@@ -30,9 +30,10 @@
         .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
         .form-group { display: flex; flex-direction: column; gap: 3px; }
         .form-group label { font-size: 11px; color: #97a0ac; font-weight: 500; }
-        .form-group input, .form-group select { background: #0a0d12; border: 1px solid #242b35; color: #eae6da; padding: 6px 10px; border-radius: 4px; font-family: 'Manrope', sans-serif; font-size: 13px; outline: none; transition: 0.2s; }
-        .form-group input:focus, .form-group select:focus { border-color: #c9a35a; }
-        .form-group input::placeholder { color: #5f6773; }
+        .form-group input, .form-group select, .form-group textarea { background: #0a0d12; border: 1px solid #242b35; color: #eae6da; padding: 6px 10px; border-radius: 4px; font-family: 'Manrope', sans-serif; font-size: 13px; outline: none; transition: 0.2s; }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #c9a35a; }
+        .form-group input::placeholder, .form-group textarea::placeholder { color: #5f6773; }
         .hint { font-size: 11px; color: #5f6773; margin-top: 3px; line-height: 1.5; }
         .hint code { background: #242b35; padding: 1px 6px; border-radius: 3px; color: #c9a35a; font-size: 11px; }
         .btn { padding: 6px 16px; border: 1px solid #c9a35a; background: transparent; color: #e3c48a; border-radius: 4px; font-family: 'Unbounded', sans-serif; font-size: 10px; letter-spacing: 0.04em; cursor: pointer; transition: 0.2s; }
@@ -119,14 +120,15 @@
         .score-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .score-sep { color: #5f6773; font-size: 12px; }
         .score-save { padding: 3px 10px; font-size: 9px; }
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
         .modal-overlay.active { display: flex; }
-        .modal { background: #10141b; border: 1px solid #c9a35a; border-radius: 8px; padding: 24px 28px; max-width: 460px; width: 90%; max-height: 80vh; overflow-y: auto; position: relative; }
+        .modal { background: #10141b; border: 1px solid #c9a35a; border-radius: 8px; padding: 24px 28px; max-width: 560px; width: 100%; max-height: 85vh; overflow-y: auto; position: relative; }
         .modal-close { position: absolute; top: 10px; right: 14px; background: none; border: none; color: #5f6773; font-size: 22px; cursor: pointer; }
         .modal-close:hover { color: #eae6da; }
         .modal h2 { font-family: 'Unbounded', sans-serif; font-size: 18px; margin-bottom: 12px; }
-        .modal input { width: 100%; background: #0a0d12; border: 1px solid #242b35; color: #eae6da; padding: 8px 12px; border-radius: 4px; font-family: 'Manrope', sans-serif; font-size: 13px; margin-bottom: 10px; }
-        .modal input:focus { border-color: #c9a35a; outline: none; }
+        .modal input, .modal textarea { width: 100%; background: #0a0d12; border: 1px solid #242b35; color: #eae6da; padding: 8px 12px; border-radius: 4px; font-family: 'Manrope', sans-serif; font-size: 13px; margin-bottom: 10px; }
+        .modal textarea { resize: vertical; min-height: 70px; }
+        .modal input:focus, .modal textarea:focus { border-color: #c9a35a; outline: none; }
         .modal .modal-actions { display: flex; gap: 8px; margin-top: 8px; }
         .logo-uploader { display: flex; gap: 12px; align-items: flex-start; margin-top: 6px; }
         .logo-preview { width: 80px; height: 80px; background: #0a0d12; border: 1px solid #242b35; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
@@ -172,6 +174,29 @@
         .toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
         .toggle-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: #c9a35a; cursor: pointer; }
         .toggle-row label { font-size: 13px; color: #eae6da; cursor: pointer; }
+
+        /* ===== ИСТОРИЯ ===== */
+        .history-list { display: flex; flex-direction: column; gap: 10px; }
+        .history-item { background: #151a22; border: 1px solid #242b35; border-radius: 5px; padding: 14px 18px; display: flex; align-items: center; gap: 14px; transition: border-color 0.2s; }
+        .history-item:hover { border-color: #c9a35a; }
+        .history-item .h-logo { width: 44px; height: 44px; background: #0a0d12; border: 1px solid #242b35; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+        .history-item .h-logo img { max-width: 90%; max-height: 90%; object-fit: contain; }
+        .history-item .h-logo .placeholder { font-family: 'Unbounded', sans-serif; font-size: 18px; color: #c9a35a; opacity: 0.6; }
+        .history-item .h-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+        .history-item .h-info .h-name { font-size: 14px; font-weight: 600; color: #eae6da; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .history-item .h-info .h-meta { font-size: 11px; color: #7a8494; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .history-item .h-info .h-meta .champ { color: #e3c48a; }
+        .history-item .h-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+        .photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; }
+        .photo-thumb { position: relative; aspect-ratio: 1; background: #0a0d12; border: 1px solid #242b35; border-radius: 4px; overflow: hidden; }
+        .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .photo-thumb .p-remove { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; background: rgba(231,76,60,0.9); color: #fff; border: none; border-radius: 50%; cursor: pointer; font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+        .photo-thumb .p-remove:hover { background: #e74c3c; }
+        .photo-thumb .p-caption-input { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); border: none; color: #eae6da; font-family: 'Manrope', sans-serif; font-size: 10px; padding: 3px 6px; outline: none; width: 100%; }
+        .photo-thumb .p-caption-input:focus { background: rgba(201,163,90,0.2); }
+        .photos-empty { color: #5f6773; font-size: 12px; font-style: italic; padding: 8px 0; }
+
         @media (max-width: 640px) {
             .form-row { grid-template-columns: 1fr; }
             .form-row.three { grid-template-columns: 1fr; }
@@ -180,6 +205,7 @@
             .match-item .teams { justify-content: center; }
             .match-item .meta { justify-content: center; }
             .score-input-group { margin-left: 0; padding-left: 0; border-left: none; margin-top: 8px; }
+            .history-item { flex-wrap: wrap; }
         }
     </style>
 </head>
@@ -200,6 +226,7 @@
         <button class="tab active" data-tab="teams">Команды</button>
         <button class="tab" data-tab="matches">Матчи</button>
         <button class="tab" data-tab="schedule">Расписание</button>
+        <button class="tab" data-tab="history">История</button>
         <button class="tab" data-tab="settings">Настройки</button>
     </div>
 
@@ -261,6 +288,22 @@
         </div>
     </div>
 
+    <div class="tab-content" id="tab-history">
+        <div class="card">
+            <div class="card-header">
+                <h3>📜 История турниров</h3>
+                <span id="historyCount" style="color:#5f6773;font-size:12px;">0 турниров</span>
+            </div>
+            <p class="hint" style="margin-bottom:12px;">
+                Зафиксируй текущий турнир в историю (кнопка ниже — активна, когда в финале есть победитель), затем отредактируй MVP, добавь фото и описание.
+            </p>
+            <div class="btn-group" style="margin-bottom:14px;">
+                <button class="btn btn-primary" onclick="snapshotCurrentTournament()">📌 Зафиксировать текущий турнир в историю</button>
+            </div>
+            <div class="history-list" id="historyList"></div>
+        </div>
+    </div>
+
     <div class="tab-content" id="tab-settings">
         <div class="card">
             <div class="card-header"><h3>⚙️ Общие настройки</h3></div>
@@ -296,11 +339,12 @@
                 <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
                 <button class="btn btn-danger" onclick="resetData()">🔄 Сбросить всё</button>
             </div>
-            <p class="hint" style="margin-top:10px;">⚠️ «Сбросить всё» перезапишет KV дефолтом: 6 команд, 5 матчей.</p>
+            <p class="hint" style="margin-top:10px;">⚠️ «Сбросить всё» перезапишет KV дефолтом: 6 команд, 5 матчей. История тоже будет очищена.</p>
         </div>
     </div>
 </div>
 
+<!-- Модалка редактирования команды -->
 <div class="modal-overlay" id="editModal">
     <div class="modal">
         <button class="modal-close" onclick="closeEditModal()">&times;</button>
@@ -329,6 +373,60 @@
     </div>
 </div>
 
+<!-- Модалка редактирования турнира в истории -->
+<div class="modal-overlay" id="historyModal">
+    <div class="modal" style="max-width:680px;">
+        <button class="modal-close" onclick="closeHistoryModal()">&times;</button>
+        <h2>Редактирование турнира в истории</h2>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Название турнира</label>
+                <input type="text" id="histName" placeholder="Compass Arena #1">
+            </div>
+            <div class="form-group">
+                <label>Дата</label>
+                <input type="text" id="histDate" placeholder="26.09.2026">
+            </div>
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+            <label>Формат (текстом)</label>
+            <input type="text" id="histFormat" placeholder="Custom Bracket · Bo3">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>MVP — команда</label>
+                <select id="histMvpTeam"><option value="">— не выбран —</option></select>
+            </div>
+            <div class="form-group">
+                <label>MVP — ник игрока</label>
+                <input type="text" id="histMvpNick" placeholder="Yatoro">
+            </div>
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+            <label>MVP — комментарий (необязательно)</label>
+            <textarea id="histMvpNote" placeholder="Лучший игрок гранд-финала, 15-0 на Morphling..."></textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom:10px;">
+            <label>Фотографии (автосжатие до 1600×1600, ~500 КБ)</label>
+            <div class="btn-group">
+                <button class="btn" onclick="document.getElementById('histPhotoInput').click()">📷 Добавить фото</button>
+                <input type="file" id="histPhotoInput" accept="image/*" multiple style="display:none" onchange="onHistoryPhotos(event)">
+            </div>
+            <div class="photos-grid" id="histPhotosGrid"></div>
+            <div class="photos-empty" id="histPhotosEmpty">Фотографий пока нет</div>
+            <div class="logo-meta" id="histPhotoMeta"></div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="saveHistoryItem()">💾 Сохранить</button>
+            <button class="btn" onclick="closeHistoryModal()">Отмена</button>
+        </div>
+    </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -336,6 +434,9 @@
 // ДАННЫЕ
 // ============================================================
 var DATA = getDefaultData();
+var HISTORY = [];
+var EDITING_HISTORY_ID = null;
+var EDITING_HISTORY_PHOTOS = [];
 
 function getDefaultData() {
     return {
@@ -396,7 +497,7 @@ function playersToInput(players) {
 }
 
 // ============================================================
-// ЛОГОТИП
+// ЛОГОТИП + ФОТО (общий загрузчик)
 // ============================================================
 var NEW_TEAM_LOGO = '';
 var EDIT_TEAM_LOGO = '';
@@ -405,6 +506,10 @@ var EDIT_TEAM_ID = null;
 var LOGO_MAX_SOURCE_BYTES = 5 * 1024 * 1024;
 var LOGO_MAX_DIMENSION = 600;
 var LOGO_OUTPUT_QUALITY = 0.92;
+
+var PHOTO_MAX_SOURCE_BYTES = 8 * 1024 * 1024;
+var PHOTO_MAX_DIMENSION = 1600;
+var PHOTO_OUTPUT_QUALITY = 0.82;
 
 function formatBytes(bytes) {
     if (bytes < 1024) return bytes + ' Б';
@@ -424,11 +529,11 @@ function setLogoMeta(id, text, cls) {
     el.className = 'logo-meta' + (cls ? ' ' + cls : '');
 }
 
-function readLogoFile(file, callback, metaId) {
+function compressImageFile(file, opts, callback, metaId) {
     if (!file) return;
-    if (file.size > LOGO_MAX_SOURCE_BYTES) {
-        setLogoMeta(metaId, '❌ Файл ' + formatBytes(file.size) + ' — превышает 5 МБ', 'err');
-        showToast('⚠️ Файл больше 5 МБ');
+    if (file.size > opts.maxSourceBytes) {
+        setLogoMeta(metaId, '❌ Файл ' + formatBytes(file.size) + ' — превышает ' + formatBytes(opts.maxSourceBytes), 'err');
+        showToast('⚠️ Файл слишком большой');
         return;
     }
     setLogoMeta(metaId, '⏳ Обработка...', 'warn');
@@ -440,8 +545,8 @@ function readLogoFile(file, callback, metaId) {
             var w = img.naturalWidth;
             var h = img.naturalHeight;
             var ratio = 1;
-            if (w > LOGO_MAX_DIMENSION || h > LOGO_MAX_DIMENSION) {
-                ratio = Math.min(LOGO_MAX_DIMENSION / w, LOGO_MAX_DIMENSION / h);
+            if (w > opts.maxDimension || h > opts.maxDimension) {
+                ratio = Math.min(opts.maxDimension / w, opts.maxDimension / h);
             }
             var newW = Math.round(w * ratio);
             var newH = Math.round(h * ratio);
@@ -452,11 +557,22 @@ function readLogoFile(file, callback, metaId) {
             var ctx = canvas.getContext('2d');
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, newW, newH);
+
+            // Для PNG-логотипов — прозрачность, для фото — JPEG
+            var usePng = opts.preferPng;
+            if (usePng) {
+                ctx.drawImage(img, 0, 0, newW, newH);
+            } else {
+                ctx.fillStyle = '#0a0d12';
+                ctx.fillRect(0, 0, newW, newH);
+                ctx.drawImage(img, 0, 0, newW, newH);
+            }
 
             var dataUrl;
             try {
-                dataUrl = canvas.toDataURL('image/png');
+                dataUrl = usePng
+                    ? canvas.toDataURL('image/png')
+                    : canvas.toDataURL('image/jpeg', opts.quality);
             } catch(err) {
                 setLogoMeta(metaId, '❌ Ошибка конвертации', 'err');
                 showToast('⚠️ Не удалось обработать картинку');
@@ -464,7 +580,9 @@ function readLogoFile(file, callback, metaId) {
             }
 
             var outSize = base64Size(dataUrl);
-            if (outSize > 900 * 1024) {
+
+            // Если PNG тяжёлый — конвертим в JPEG
+            if (usePng && outSize > opts.maxOutBytes) {
                 try {
                     var canvas2 = document.createElement('canvas');
                     canvas2.width = newW;
@@ -473,7 +591,7 @@ function readLogoFile(file, callback, metaId) {
                     ctx2.fillStyle = '#0a0d12';
                     ctx2.fillRect(0, 0, newW, newH);
                     ctx2.drawImage(img, 0, 0, newW, newH);
-                    var jpegUrl = canvas2.toDataURL('image/jpeg', LOGO_OUTPUT_QUALITY);
+                    var jpegUrl = canvas2.toDataURL('image/jpeg', opts.quality);
                     var jpegSize = base64Size(jpegUrl);
                     if (jpegSize < outSize) {
                         dataUrl = jpegUrl;
@@ -482,9 +600,9 @@ function readLogoFile(file, callback, metaId) {
                 } catch(e) {}
             }
 
-            if (outSize > 900 * 1024) {
+            if (outSize > opts.maxOutBytes) {
                 setLogoMeta(metaId, '❌ Даже после сжатия ' + formatBytes(outSize) + ' — слишком много', 'err');
-                showToast('⚠️ Не удалось сжать логотип до разумного размера');
+                showToast('⚠️ Не удалось сжать до разумного размера');
                 return;
             }
 
@@ -505,6 +623,22 @@ function readLogoFile(file, callback, metaId) {
     reader.readAsDataURL(file);
 }
 
+var LOGO_OPTS = {
+    maxSourceBytes: LOGO_MAX_SOURCE_BYTES,
+    maxDimension: LOGO_MAX_DIMENSION,
+    maxOutBytes: 900 * 1024,
+    quality: LOGO_OUTPUT_QUALITY,
+    preferPng: true
+};
+
+var PHOTO_OPTS = {
+    maxSourceBytes: PHOTO_MAX_SOURCE_BYTES,
+    maxDimension: PHOTO_MAX_DIMENSION,
+    maxOutBytes: 900 * 1024,
+    quality: PHOTO_OUTPUT_QUALITY,
+    preferPng: false
+};
+
 function renderLogoPreview(containerId, logo, placeholderText) {
     var el = document.getElementById(containerId);
     if (!el) return;
@@ -513,7 +647,7 @@ function renderLogoPreview(containerId, logo, placeholderText) {
 }
 
 function onNewTeamLogo(e) {
-    readLogoFile(e.target.files[0], function(dataUrl) {
+    compressImageFile(e.target.files[0], LOGO_OPTS, function(dataUrl) {
         NEW_TEAM_LOGO = dataUrl;
         renderLogoPreview('newTeamLogoPreview', NEW_TEAM_LOGO, 'нет<br>логотипа');
     }, 'newTeamLogoMeta');
@@ -525,7 +659,7 @@ function clearNewTeamLogo() {
     setLogoMeta('newTeamLogoMeta', '', '');
 }
 function onEditLogo(e) {
-    readLogoFile(e.target.files[0], function(dataUrl) {
+    compressImageFile(e.target.files[0], LOGO_OPTS, function(dataUrl) {
         EDIT_TEAM_LOGO = dataUrl;
         renderLogoPreview('editLogoPreview', EDIT_TEAM_LOGO, 'нет<br>логотипа');
     }, 'editLogoMeta');
@@ -547,6 +681,9 @@ function loadData() {
             return res.json();
         })
         .then(function(parsed) {
+            HISTORY = Array.isArray(parsed.history) ? parsed.history : [];
+            delete parsed.history;
+
             DATA = parsed;
             if (!DATA.schedule) DATA.schedule = {};
             if (!DATA.tournament) DATA.tournament = getDefaultData().tournament;
@@ -610,15 +747,19 @@ function renderEverything() {
     renderMatches();
     renderSchedule();
     renderPreview();
+    renderHistory();
 }
 
 function saveData() {
     updateMatchLinks();
     var pw = ensurePassword();
+    // Собираем payload: DATA + history отдельным полем
+    var payload = Object.assign({}, DATA, { history: HISTORY });
+
     return fetch('/api/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pw, data: DATA })
+        body: JSON.stringify({ password: pw, data: payload })
     }).then(function(res) {
         if (res.status === 403) {
             ADMIN_PW = null;
@@ -701,7 +842,7 @@ function updateMatchLinks() {
 }
 
 // ============================================================
-// РУЧНОЕ НАЗНАЧЕНИЕ КОМАНД В M1-M3
+// РУЧНОЕ НАЗНАЧЕНИЕ КОМАНД
 // ============================================================
 function setMatchTeam(matchId, slot, teamId) {
     var match = getMatch(matchId);
@@ -740,7 +881,7 @@ function setScore(matchId) {
 }
 
 // ============================================================
-// ОТРИСОВКА СПИСКА КОМАНД
+// ОТРИСОВКА КОМАНД
 // ============================================================
 function renderTeams() {
     var container = document.getElementById('teamList');
@@ -1008,7 +1149,7 @@ function moveTeam(index, direction) {
 }
 
 // ============================================================
-// ПРЕВЬЮ СЕТКИ
+// ПРЕВЬЮ
 // ============================================================
 function renderPreview() {
     var wrap = document.getElementById('previewWrap');
@@ -1239,7 +1380,260 @@ function renderSchedule() {
 }
 
 // ============================================================
-// ДЕЙСТВИЯ
+// ========== ИСТОРИЯ ТУРНИРОВ ==========
+// ============================================================
+
+function renderHistory() {
+    var container = document.getElementById('historyList');
+    var countEl = document.getElementById('historyCount');
+    if (!container) return;
+
+    if (countEl) countEl.textContent = HISTORY.length + ' ' + pluralT(HISTORY.length);
+
+    if (HISTORY.length === 0) {
+        container.innerHTML = '<div style="color:#5f6773;font-size:13px;text-align:center;padding:20px;font-style:italic;">Пока ни одного турнира в истории</div>';
+        return;
+    }
+
+    var sorted = HISTORY.slice().sort(function(a, b) {
+        var ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        var tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return tb - ta;
+    });
+
+    container.innerHTML = '';
+    for (var i = 0; i < sorted.length; i++) {
+        var t = sorted[i];
+        var champ = null;
+        if (t.teams) {
+            for (var k = 0; k < t.teams.length; k++) {
+                if (t.teams[k].id === t.championId) { champ = t.teams[k]; break; }
+            }
+        }
+
+        var logoHtml = '';
+        if (champ && champ.logo) logoHtml = '<img src="' + champ.logo + '" alt="">';
+        else if (champ && champ.name) logoHtml = '<span class="placeholder">' + champ.name.charAt(0).toUpperCase() + '</span>';
+        else logoHtml = '<span class="placeholder">?</span>';
+
+        var mvpText = (t.mvp && t.mvp.playerNick) ? (' · MVP: ' + t.mvp.playerNick) : '';
+        var photosText = (t.photos && t.photos.length) ? (' · ' + t.photos.length + ' фото') : '';
+
+        var div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML =
+            '<div class="h-logo">' + logoHtml + '</div>' +
+            '<div class="h-info">' +
+                '<div class="h-name">' + escapeHtml(t.name) + '</div>' +
+                '<div class="h-meta">' + escapeHtml(t.date || '') + ' · Победитель: <span class="champ">' + escapeHtml(champ ? champ.name : '—') + '</span>' + escapeHtml(mvpText + photosText) + '</div>' +
+            '</div>' +
+            '<div class="h-actions">' +
+                '<button class="btn btn-sm" onclick="openHistoryModal(\'' + escapeHtml(t.id) + '\')">✏️</button>' +
+                '<button class="btn btn-sm btn-danger" onclick="deleteHistoryItem(\'' + escapeHtml(t.id) + '\')">✕</button>' +
+            '</div>';
+        container.appendChild(div);
+    }
+}
+
+function pluralT(n) {
+    var mod10 = n % 10;
+    var mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'турнир';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'турнира';
+    return 'турниров';
+}
+
+function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function snapshotCurrentTournament() {
+    updateMatchLinks();
+    var grand = getMatch(5);
+    if (!grand || !grand.winner) {
+        if (!confirm('В финале (M5) ещё нет победителя. Зафиксировать всё равно? (снапшот будет без чемпиона)')) return;
+    }
+
+    var championId = grand ? grand.winner : null;
+    var runnerUpId = grand ? getLoser(grand) : null;
+
+    // Уникальный id
+    var now = new Date();
+    var id = 'ca-' + now.getFullYear() + '-' + pad2(now.getMonth()+1) + '-' + pad2(now.getDate()) + '-' + now.getTime();
+
+    // Дата: берём из tournament.dates, если есть, иначе — сегодня
+    var dateText = DATA.tournament.dates || (pad2(now.getDate()) + '.' + pad2(now.getMonth()+1) + '.' + now.getFullYear());
+
+    var snapshot = {
+        id: id,
+        name: DATA.tournament.name || 'Compass Arena',
+        date: dateText,
+        format: (DATA.tournament.format || 'Custom Bracket') + ' · ' + (DATA.tournament.matches || 'Bo3'),
+        game: DATA.tournament.game || 'Dota 2',
+        createdAt: now.toISOString(),
+        // Снапшот данных на момент фиксации
+        teams: JSON.parse(JSON.stringify(DATA.teams || [])),
+        matches: JSON.parse(JSON.stringify(DATA.matches || [])),
+        championId: championId,
+        runnerUpId: runnerUpId,
+        mvp: { teamId: null, playerNick: '', note: '' },
+        photos: []
+    };
+
+    HISTORY.unshift(snapshot);
+    if (HISTORY.length > 20) HISTORY = HISTORY.slice(0, 20);
+
+    saveData();
+    renderHistory();
+    showToast('📌 Турнир зафиксирован в истории. Открой ✏️ чтобы добавить MVP и фото.');
+
+    setTimeout(function() { openHistoryModal(id); }, 300);
+}
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function openHistoryModal(id) {
+    var t = null;
+    for (var i = 0; i < HISTORY.length; i++) {
+        if (HISTORY[i].id === id) { t = HISTORY[i]; break; }
+    }
+    if (!t) return;
+
+    EDITING_HISTORY_ID = id;
+    EDITING_HISTORY_PHOTOS = JSON.parse(JSON.stringify(t.photos || []));
+
+    document.getElementById('histName').value = t.name || '';
+    document.getElementById('histDate').value = t.date || '';
+    document.getElementById('histFormat').value = t.format || '';
+    document.getElementById('histMvpNick').value = (t.mvp && t.mvp.playerNick) || '';
+    document.getElementById('histMvpNote').value = (t.mvp && t.mvp.note) || '';
+
+    // Заполняем селект команд
+    var sel = document.getElementById('histMvpTeam');
+    sel.innerHTML = '<option value="">— не выбран —</option>';
+    if (t.teams) {
+        for (var k = 0; k < t.teams.length; k++) {
+            var tt = t.teams[k];
+            var opt = document.createElement('option');
+            opt.value = tt.id;
+            opt.textContent = tt.name;
+            if (t.mvp && t.mvp.teamId === tt.id) opt.selected = true;
+            sel.appendChild(opt);
+        }
+    }
+
+    renderHistoryPhotos();
+    setLogoMeta('histPhotoMeta', '', '');
+    document.getElementById('historyModal').classList.add('active');
+}
+
+function closeHistoryModal() {
+    document.getElementById('historyModal').classList.remove('active');
+    EDITING_HISTORY_ID = null;
+    EDITING_HISTORY_PHOTOS = [];
+}
+
+function renderHistoryPhotos() {
+    var grid = document.getElementById('histPhotosGrid');
+    var empty = document.getElementById('histPhotosEmpty');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    if (EDITING_HISTORY_PHOTOS.length === 0) {
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+
+    for (var i = 0; i < EDITING_HISTORY_PHOTOS.length; i++) {
+        var p = EDITING_HISTORY_PHOTOS[i];
+        var div = document.createElement('div');
+        div.className = 'photo-thumb';
+        div.innerHTML =
+            '<img src="' + p.url + '" alt="">' +
+            '<button class="p-remove" onclick="removeHistoryPhoto(' + i + ')">×</button>' +
+            '<input type="text" class="p-caption-input" placeholder="подпись..." value="' + escapeHtml(p.caption || '') + '" onchange="setHistoryPhotoCaption(' + i + ', this.value)">';
+        grid.appendChild(div);
+    }
+}
+
+function onHistoryPhotos(e) {
+    var files = e.target.files;
+    if (!files || files.length === 0) return;
+    var remaining = files.length;
+    setLogoMeta('histPhotoMeta', '⏳ Обработка ' + files.length + ' файл(ов)...', 'warn');
+
+    for (var i = 0; i < files.length; i++) {
+        (function(idx) {
+            compressImageFile(files[idx], PHOTO_OPTS, function(dataUrl) {
+                EDITING_HISTORY_PHOTOS.push({ url: dataUrl, caption: '' });
+                remaining--;
+                if (remaining === 0) {
+                    setLogoMeta('histPhotoMeta', '✅ Загружено ' + files.length + ' фото', 'ok');
+                    renderHistoryPhotos();
+                }
+            }, 'histPhotoMeta');
+        })(i);
+    }
+    e.target.value = '';
+}
+
+function removeHistoryPhoto(idx) {
+    EDITING_HISTORY_PHOTOS.splice(idx, 1);
+    renderHistoryPhotos();
+}
+
+function setHistoryPhotoCaption(idx, val) {
+    if (EDITING_HISTORY_PHOTOS[idx]) EDITING_HISTORY_PHOTOS[idx].caption = val;
+}
+
+function saveHistoryItem() {
+    if (!EDITING_HISTORY_ID) return;
+    var t = null;
+    for (var i = 0; i < HISTORY.length; i++) {
+        if (HISTORY[i].id === EDITING_HISTORY_ID) { t = HISTORY[i]; break; }
+    }
+    if (!t) return;
+
+    t.name = document.getElementById('histName').value.trim() || 'Compass Arena';
+    t.date = document.getElementById('histDate').value.trim();
+    t.format = document.getElementById('histFormat').value.trim();
+
+    var mvpTeam = document.getElementById('histMvpTeam').value;
+    t.mvp = {
+        teamId: mvpTeam === '' ? null : parseInt(mvpTeam, 10),
+        playerNick: document.getElementById('histMvpNick').value.trim(),
+        note: document.getElementById('histMvpNote').value.trim()
+    };
+
+    t.photos = EDITING_HISTORY_PHOTOS;
+
+    saveData();
+    renderHistory();
+    closeHistoryModal();
+    showToast('💾 Турнир в истории обновлён');
+}
+
+function deleteHistoryItem(id) {
+    if (!confirm('Удалить турнир из истории?')) return;
+    var newH = [];
+    for (var i = 0; i < HISTORY.length; i++) {
+        if (HISTORY[i].id !== id) newH.push(HISTORY[i]);
+    }
+    HISTORY = newH;
+    saveData();
+    renderHistory();
+    showToast('🗑️ Турнир удалён из истории');
+}
+
+// ============================================================
+// ДЕЙСТВИЯ С КОМАНДАМИ
 // ============================================================
 function addTeam() {
     var nameInput = document.getElementById('teamNameInput');
@@ -1346,7 +1740,8 @@ function saveSettings() {
 }
 
 function exportData() {
-    var blob = new Blob([JSON.stringify(DATA, null, 2)], { type: 'application/json' });
+    var payload = Object.assign({}, DATA, { history: HISTORY });
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
@@ -1364,6 +1759,8 @@ function importData(event) {
         try {
             var data = JSON.parse(e.target.result);
             if (!data.teams || !data.matches) throw new Error('bad format');
+            HISTORY = Array.isArray(data.history) ? data.history : [];
+            delete data.history;
             DATA = data;
             saveData();
             renderEverything();
@@ -1378,8 +1775,9 @@ function importData(event) {
 
 function resetData() {
     if (!confirm('⚠️ Сбросить ВСЕ данные на дефолт (6 команд, 5 матчей)?')) return;
-    if (!confirm('Точно? Это перезапишет KV.')) return;
+    if (!confirm('Точно? Это перезапишет KV. История тоже будет очищена.')) return;
     DATA = getDefaultData();
+    HISTORY = [];
     saveData();
     renderEverything();
     showToast('🔄 Данные сброшены');
@@ -1408,21 +1806,23 @@ for (var i = 0; i < tabs.length; i++) {
         if (target) target.classList.add('active');
         if (this.dataset.tab === 'matches') renderMatches();
         if (this.dataset.tab === 'schedule') renderSchedule();
+        if (this.dataset.tab === 'history') renderHistory();
     });
 }
 
 document.getElementById('editModal').addEventListener('click', function(e) {
     if (e.target === this) closeEditModal();
 });
+document.getElementById('historyModal').addEventListener('click', function(e) {
+    if (e.target === this) closeHistoryModal();
+});
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeEditModal();
+    if (e.key === 'Escape') { closeEditModal(); closeHistoryModal(); }
 });
 
 // ============================================================
-// ИНИЦИАЛИЗАЦИЯ
+// ЭКСПОРТ В WINDOW
 // ============================================================
-loadData().then(renderEverything);
-
 window.addTeam = addTeam;
 window.deleteTeam = deleteTeam;
 window.openEditModal = openEditModal;
@@ -1445,7 +1845,21 @@ window.onEditLogo = onEditLogo;
 window.clearNewTeamLogo = clearNewTeamLogo;
 window.clearEditLogo = clearEditLogo;
 
-console.log('✅ Admin panel loaded (Custom Bracket: 6 teams, 5 matches, scores)');
+window.snapshotCurrentTournament = snapshotCurrentTournament;
+window.openHistoryModal = openHistoryModal;
+window.closeHistoryModal = closeHistoryModal;
+window.deleteHistoryItem = deleteHistoryItem;
+window.saveHistoryItem = saveHistoryItem;
+window.onHistoryPhotos = onHistoryPhotos;
+window.removeHistoryPhoto = removeHistoryPhoto;
+window.setHistoryPhotoCaption = setHistoryPhotoCaption;
+
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================================
+loadData().then(renderEverything);
+
+console.log('✅ Admin panel loaded (+ history, MVP, photos)');
 </script>
 
 </body>
