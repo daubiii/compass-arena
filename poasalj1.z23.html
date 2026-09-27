@@ -100,7 +100,7 @@
         .match-list { display: flex; flex-direction: column; gap: 6px; }
         .match-item { background: #151a22; border: 1px solid #242b35; border-radius: 4px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 13px; }
         .match-item.manual { border-left: 3px solid #c9a35a; }
-        .match-item.auto { border-left: 3px solid #5f6773; opacity: 0.85; }
+        .match-item.auto { border-left: 3px solid #5f6773; opacity: 0.95; }
         .match-item .teams { display: flex; align-items: center; gap: 10px; }
         .match-item .teams .vs { color: #5f6773; font-size: 11px; }
         .match-item .teams .winner { color: #e3c48a; font-weight: 600; }
@@ -111,6 +111,14 @@
         .match-item .meta select { background: #0a0d12; border: 1px solid #242b35; color: #eae6da; padding: 3px 6px; border-radius: 4px; font-size: 11px; }
         .manual-selects { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .manual-selects select { background: #0a0d12; border: 1px solid #c9a35a; color: #eae6da; padding: 5px 8px; border-radius: 4px; font-size: 12px; font-family: 'Manrope', sans-serif; min-width: 130px; }
+        .score-input-group { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding-left: 10px; border-left: 1px solid #242b35; }
+        .score-input-group label { font-size: 11px; color: #97a0ac; }
+        .score-input { width: 36px; background: #0a0d12; border: 1px solid #242b35; color: #e3c48a; padding: 3px 6px; border-radius: 4px; font-family: 'Unbounded', sans-serif; font-size: 12px; text-align: center; }
+        .score-input:focus { border-color: #c9a35a; outline: none; }
+        .score-input::-webkit-outer-spin-button,
+        .score-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .score-sep { color: #5f6773; font-size: 12px; }
+        .score-save { padding: 3px 10px; font-size: 9px; }
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
         .modal-overlay.active { display: flex; }
         .modal { background: #10141b; border: 1px solid #c9a35a; border-radius: 8px; padding: 24px 28px; max-width: 460px; width: 90%; max-height: 80vh; overflow-y: auto; position: relative; }
@@ -129,8 +137,6 @@
         .logo-meta.ok { color: #4caf50; }
         .logo-meta.warn { color: #e3c48a; }
         .logo-meta.err { color: #e74c3c; }
-
-        /* === Превью сетки === */
         .preview-wrap { display: flex; gap: 24px; overflow-x: auto; padding: 8px 0; }
         .preview-group { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; min-width: 0; }
         .preview-group + .preview-group { padding-left: 20px; border-left: 1px solid #242b35; }
@@ -155,10 +161,10 @@
         .preview-team .badge { font-size: 8px; padding: 0px 5px; border-radius: 8px; font-weight: 700; }
         .preview-team .badge.win { background: #4caf50; color: #fff; }
         .preview-team .badge.loss { background: #e74c3c; color: #fff; }
+        .preview-score { font-family: 'Unbounded', sans-serif; font-size: 10px; color: #e3c48a; text-align: right; padding-top: 3px; margin-top: 3px; border-top: 1px solid #1a2029; }
         .preview-eliminated-item { background: #0d1118; border: 1px solid #1a2029; border-radius: 3px; padding: 6px 10px; font-size: 11px; color: #7a8494; opacity: 0.65; }
         .preview-eliminated-item .name { color: #97a0ac; font-weight: 500; }
         .preview-eliminated-item .meta { font-size: 9px; color: #5f6773; }
-
         .toast { position: fixed; bottom: 24px; right: 24px; background: #10141b; border: 1px solid #c9a35a; padding: 10px 20px; border-radius: 6px; color: #eae6da; font-size: 13px; z-index: 2000; opacity: 0; transform: translateY(20px); transition: 0.3s; pointer-events: none; max-width: 360px; }
         .toast.show { opacity: 1; transform: translateY(0); }
         .password-section { background: #10141b; border: 1px solid #c9a35a; border-radius: 6px; padding: 16px 20px; margin-bottom: 14px; }
@@ -173,6 +179,7 @@
             .match-item { flex-direction: column; align-items: stretch; }
             .match-item .teams { justify-content: center; }
             .match-item .meta { justify-content: center; }
+            .score-input-group { margin-left: 0; padding-left: 0; border-left: none; margin-top: 8px; }
         }
     </style>
 </head>
@@ -342,11 +349,11 @@ function getDefaultData() {
             { id: 6, name: "Слот 6", players: [], logo: "" }
         ],
         matches: [
-            { id: 1, round: 1, team1: null, team2: null, winner: null, bracket: 'upper' },
-            { id: 2, round: 1, team1: null, team2: null, winner: null, bracket: 'upper' },
-            { id: 3, round: 1, team1: null, team2: null, winner: null, bracket: 'upper' },
-            { id: 4, round: 2, team1: null, team2: null, winner: null, bracket: 'upper' },
-            { id: 5, round: 3, team1: null, team2: null, winner: null, bracket: 'grand' }
+            { id: 1, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null },
+            { id: 2, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null },
+            { id: 3, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null },
+            { id: 4, round: 2, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null },
+            { id: 5, round: 3, team1: null, team2: null, winner: null, bracket: 'grand', score1: null, score2: null }
         ],
         schedule: {},
         liveMatchId: null,
@@ -551,6 +558,10 @@ function loadData() {
             for (var j = 0; j < DATA.teams.length; j++) {
                 if (DATA.teams[j].logo === undefined) DATA.teams[j].logo = '';
             }
+            for (var k = 0; k < DATA.matches.length; k++) {
+                if (DATA.matches[k].score1 === undefined) DATA.matches[k].score1 = null;
+                if (DATA.matches[k].score2 === undefined) DATA.matches[k].score2 = null;
+            }
         })
         .catch(function(err) {
             console.warn('Не удалось загрузить данные', err);
@@ -654,22 +665,16 @@ function getLoser(m) {
     return null;
 }
 
-// ============================================================
-// СВЯЗИ (5 матчей): M4 автомат, M5 автомат, M1-M3 ручные
-// ============================================================
 function updateMatchLinks() {
     var m = {};
     for (var i = 0; i < DATA.matches.length; i++) {
         m[DATA.matches[i].id] = DATA.matches[i];
     }
 
-    // M1, M2, M3 — команды назначаются вручную
-    // M4: W(M1) vs W(M2)
     if (m[4]) {
         m[4].team1 = m[1] ? m[1].winner : null;
         m[4].team2 = m[2] ? m[2].winner : null;
     }
-    // M5: W(M4) vs W(M3)
     if (m[5]) {
         m[5].team1 = m[4] ? m[4].winner : null;
         m[5].team2 = m[3] ? m[3].winner : null;
@@ -704,7 +709,6 @@ function setMatchTeam(matchId, slot, teamId) {
     var id = teamId === '' ? null : parseInt(teamId, 10);
     if (slot === 1) match.team1 = id;
     else if (slot === 2) match.team2 = id;
-    // Сброс winner если команда убрана
     if (match.winner && match.winner !== match.team1 && match.winner !== match.team2) {
         match.winner = null;
         match.score1 = null;
@@ -714,6 +718,25 @@ function setMatchTeam(matchId, slot, teamId) {
     renderMatches();
     renderPreview();
     showToast('✅ M' + matchId + ': команда назначена');
+}
+
+// ============================================================
+// СЧЁТ
+// ============================================================
+function setScore(matchId) {
+    var s1El = document.getElementById('admin-score1-' + matchId);
+    var s2El = document.getElementById('admin-score2-' + matchId);
+    if (!s1El || !s2El) return;
+    var match = getMatch(matchId);
+    if (!match) return;
+    var s1 = s1El.value === '' ? null : parseInt(s1El.value, 10);
+    var s2 = s2El.value === '' ? null : parseInt(s2El.value, 10);
+    match.score1 = s1;
+    match.score2 = s2;
+    saveData();
+    renderMatches();
+    renderPreview();
+    showToast('🔢 Счёт матча M' + matchId + ' сохранён: ' + (s1 != null ? s1 : '—') + ':' + (s2 != null ? s2 : '—'));
 }
 
 // ============================================================
@@ -1016,13 +1039,15 @@ function renderPreview() {
         html += '<span class="name">' + name2 + '</span>';
         if (w2) html += '<span class="badge ' + w2 + '">' + (w2 === 'win' ? 'W' : 'L') + '</span>';
         html += '</div>';
+        if (m.winner && m.score1 != null && m.score2 != null) {
+            html += '<div class="preview-score">' + m.score1 + ' : ' + m.score2 + '</div>';
+        }
         html += '</div>';
         return html;
     }
 
     var html = '';
 
-    // Раунд 1
     html += '<div class="preview-group">';
     html += '<div class="preview-group-title upper">Раунд 1</div>';
     html += '<div class="preview-rounds">';
@@ -1033,7 +1058,6 @@ function renderPreview() {
     html += '</div>';
     html += '</div></div>';
 
-    // Раунд 2
     html += '<div class="preview-group">';
     html += '<div class="preview-group-title upper">Раунд 2</div>';
     html += '<div class="preview-rounds">';
@@ -1042,7 +1066,6 @@ function renderPreview() {
     html += '</div>';
     html += '</div></div>';
 
-    // Финал
     html += '<div class="preview-group">';
     html += '<div class="preview-group-title grand">Финал</div>';
     html += '<div class="preview-rounds">';
@@ -1051,7 +1074,6 @@ function renderPreview() {
     html += '</div>';
     html += '</div></div>';
 
-    // Выбывшие
     html += '<div class="preview-group">';
     html += '<div class="preview-group-title eliminated">Выбывшие</div>';
     html += '<div class="preview-rounds"><div class="preview-round">';
@@ -1095,15 +1117,8 @@ function renderMatches() {
 
         var label = (m.bracket === 'grand') ? 'Финал' : ('Раунд ' + m.round);
 
-        // Формируем селекты для ручных матчей
-        var teamsOptions = '<option value="">— выбрать —</option>';
-        for (var ti = 0; ti < DATA.teams.length; ti++) {
-            teamsOptions += '<option value="' + DATA.teams[ti].id + '">' + DATA.teams[ti].name + '</option>';
-        }
-
         var bodyHtml = '';
         if (isManual) {
-            // Ручной матч — селекты команд + winner
             var sel1 = '<select onchange="setMatchTeam(' + m.id + ', 1, this.value)">';
             var sel2 = '<select onchange="setMatchTeam(' + m.id + ', 2, this.value)">';
             var opts1 = '<option value="">— команда 1 —</option>';
@@ -1126,7 +1141,15 @@ function renderMatches() {
                     winnerHtml += '<option value="' + m.team2 + '">' + getTeamName(m.team2) + '</option>';
                     winnerHtml += '</select>';
                 } else {
-                    winnerHtml = '<span class="winner">→ ' + getTeamName(m.winner) + '</span> <button class="btn btn-sm" onclick="resetMatch(' + m.id + ')">↩️ Сбросить</button>';
+                    winnerHtml = '<span class="winner">→ ' + getTeamName(m.winner) + '</span>';
+                    winnerHtml += '<div class="score-input-group">';
+                    winnerHtml += '<label>Счёт:</label>';
+                    winnerHtml += '<input type="number" min="0" max="9" id="admin-score1-' + m.id + '" class="score-input" value="' + (m.score1 != null ? m.score1 : '') + '" placeholder="0">';
+                    winnerHtml += '<span class="score-sep">:</span>';
+                    winnerHtml += '<input type="number" min="0" max="9" id="admin-score2-' + m.id + '" class="score-input" value="' + (m.score2 != null ? m.score2 : '') + '" placeholder="0">';
+                    winnerHtml += '<button class="btn btn-sm score-save" onclick="setScore(' + m.id + ')">✓</button>';
+                    winnerHtml += '<button class="btn btn-sm" onclick="resetMatch(' + m.id + ')">↩️ Сбросить</button>';
+                    winnerHtml += '</div>';
                 }
             } else {
                 winnerHtml = '<span style="color:#5f6773;">— сначала выбери команды —</span>';
@@ -1135,7 +1158,6 @@ function renderMatches() {
             bodyHtml = '<div class="manual-selects">' + sel1 + '<span class="vs">vs</span>' + sel2 + '</div>' +
                        '<div class="meta" style="margin-top:6px;">' + winnerHtml + '</div>';
         } else {
-            // Автомат — M4, M5
             var t1 = getTeamName(m.team1);
             var t2 = getTeamName(m.team2);
             var canPlay = !!(m.team1 && m.team2);
@@ -1148,7 +1170,15 @@ function renderMatches() {
                     winnerHtml += '<option value="' + m.team2 + '">' + getTeamName(m.team2) + '</option>';
                     winnerHtml += '</select>';
                 } else {
-                    winnerHtml = '<span class="winner">→ ' + getTeamName(m.winner) + '</span> <button class="btn btn-sm" onclick="resetMatch(' + m.id + ')">↩️ Сбросить</button>';
+                    winnerHtml = '<span class="winner">→ ' + getTeamName(m.winner) + '</span>';
+                    winnerHtml += '<div class="score-input-group">';
+                    winnerHtml += '<label>Счёт:</label>';
+                    winnerHtml += '<input type="number" min="0" max="9" id="admin-score1-' + m.id + '" class="score-input" value="' + (m.score1 != null ? m.score1 : '') + '" placeholder="0">';
+                    winnerHtml += '<span class="score-sep">:</span>';
+                    winnerHtml += '<input type="number" min="0" max="9" id="admin-score2-' + m.id + '" class="score-input" value="' + (m.score2 != null ? m.score2 : '') + '" placeholder="0">';
+                    winnerHtml += '<button class="btn btn-sm score-save" onclick="setScore(' + m.id + ')">✓</button>';
+                    winnerHtml += '<button class="btn btn-sm" onclick="resetMatch(' + m.id + ')">↩️ Сбросить</button>';
+                    winnerHtml += '</div>';
                 }
             } else {
                 winnerHtml = '<span style="color:#5f6773;">ожидание (автоматически)</span>';
@@ -1171,26 +1201,19 @@ function setWinner(matchId, teamId) {
     if (DATA.liveMatchId === matchId) DATA.liveMatchId = null;
     saveData();
     renderMatches();
-    showToast('🏆 Победитель матча #' + matchId + ' выбран');
+    showToast('🏆 Победитель матча M' + matchId + ' выбран');
 }
 
 function resetMatch(matchId) {
     var match = getMatch(matchId);
     if (!match) return;
-    if (!confirm('Сбросить результат матча #' + matchId + '?')) return;
+    if (!confirm('Сбросить результат матча M' + matchId + '?')) return;
     match.winner = null;
     match.score1 = null;
     match.score2 = null;
     saveData();
     renderMatches();
-    showToast('↩️ Результат матча #' + matchId + ' сброшен');
-}
-
-function toggleLive(matchId) {
-    DATA.liveMatchId = (DATA.liveMatchId === matchId) ? null : matchId;
-    saveData();
-    renderMatches();
-    showToast(DATA.liveMatchId ? '🔴 Матч #' + matchId + ' в эфире' : '⏹ Матч убран из эфира');
+    showToast('↩️ Результат матча M' + matchId + ' сброшен');
 }
 
 function renderSchedule() {
@@ -1298,7 +1321,7 @@ function setSchedule(matchId, time) {
     if (!DATA.schedule) DATA.schedule = {};
     DATA.schedule[matchId] = time;
     saveData();
-    showToast('🕐 Время матча #' + matchId + ' сохранено');
+    showToast('🕐 Время матча M' + matchId + ' сохранено');
 }
 
 function saveSettings() {
@@ -1409,8 +1432,8 @@ window.moveTeam = moveTeam;
 window.shuffleTeams = shuffleTeams;
 window.setMatchTeam = setMatchTeam;
 window.setWinner = setWinner;
+window.setScore = setScore;
 window.resetMatch = resetMatch;
-window.toggleLive = toggleLive;
 window.setSchedule = setSchedule;
 window.saveSettings = saveSettings;
 window.exportData = exportData;
@@ -1422,7 +1445,7 @@ window.onEditLogo = onEditLogo;
 window.clearNewTeamLogo = clearNewTeamLogo;
 window.clearEditLogo = clearEditLogo;
 
-console.log('✅ Admin panel loaded (Custom Bracket: 6 teams, 5 matches)');
+console.log('✅ Admin panel loaded (Custom Bracket: 6 teams, 5 matches, scores)');
 </script>
 
 </body>
