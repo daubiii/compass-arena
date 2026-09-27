@@ -12,7 +12,7 @@ export async function onRequestPost(context) {
   }
 
   const { password, data } = body || {};
-  
+
   // В Cloudflare IP можно получить так:
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const rateKey = 'ip:' + ip;
@@ -20,7 +20,7 @@ export async function onRequestPost(context) {
   // ---- Проверка блокировки по перебору пароля ----
   const now = Date.now();
   let record = await env.COMPASS_KV.get(rateKey, { type: 'json' });
-  
+
   if (record && now - record.firstAttempt < LOCKOUT_MS && record.count >= MAX_ATTEMPTS) {
     const waitMin = Math.ceil((LOCKOUT_MS - (now - record.firstAttempt)) / 60000);
     return new Response(
@@ -49,8 +49,18 @@ export async function onRequestPost(context) {
     return new Response('Bad request: missing data', { status: 400 });
   }
 
-  // Сохраняем в KV
-  await env.COMPASS_KV.put('tournament', JSON.stringify(data));
+  // ---- Сохраняем основное состояние турнира ----
+  // history храним отдельно, чтобы не раздувать основной ключ.
+  const { history, ...tournamentData } = data;
+
+  await env.COMPASS_KV.put('tournament', JSON.stringify(tournamentData));
+
+  // ---- Сохраняем историю (если передана) ----
+  if (Array.isArray(history)) {
+    // Защита от разрастания: лимит 20 турниров, каждый с ограничением размера
+    const trimmedHistory = history.slice(0, 20);
+    await env.COMPASS_KV.put('history', JSON.stringify(trimmedHistory));
+  }
 
   return new Response(JSON.stringify({ ok: true }), {
     headers: { 'Content-Type': 'application/json' }
