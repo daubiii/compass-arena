@@ -26,11 +26,11 @@ const DEFAULT_DATA = {
     { id: 6, name: "Слот 6", players: [], logo: "" }
   ],
   matches: [
-    { id: 1, round: 1, team1: null, team2: null, winner: null, bracket: 'upper' },
-    { id: 2, round: 1, team1: null, team2: null, winner: null, bracket: 'upper' },
-    { id: 3, round: 1, team1: null, team2: null, winner: null, bracket: 'upper' },
-    { id: 4, round: 2, team1: null, team2: null, winner: null, bracket: 'upper' },
-    { id: 5, round: 3, team1: null, team2: null, winner: null, bracket: 'grand' }
+    { id: 1, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null },
+    { id: 2, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null },
+    { id: 3, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null },
+    { id: 4, round: 2, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null },
+    { id: 5, round: 3, team1: null, team2: null, winner: null, bracket: 'grand', score1: null, score2: null }
   ],
   schedule: {},
   liveMatchId: null,
@@ -41,14 +41,21 @@ const DEFAULT_DATA = {
 
 export async function onRequestGet(context) {
   const { env } = context;
-  let data = await env.COMPASS_KV.get('tournament', { type: 'json' });
 
+  let data = await env.COMPASS_KV.get('tournament', { type: 'json' });
   if (!data) {
     data = DEFAULT_DATA;
     await env.COMPASS_KV.put('tournament', JSON.stringify(data));
   }
 
-  return new Response(JSON.stringify(data), {
+  // История турниров — отдельный ключ. Если нет — пустой массив.
+  let history = await env.COMPASS_KV.get('history', { type: 'json' });
+  if (!Array.isArray(history)) history = [];
+
+  // Отдаём объединённый объект: текущие данные + history
+  const response = Object.assign({}, data, { history });
+
+  return new Response(JSON.stringify(response), {
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store'
