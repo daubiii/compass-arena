@@ -1,821 +1,447 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compass Arena — турнирная сетка</title>
-    <meta name="description" content="Compass Arena — турнир по Dota 2. Custom Bracket, Bo3. Следи за сеткой и расписанием матчей.">
-    <meta name="theme-color" content="#0a0d12">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Compass Arena — турнир по Dota 2</title>
+<meta name="description" content="Compass Arena — турнир по Dota 2. Шесть команд, серии до двух побед. Сетка, расписание и прямая трансляция.">
+<meta name="theme-color" content="#07080a">
 
-    <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png">
 
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Compass Arena">
-    <meta property="og:title" content="Compass Arena — турнир по Dota 2">
-    <meta property="og:description" content="Bo3. Смотри сетку, расписание и трансляцию.">
-    <meta property="og:image" content="https://compassarena.ru/favicon-180.png">
-    <meta property="og:url" content="https://compassarena.ru/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Compass Arena">
+<meta property="og:title" content="Compass Arena — турнир по Dota 2">
+<meta property="og:description" content="Шесть команд, серии до двух побед. Сетка, расписание и прямая трансляция.">
+<meta property="og:image" content="https://compassarena.ru/img/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://compassarena.ru/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Compass Arena — турнир по Dota 2">
+<meta name="twitter:description" content="Шесть команд, серии до двух побед. Сетка, расписание и прямая трансляция.">
+<meta name="twitter:image" content="https://compassarena.ru/img/og-image.jpg">
 
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Compass Arena — турнир по Dota 2">
-    <meta name="twitter:description" content="Bo3. Смотри сетку, расписание и трансляцию.">
-    <meta name="twitter:image" content="https://compassarena.ru/favicon-180.png">
+<link rel="preload" href="/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/onest-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site.css">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0a0d12; color: #eae6da; font-family: 'Manrope', sans-serif; position: relative; }
-        body.phase-3 { overflow-x: hidden; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+<style>
+/* ==========================================================
+   ГЛАВНАЯ
+   ========================================================== */
 
-        header, section, footer, .modal-overlay { position: relative; z-index: 1; }
+/* ---------- Первый экран ---------- */
+.hero { position: relative; min-height: 100svh; max-height: 1000px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+body.phase-2 .hero, body.phase-3 .hero { min-height: 70svh; max-height: 720px; }
+.hero > .wrap { width: 100%; }
+.hero-img, .hero-img img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-img img { object-fit: cover; object-position: 76% 42%; }
+.hero-shade {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(7,8,10,.65) 0%, rgba(7,8,10,0) 22%),
+    linear-gradient(90deg, rgba(7,8,10,.95) 0%, rgba(7,8,10,.74) 32%, rgba(7,8,10,.12) 62%, rgba(7,8,10,0) 100%),
+    linear-gradient(0deg, var(--bg) 0%, rgba(7,8,10,0) 34%);
+}
+#dust { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .9; }
+.hero-body { position: relative; z-index: 2; padding-bottom: 56px; padding-top: calc(var(--head-h) + 40px); }
+.hero-kicker { font-size: 14px; color: var(--text-2); margin-bottom: 22px; display: flex; align-items: center; gap: 12px; }
+.hero-kicker::before { content: ''; width: 34px; height: 1px; background: var(--gold); }
+.hero h1 {
+  font-family: var(--display); font-weight: 300;
+  font-size: clamp(30px, 4.15vw, 62px); line-height: 1.08; letter-spacing: -.025em;
+  max-width: 14em;
+}
+.hero h1 em { font-style: normal; color: var(--gold-hi); }
+.hero .lede { margin-top: 26px; color: var(--text-2); font-size: clamp(15px, 1.3vw, 18px); max-width: 30em; }
+.hero-cta { margin-top: 36px; display: flex; gap: 12px; flex-wrap: wrap; }
 
-        /* ===== HEADER ===== */
-        header { padding: 14px 0; border-bottom: 1px solid #242b35; position: sticky; top: 0; background: rgba(10,13,18,0.92); backdrop-filter: blur(8px); z-index: 100; }
-        .header-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 12px; }
-        .header-left { display: flex; align-items: center; gap: 12px; }
-        .wordmark { font-family: 'Unbounded', sans-serif; font-weight: 500; font-size: 16px; color: #eae6da; text-decoration: none; }
-        .wordmark em { font-style: normal; color: #c9a35a; }
+/* ---------- Отсчёт до старта ---------- */
+.cd { display: none; position: relative; z-index: 2; padding-bottom: 34px; }
+body.phase-1 .cd { display: block; }
+.cd-inner { border-top: 1px solid var(--line-2); padding-top: 22px; display: grid; grid-template-columns: auto 1fr; gap: 20px 56px; align-items: end; }
+.cd-label { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+.cd-label b { display: block; font-weight: 400; color: var(--text); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.cd-nums { display: flex; gap: clamp(20px, 4vw, 56px); }
+.cd-num { display: flex; flex-direction: column; }
+.cd-num b { font-family: var(--display); font-weight: 200; font-size: clamp(34px, 5vw, 68px); line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.cd-num small { font-size: 12px; color: var(--text-3); margin-top: 8px; }
+.cd-announce { grid-column: 1 / -1; font-size: 14px; color: var(--gold-hi); opacity: 0; height: 0; transition: opacity .5s; }
+.cd-announce.visible { opacity: 1; height: auto; }
+.cd.final-stretch .cd-num b { color: var(--gold-hi); }
+.cd-track { grid-column: 1 / -1; height: 1px; background: var(--line); position: relative; margin-top: 4px; }
+.cd-track i { position: absolute; left: 0; top: -1px; height: 3px; width: 0; background: var(--gold); border-radius: 2px; transition: width 1s linear; }
+.cd-track-caption { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
 
-        .burger { width: 42px; height: 42px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; background: transparent; border: 1px solid rgba(201,163,90,0.3); border-radius: 4px; cursor: pointer; transition: 0.2s; }
-        .burger:hover { border-color: #c9a35a; background: rgba(201,163,90,0.08); }
-        .burger span { display: block; width: 20px; height: 2px; background: #e3c48a; border-radius: 1px; transition: 0.25s; }
-        .burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-        .burger.open span:nth-child(2) { opacity: 0; }
-        .burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+/* ---------- Эфир ---------- */
+.stream { padding-top: 8px; }
+.note { border: 1px solid var(--line); border-radius: 14px; background: var(--raise); display: none; }
+body.phase-1 .note { display: block; }
+.note-toggle { width: 100%; display: flex; align-items: center; gap: 16px; padding: 18px 22px; background: none; border: 0; cursor: pointer; text-align: left; }
+.note-toggle > span:first-child { font-family: var(--display); font-weight: 400; font-size: 15px; flex: 1; }
+.note-time { font-size: 14px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.note-time b { font-weight: 500; color: var(--text); }
+.note-toggle svg { width: 16px; height: 16px; stroke: var(--text-2); transition: transform .35s var(--ease); flex: none; }
+.note.open .note-toggle svg { transform: rotate(180deg); }
+.note-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .45s var(--ease); }
+.note.open .note-body { grid-template-rows: 1fr; }
+.note-body > div { overflow: hidden; }
+.note-inner { padding: 0 22px 22px; border-top: 1px solid var(--line); padding-top: 20px; display: flex; gap: 18px 40px; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; }
+.note-inner p { color: var(--text-2); max-width: 46ch; }
+.note-inner .sign { color: var(--text-3); font-size: 14px; margin-top: 10px; }
 
-        .menu-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 90; }
-        .menu-overlay.active { display: block; }
-        .menu-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 320px; max-width: 85vw; background: #10141b; border-left: 1px solid #242b35; padding: 90px 32px 32px; z-index: 95; transform: translateX(100%); transition: transform 0.3s ease; display: flex; flex-direction: column; gap: 4px; }
-        .menu-panel.active { transform: translateX(0); }
-        .menu-panel a { display: block; padding: 16px 0; color: #eae6da; text-decoration: none; font-family: 'Unbounded', sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 0.04em; border-bottom: 1px solid #1a2029; transition: 0.2s; }
-        .menu-panel a:hover { color: #c9a35a; padding-left: 8px; }
-        .menu-panel a:last-child { border-bottom: none; }
+.player { display: none; }
+body.phase-2 .player, body.phase-3 .player { display: block; }
+.player-bar { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-2); padding: 0 2px 14px; }
+.player-bar a { margin-left: auto; color: var(--text-2); text-underline-offset: 4px; }
+.player-bar a:hover { color: var(--gold-hi); }
+.player-frame { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #000; }
+.player-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
-        /* ===== HERO ===== */
-        .hero-bg { padding: 16px 0 0; }
-        .hero-bg-inner { background-image: url('gt.png'); background-size: cover; background-position: center; background-repeat: no-repeat; border-radius: 16px 16px 0 0; min-height: 340px; display: flex; align-items: center; position: relative; overflow: hidden; }
-        .hero-bg-inner::before { content: ''; position: absolute; inset: 0; background: rgba(10, 13, 18, 0.55); z-index: 0; border-radius: 16px 16px 0 0; }
-        .hero-content { position: relative; z-index: 1; padding: 50px 40px 60px; max-width: 640px; }
-        .hero-content h1 { font-family: 'Unbounded', sans-serif; font-size: 36px; font-weight: 600; line-height: 1.1; color: #eae6da; }
-        .hero-content h1 .accent { color: #c9a35a; }
-        .hero-content p { color: #b0b8c4; font-size: 15px; max-width: 480px; margin-top: 12px; line-height: 1.7; }
-        .hero-fade { position: absolute; bottom: 0; left: 0; right: 0; height: 80px; background: linear-gradient(to bottom, transparent 0%, #0a0d12 100%); z-index: 1; pointer-events: none; }
+/* ---------- Сетка ---------- */
+.bracket-sec { padding: 96px 0 40px; }
+.sec-head { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 64px; align-items: end; margin-bottom: 56px; }
+.sec-copy { color: var(--text-2); font-size: 15px; max-width: 52ch; justify-self: end; }
+.sec-copy b, .sec-copy em { color: var(--text); font-style: normal; font-weight: 500; }
 
-        /* ===== ARENA / TIMER ===== */
-        .arena-stats { position: relative; padding: 60px 0 50px; border-bottom: 1px solid #242b35; overflow: hidden; background: radial-gradient(ellipse at 50% 0%, rgba(201,163,90,0.10) 0%, transparent 60%), linear-gradient(180deg, #0d1118 0%, #0a0d12 100%); }
-        .arena-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 24px; text-align: center; }
-        .arena-logo { width: 90px; height: 90px; opacity: 0.85; }
-        .arena-logo svg { width: 100%; height: 100%; }
-        .compass-needle { transform-origin: 100px 100px; animation: rotateNeedle 12s linear infinite; }
-        @keyframes rotateNeedle { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.bracket-scroll { overflow-x: auto; padding: 4px 0 22px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+.bracket-scroll::-webkit-scrollbar { height: 6px; }
+.bracket-scroll::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
+.bracket { position: relative; display: grid; grid-template-columns: repeat(3, minmax(250px, 1fr)); column-gap: 96px; min-width: 930px; }
+.b-col-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--text-3); padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 26px; }
+.b-col-head b { font-weight: 500; color: var(--text-2); }
+.b-col-body { position: relative; }
+.b-lines { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.b-lines path { fill: none; stroke: rgba(255,255,255,.14); stroke-width: 1; stroke-linejoin: round; }
+.b-lines path.on { stroke: var(--gold); stroke-opacity: .85; }
 
-        .arena-timer { text-align: center; width: 100%; max-width: 640px; }
-        .timer-label { font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.32em; color: #7a8494; text-transform: uppercase; margin-bottom: 22px; }
-        .timer-blocks { display: flex; align-items: flex-start; justify-content: center; gap: 14px; }
-        .timer-block { display: flex; flex-direction: column; align-items: center; min-width: 96px; }
-        .timer-block .num { font-family: 'Unbounded', sans-serif; font-size: 68px; font-weight: 600; color: #eae6da; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 0 40px rgba(201,163,90,0.25); animation: timerGlow 3s ease-in-out infinite; transition: color 0.6s ease; }
-        @keyframes timerGlow { 0%,100% { text-shadow: 0 0 40px rgba(201,163,90,0.25); } 50% { text-shadow: 0 0 60px rgba(201,163,90,0.50); } }
-        .arena-timer.final-stretch .timer-block .num { color: #e3c48a; }
-        .timer-block .unit { font-size: 11px; color: #5f6773; margin-top: 10px; letter-spacing: 0.15em; text-transform: uppercase; }
-        .timer-sep { font-family: 'Unbounded', sans-serif; font-size: 48px; color: #c9a35a; opacity: 0.35; margin-top: 6px; }
-        .timer-date { margin-top: 22px; font-size: 13px; color: #97a0ac; letter-spacing: 0.12em; text-transform: uppercase; }
+.match {
+  position: absolute; left: 0; right: 0; height: 104px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+  transition: border-color .3s, box-shadow .5s;
+}
+.m-head { height: 24px; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; font-size: 11.5px; color: var(--text-3); border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.m-head .live { display: flex; align-items: center; gap: 7px; color: var(--blood); }
+.team { height: 40px; display: flex; align-items: center; gap: 11px; padding: 0 14px; position: relative; cursor: pointer; transition: background .2s; }
+.team + .team { border-top: 1px solid var(--line); }
+.team:hover { background: rgba(255,255,255,.035); }
+.team .seed { width: 16px; font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.team .name { flex: 1; font-size: 14.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.team .score { font-family: var(--display); font-weight: 400; font-size: 14px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.team .info-icon { width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--line-2); font-size: 9px; display: grid; place-items: center; color: var(--text-3); font-style: italic; flex: none; transition: border-color .2s, color .2s; }
+.team:hover .info-icon { border-color: var(--gold); color: var(--gold-hi); }
+.team.is-winner .name { color: var(--text); }
+.team.is-winner .score { color: var(--gold-hi); }
+.team.is-winner::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px; background: var(--gold); border-radius: 0 2px 2px 0; }
+.team.is-loser .name, .team.is-loser .seed, .team.is-loser .score { color: var(--text-3); }
+.team.tbd { cursor: default; }
+.team.tbd .name { color: var(--text-3); font-weight: 400; }
+.team.tbd:hover { background: none; }
+.match.is-live { border-color: rgba(194, 88, 76, .6); box-shadow: 0 0 0 1px rgba(194, 88, 76, .25), 0 12px 40px -12px rgba(194, 88, 76, .35); }
+.match.is-waiting { border-color: var(--line-2); }
+.match.is-grand { border-color: rgba(201, 163, 90, .45); }
+.match.is-grand .m-head { color: var(--gold); }
+.match.is-grand-champion { border-color: var(--gold); box-shadow: 0 0 60px -14px rgba(201, 163, 90, .45); }
+.match.is-receiving { animation: receive 5s var(--ease); }
+@keyframes receive {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201,163,90,0); border-color: var(--line); }
+  15%, 75% { box-shadow: 0 0 0 4px rgba(201,163,90,.18), 0 0 46px -6px rgba(201,163,90,.5); border-color: var(--gold); }
+}
+.scroll-hint { display: none; font-size: 13px; color: var(--text-3); margin-top: 6px; }
+.footnote { margin-top: 44px; padding-left: 20px; border-left: 1px solid var(--gold); color: var(--text-2); font-size: 14px; max-width: 64ch; }
 
-        .timer-progress { margin-top: 26px; width: 100%; height: 3px; background: #1a2029; border-radius: 2px; overflow: hidden; position: relative; }
-        .timer-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #8a6d3a 0%, #c9a35a 50%, #e3c48a 100%); transition: width 1s linear; box-shadow: 0 0 12px rgba(201,163,90,0.5); }
-        .timer-progress-label { display: flex; justify-content: space-between; margin-top: 8px; font-size: 10px; color: #5f6773; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; }
+/* ---------- Выбывшие ---------- */
+.out-sec { padding: 24px 0 8px; }
+.out-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px; }
+.out-head span:first-child { font-family: var(--display); font-weight: 400; font-size: 15px; }
+.out-head .count { color: var(--text-3); font-size: 13px; }
+.out-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.out-item { display: inline-flex; align-items: baseline; gap: 10px; padding: 9px 16px; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; transition: border-color .2s, background .2s; }
+.out-item:hover { border-color: var(--line-2); background: rgba(255,255,255,.03); }
+.out-item .name { font-size: 14px; color: var(--text-2); }
+.out-item .meta { font-size: 12px; color: var(--text-3); }
+.out-empty { color: var(--text-3); font-size: 14px; }
 
-        .timer-announce { margin-top: 16px; font-family: 'Unbounded', sans-serif; font-size: 14px; font-weight: 500; color: #e3c48a; letter-spacing: 0.06em; min-height: 20px; opacity: 0; transition: opacity 0.6s ease; }
-        .timer-announce.visible { opacity: 1; }
+/* ---------- Расписание (превью) ---------- */
+.sched-sec { padding: 96px 0 96px; }
+.sched-top { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 36px; flex-wrap: wrap; }
+.text-link { color: var(--text-2); font-size: 14px; text-underline-offset: 5px; text-decoration-color: var(--line-2); transition: color .2s, text-decoration-color .2s; }
+.text-link:hover { color: var(--gold-hi); text-decoration-color: var(--gold); }
+.s-list { border-top: 1px solid var(--line); }
+.s-row { display: grid; grid-template-columns: 150px 1fr auto; gap: 8px 28px; align-items: center; padding: 20px 4px; border-bottom: 1px solid var(--line); }
+.s-when { font-size: 14px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.s-when b { display: block; font-family: var(--display); font-weight: 400; font-size: 17px; color: var(--gold-hi); margin-bottom: 2px; }
+.s-teams { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 17px; }
+.s-teams .vs { color: var(--text-3); font-size: 12px; }
+.s-teams .win { color: var(--gold-hi); }
+.s-teams .lose { color: var(--text-3); }
+.s-teams .sc { font-family: var(--display); font-weight: 400; font-size: 15px; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.s-tag { font-size: 12.5px; color: var(--text-3); white-space: nowrap; }
+.s-row.done .s-when b { color: var(--text-3); }
+.s-empty { padding: 34px 4px; color: var(--text-3); }
+.s-live { display: inline-flex; align-items: center; gap: 8px; color: var(--blood); }
 
-        /* ===== БАННЕР СЕТКИ ===== */
-        .bracket-banner { padding: 40px 0 24px; border-top: 1px solid #242b35; border-bottom: 1px solid #242b35; background: linear-gradient(180deg, rgba(13,17,24,0.6) 0%, rgba(10,13,18,0.2) 100%); }
-        .bracket-banner-inner { text-align: center; }
-        .bracket-banner-title { font-family: 'Unbounded', sans-serif; font-weight: 600; font-size: 38px; letter-spacing: 0.02em; color: #eae6da; line-height: 1.1; margin-bottom: 8px; }
-        .bracket-banner-sub { font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #7a8494; }
+/* ---------- Модальное окно команды ---------- */
+.overlay { position: fixed; inset: 0; z-index: 150; background: rgba(4, 5, 7, .72); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s; }
+.overlay.active { opacity: 1; visibility: visible; }
+.sheet { position: relative; width: 100%; max-width: 440px; background: var(--raise); border: 1px solid var(--line-2); border-radius: 18px; padding: 28px; transform: translateY(14px) scale(.985); transition: transform .4s var(--ease); max-height: 90svh; overflow-y: auto; }
+.overlay.active .sheet { transform: none; }
+.sheet-close { position: absolute; top: 16px; right: 16px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: none; cursor: pointer; display: grid; place-items: center; transition: border-color .2s; }
+.sheet-close:hover { border-color: var(--line-2); }
+.sheet-close svg { width: 12px; height: 12px; stroke: var(--text-2); }
+.sheet-head { display: flex; align-items: center; gap: 18px; padding-right: 40px; margin-bottom: 26px; }
+.sheet-logo { width: 60px; height: 60px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--card); display: grid; place-items: center; overflow: hidden; flex: none; }
+.sheet-logo img { width: 100%; height: 100%; object-fit: cover; }
+.sheet-logo .ph { font-family: var(--display); font-weight: 300; font-size: 24px; color: var(--gold-hi); }
+.sheet-head h2 { font-family: var(--display); font-weight: 400; font-size: 20px; line-height: 1.2; overflow-wrap: anywhere; }
+.sheet-head .sub { color: var(--text-3); font-size: 13px; margin-top: 4px; }
+.players { border-top: 1px solid var(--line); }
+.player-row { display: flex; justify-content: space-between; gap: 16px; padding: 13px 2px; border-bottom: 1px solid var(--line); }
+.player-row .nick { font-weight: 500; overflow-wrap: anywhere; }
+.player-row .role { color: var(--text-3); font-size: 13px; white-space: nowrap; }
+.player-row.none { color: var(--text-3); font-size: 14px; }
+.stats { display: none; gap: 10px; margin-top: 22px; }
+.stat { flex: 1; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; }
+.stat .v { font-family: var(--display); font-weight: 300; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat .l { color: var(--text-3); font-size: 12px; margin-top: 8px; }
+.stat.win .v { color: var(--gold-hi); }
+.stat.loss .v { color: var(--blood); }
 
-        /* ===== ОБЪЯСНЕНИЕ ФОРМАТА ===== */
-        .explain-section { padding: 32px 0 12px; }
-        .explain-card {
-            background: linear-gradient(180deg, #10141b 0%, #0d1118 100%);
-            border: 1px solid #242b35;
-            border-left: 3px solid #c9a35a;
-            border-radius: 8px;
-            padding: 22px 28px;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-        .explain-title {
-            font-family: 'Unbounded', sans-serif;
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-            color: #e3c48a;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .explain-title .dot { width: 6px; height: 6px; border-radius: 50%; background: #c9a35a; }
-        .explain-text { font-size: 13.5px; color: #b0b8c4; line-height: 1.75; }
-        .explain-text + .explain-text { margin-top: 10px; }
-        .explain-text em { color: #c9a35a; font-style: normal; }
-        .explain-text .accent-line { display: block; margin-top: 12px; padding-top: 12px; border-top: 1px solid #1a2029; font-style: italic; color: #97a0ac; font-size: 13px; }
+/* ---------- Экран победителя ---------- */
+.winner { position: fixed; inset: 0; z-index: 180; display: none; align-items: center; justify-content: center; padding: 24px; text-align: center;
+  background: radial-gradient(ellipse 70% 60% at 50% 38%, rgba(201,163,90,.16), transparent 70%), rgba(5, 6, 8, .985); opacity: 0; transition: opacity .6s var(--ease); overflow-y: auto; }
+.winner.active { display: flex; }
+.winner.visible { opacity: 1; }
+.winner-inner { max-width: 780px; width: 100%; }
+.winner-label { font-size: 14px; color: var(--gold); margin-bottom: 26px; }
+.winner-logo { width: 110px; height: 110px; margin: 0 auto 26px; border-radius: 26px; border: 1px solid rgba(201,163,90,.5); background: var(--card); display: grid; place-items: center; overflow: hidden; box-shadow: 0 0 80px -10px rgba(201,163,90,.45); }
+.winner-logo img { width: 100%; height: 100%; object-fit: cover; }
+.winner-logo .ph { font-family: var(--display); font-weight: 200; font-size: 46px; color: var(--gold-hi); }
+.winner-name { font-family: var(--display); font-weight: 300; font-size: clamp(34px, 7vw, 76px); line-height: 1.05; letter-spacing: -.02em; overflow-wrap: anywhere; color: var(--gold-hi); }
+.winner-sub { color: var(--text-3); margin-top: 14px; font-size: 14px; }
+.podium { display: flex; justify-content: center; gap: 12px; margin: 40px 0 36px; flex-wrap: wrap; }
+.podium-item { min-width: 190px; padding: 16px 22px; border: 1px solid var(--line-2); border-radius: 14px; text-align: left; }
+.podium-item.place-1 { border-color: rgba(201,163,90,.55); }
+.podium-rank { font-size: 12px; color: var(--text-3); margin-bottom: 6px; }
+.place-1 .podium-rank { color: var(--gold); }
+.podium-name { font-family: var(--display); font-weight: 400; font-size: 16px; overflow-wrap: anywhere; }
 
-        /* ===== ЧАСТИЦЫ ===== */
-        #particles-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 0; }
+.chip { position: fixed; left: 22px; bottom: 22px; z-index: 60; display: none; align-items: center; gap: 10px; padding: 11px 18px; border-radius: 999px; background: rgba(16,19,26,.9); border: 1px solid rgba(201,163,90,.5); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); cursor: pointer; font-size: 14px; }
+.chip.visible { display: flex; }
+.chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+.chip .name { color: var(--gold-hi); font-weight: 500; }
 
-        /* ===== СВЁРНУТАЯ TWITCH-КАРТОЧКА ===== */
-        .stream-collapsed { max-width: 960px; margin: 20px auto 40px; background: #10141b; border: 1px solid #242b35; border-radius: 10px; overflow: hidden; transition: border-color 0.2s; }
-        .stream-collapsed:hover { border-color: #c9a35a; }
-        .stream-collapsed-toggle { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: transparent; border: none; color: #eae6da; font-family: 'Unbounded', sans-serif; font-size: 13px; letter-spacing: 0.06em; cursor: pointer; text-transform: uppercase; }
-        .stream-collapsed-title { color: #e3c48a; }
-        .stream-collapsed-arrow { color: #c9a35a; transition: transform 0.25s; font-size: 11px; }
-        .stream-collapsed.open .stream-collapsed-arrow { transform: rotate(180deg); }
-        .stream-collapsed-body { max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.35s ease; padding: 0 24px; color: #b0b8c4; font-size: 14px; line-height: 1.7; }
-        .stream-collapsed.open .stream-collapsed-body { max-height: 260px; padding: 0 24px 20px; }
-        .stream-collapsed-sign { margin-top: 8px; color: #e3c48a; font-size: 13px; letter-spacing: 0.02em; }
-        .stream-collapsed-cta { margin-top: 14px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border: 1px solid rgba(201,163,90,0.4); color: #e3c48a; border-radius: 4px; font-family: 'Unbounded', sans-serif; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; transition: 0.2s; }
-        .stream-collapsed-cta:hover { background: #c9a35a; color: #0a0d12; border-color: #c9a35a; }
-        .stream-mini-timer { margin-top: 10px; font-size: 12px; color: #7a8494; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
-        .stream-mini-timer b { color: #e3c48a; font-family: 'Unbounded', sans-serif; font-weight: 500; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
-
-        /* ===== TWITCH EMBED ===== */
-        .twitch-wrap { margin: 20px auto 40px; border: 1px solid #2f3844; border-radius: 10px; overflow: hidden; background: #000; aspect-ratio: 16 / 9; max-width: 960px; width: 100%; position: relative; }
-        .twitch-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
-
-        /* ===== BRACKET ===== */
-        .bracket-section { padding: 32px 0 48px; transition: opacity 0.8s ease; position: relative; }
-        .bracket-section .sub { color: #97a0ac; font-size: 13px; margin-bottom: 20px; text-align: center; }
-        .bracket-wrapper { overflow-x: auto; padding: 20px 0 24px; }
-        .bracket-wrapper::-webkit-scrollbar { height: 8px; }
-        .bracket-wrapper::-webkit-scrollbar-track { background: #10141b; border-radius: 4px; }
-        .bracket-wrapper::-webkit-scrollbar-thumb { background: #2f3844; border-radius: 4px; }
-        .bracket-wrapper::-webkit-scrollbar-thumb:hover { background: #c9a35a; }
-
-        .bracket { display: flex; align-items: flex-start; gap: 0; padding: 8px 4px; min-width: max-content; }
-
-        .bracket-group { display: flex; flex-direction: column; gap: 12px; position: relative; flex-shrink: 0; padding: 0 32px; }
-        .bracket-group:first-child { padding-left: 0; }
-        .bracket-group:last-child { padding-right: 0; }
-
-        .bracket-group + .bracket-group { border-left: 1px solid rgba(201,163,90,0.12); }
-        .bracket-group.final + .bracket-group,
-        .bracket-group.grand + .bracket-group { border-left: 1px solid rgba(201,163,90,0.35); }
-
-        .bracket-group-header {
-            font-family: 'Unbounded', sans-serif; font-size: 12px; font-weight: 600;
-            letter-spacing: 0.22em; text-transform: uppercase;
-            padding-bottom: 10px;
-            text-align: center;
-            margin-bottom: 12px;
-            position: relative;
-        }
-        .bracket-group-header::after {
-            content: '';
-            position: absolute;
-            left: 50%;
-            bottom: 0;
-            transform: translateX(-50%);
-            width: 40px;
-            height: 2px;
-            background: #c9a35a;
-            border-radius: 1px;
-        }
-        .bracket-group-header.upper { color: #c9a35a; }
-        .bracket-group-header.upper::after { background: #c9a35a; }
-        .bracket-group-header.grand { color: #e3c48a; font-size: 13px; }
-        .bracket-group-header.grand::after { background: #e3c48a; width: 60px; height: 2px; box-shadow: 0 0 12px rgba(201,163,90,0.6); }
-        .bracket-group-header.grand::before {
-            content: '';
-            display: inline-block;
-            width: 18px;
-            height: 14px;
-            background-color: #e3c48a;
-            -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 18'><path d='M2 16h20l-1.5-9-4 4L12 3 7.5 11l-4-4L2 16z'/></svg>");
-            -webkit-mask-repeat: no-repeat; -webkit-mask-size: contain; -webkit-mask-position: center;
-            mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 18'><path d='M2 16h20l-1.5-9-4 4L12 3 7.5 11l-4-4L2 16z'/></svg>");
-            mask-repeat: no-repeat; mask-size: contain; mask-position: center;
-            margin-right: 10px;
-            margin-bottom: 2px;
-            vertical-align: middle;
-        }
-
-        .bracket-group-inner { display: flex; gap: 28px; position: relative; }
-
-        .round { display: flex; flex-direction: column; gap: 20px; min-width: 190px; position: relative; }
-        .round-label { font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 10px; letter-spacing: 0.18em; color: #5f6773; text-align: center; margin-bottom: 6px; text-transform: uppercase; }
-
-        .match { background: linear-gradient(180deg, #151a22 0%, #11151c 100%); border: 1px solid #2f3844; border-radius: 6px; padding: 10px 14px; min-height: 62px; display: flex; flex-direction: column; justify-content: center; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.15s; position: relative; }
-        .match:hover { border-color: #c9a35a; background: #1a2029; transform: translateY(-1px); }
-
-        .match.is-live { border-color: #e74c3c; background: linear-gradient(180deg, rgba(231, 76, 60, 0.08) 0%, #151a22 100%); animation: livePulse 1.8s ease-in-out infinite; }
-        .match.is-live::before { content: 'LIVE'; position: absolute; top: -10px; left: 10px; padding: 2px 8px; background: #e74c3c; color: #fff; font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 9px; letter-spacing: 0.14em; border-radius: 3px; animation: blink 1.2s infinite; }
-        @keyframes livePulse { 0%, 100% { border-color: rgba(231, 76, 60, 0.9); } 50% { border-color: rgba(231, 76, 60, 0.4); } }
-
-        .match.is-waiting { border-color: rgba(201,163,90,0.4); box-shadow: 0 0 0 1px rgba(201,163,90,0.1); animation: waitingPulse 3s ease-in-out infinite; }
-        @keyframes waitingPulse {
-            0%,100% { box-shadow: 0 0 0 1px rgba(201,163,90,0.1); }
-            50%     { box-shadow: 0 0 0 3px rgba(201,163,90,0.18); }
-        }
-
-        .match .team { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; color: #eae6da; transition: color 0.3s, opacity 0.3s; }
-        .match .team .seed { font-size: 9px; color: #5f6773; width: 18px; font-weight: 600; }
-        .match .team .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .match .team .score { font-family: 'Unbounded', sans-serif; font-size: 14px; font-weight: 600; color: #c9a35a; min-width: 16px; text-align: center; }
-
-        .match .team .status { font-size: 8px; padding: 1px 6px; border-radius: 10px; font-weight: 700; letter-spacing: 0.05em; margin-left: 2px; margin-right: 4px; }
-        .match .team .status.win { background: #4caf50; color: #fff; }
-        .match .team .status.loss { background: #e74c3c; color: #fff; }
-
-        .match .team .info-icon {
-            width: 14px; height: 14px;
-            border-radius: 50%;
-            border: 1px solid rgba(201,163,90,0.35);
-            color: #c9a35a;
-            font-size: 9px;
-            font-weight: 700;
-            font-family: 'Manrope', sans-serif;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            line-height: 1;
-            flex-shrink: 0;
-            transition: 0.2s;
-            opacity: 0.55;
-        }
-        .match .team:hover .info-icon {
-            opacity: 1;
-            border-color: #c9a35a;
-            background: rgba(201,163,90,0.15);
-            transform: scale(1.1);
-        }
-        .match .team.is-loser .info-icon { opacity: 0.2; }
-
-        .match .team.is-winner .name { color: #e3c48a; font-weight: 600; }
-        .match .team.is-loser { opacity: 0.55; }
-        .match .team.is-loser .name { color: #7a8494; }
-
-        /* Счёт матча в карточке */
-        .match .match-score {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #2f3844;
-            font-family: 'Unbounded', sans-serif;
-            font-size: 13px;
-            font-weight: 600;
-            color: #e3c48a;
-            letter-spacing: 0.05em;
-        }
-        .match.is-grand .match-score {
-            font-size: 15px;
-            padding-top: 10px;
-            margin-top: 10px;
-        }
-        .match.is-receiving .match-score { border-top-color: rgba(201,163,90,0.4); }
-
-        .match-empty { background: #10141b; border: 1px dashed #2f3844; border-radius: 6px; padding: 10px 14px; min-height: 62px; display: flex; align-items: center; justify-content: center; color: #5f6773; font-size: 11px; }
-
-        /* ФИНАЛ */
-        .match.is-grand {
-            background: linear-gradient(180deg, #1a1f28 0%, #151a22 100%);
-            border: 1px solid rgba(201,163,90,0.45);
-            box-shadow: 0 0 0 1px rgba(201,163,90,0.08), 0 8px 24px rgba(201,163,90,0.06);
-            min-height: 76px;
-            padding: 14px 18px;
-        }
-        .match.is-grand .team { font-size: 14px; padding: 6px 0; }
-        .match.is-grand .team .name { font-weight: 500; }
-
-        .match.is-grand-champion {
-            opacity: 1;
-            border-color: #c9a35a;
-            background: linear-gradient(180deg, #1e232c 0%, #151a22 100%);
-            box-shadow: 0 0 0 2px rgba(201,163,90,0.4), 0 0 40px rgba(201,163,90,0.25);
-            animation: championGlow 3s ease-in-out infinite;
-        }
-        .match.is-grand-champion::before {
-            content: 'ПОБЕДА';
-            position: absolute; top: -12px; left: 14px;
-            padding: 3px 12px;
-            background: #c9a35a; color: #0a0d12;
-            font-family: 'Unbounded', sans-serif; font-weight: 600;
-            font-size: 9px; letter-spacing: 0.14em;
-            border-radius: 3px;
-        }
-        @keyframes championGlow {
-            0%,100% { box-shadow: 0 0 0 2px rgba(201,163,90,0.4), 0 0 40px rgba(201,163,90,0.25); }
-            50%     { box-shadow: 0 0 0 3px rgba(201,163,90,0.6), 0 0 60px rgba(201,163,90,0.4); }
-        }
-
-        /* АНИМАЦИЯ «КОМАНДА ПРОШЛА ДАЛЬШЕ» */
-        @keyframes receiverFlash {
-            0%   { box-shadow: 0 0 0 0 rgba(201,163,90,0.8), 0 0 0 0 rgba(201,163,90,0.4); border-color: #e3c48a; }
-            40%  { box-shadow: 0 0 0 8px rgba(201,163,90,0.3), 0 0 0 16px rgba(201,163,90,0.1); border-color: #e3c48a; }
-            100% { box-shadow: 0 0 0 0 rgba(201,163,90,0), 0 0 0 0 rgba(201,163,90,0); border-color: inherit; }
-        }
-        .match.is-receiving {
-            animation: receiverFlash 5s ease-out;
-            border-color: #e3c48a !important;
-            background: linear-gradient(180deg, rgba(201,163,90,0.12) 0%, #151a22 100%) !important;
-            z-index: 10;
-        }
-        .match.is-receiving .team .name {
-            color: #e3c48a !important;
-            font-weight: 600;
-            transition: color 0.3s ease;
-        }
-        .match.is-receiving::after {
-            content: 'ПРОШЛА ДАЛЬШЕ';
-            position: absolute;
-            top: -12px;
-            right: 10px;
-            padding: 3px 10px;
-            background: #c9a35a;
-            color: #0a0d12;
-            font-family: 'Unbounded', sans-serif;
-            font-weight: 600;
-            font-size: 9px;
-            letter-spacing: 0.14em;
-            border-radius: 3px;
-            animation: blink 1.4s infinite;
-        }
-
-        .round:not(:last-child)::after { content: ''; position: absolute; top: 50%; right: -28px; width: 28px; height: 1px; background: linear-gradient(90deg, rgba(201,163,90,0.35) 0%, rgba(201,163,90,0) 100%); pointer-events: none; }
-
-        .bracket-hint { display: none; text-align: center; font-size: 11px; color: #5f6773; margin-top: 8px; letter-spacing: 0.05em; }
-
-        /* ===== ВЫБЫВШИЕ ===== */
-        .eliminated-section { padding: 24px 0 48px; border-top: 1px solid #242b35; transition: opacity 0.8s ease; }
-        .eliminated-inner { max-width: 1200px; margin: 0 auto; }
-        .eliminated-header {
-            font-family: 'Unbounded', sans-serif;
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 0.22em;
-            text-transform: uppercase;
-            color: #b3695f;
-            margin-bottom: 16px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(179,105,95,0.3);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .eliminated-header .count {
-            font-family: 'Manrope', sans-serif;
-            font-size: 11px;
-            color: #5f6773;
-            font-weight: 500;
-            letter-spacing: 0.1em;
-        }
-        .eliminated-list { display: flex; flex-wrap: wrap; gap: 10px; }
-        .eliminated-item {
-            background: #0d1118;
-            border: 1px solid #1a2029;
-            border-radius: 5px;
-            padding: 10px 16px;
-            font-size: 13px;
-            color: #7a8494;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            opacity: 0.72;
-            cursor: pointer;
-            transition: 0.2s;
-            min-width: 160px;
-        }
-        .eliminated-item:hover { opacity: 1; border-color: #b3695f; background: #11151c; }
-        .eliminated-item .name { color: #97a0ac; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .eliminated-item .meta { font-size: 10px; color: #5f6773; letter-spacing: 0.05em; text-transform: uppercase; }
-        .eliminated-empty { color: #5f6773; font-size: 13px; font-style: italic; padding: 8px 0; }
-
-        /* ===== SCHEDULE ===== */
-        .schedule-section { padding: 20px 0 14px; border-top: 1px solid #242b35; }
-        .schedule-section h2 { font-family: 'Unbounded', sans-serif; font-weight: 500; font-size: 20px; margin-bottom: 12px; }
-        .schedule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
-        .schedule-item { background: #151a22; border: 1px solid #2f3844; border-radius: 5px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12.5px; transition: 0.2s; }
-        .schedule-item:hover { border-color: #c9a35a; }
-        .schedule-item.done { opacity: 0.85; border-color: #1a2029; }
-        .schedule-item .teams { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .schedule-item .teams .vs { color: #5f6773; font-size: 10px; }
-        .schedule-item .teams .s-score { font-family: 'Unbounded', sans-serif; font-size: 12px; font-weight: 600; color: #e3c48a; letter-spacing: 0.04em; padding: 0 4px; }
-        .schedule-item .teams .s-team-winner { color: #e3c48a; font-weight: 500; }
-        .schedule-item .teams .s-team-loser { color: #7a8494; }
-        .schedule-item .time { color: #e3c48a; font-size: 11px; font-weight: 500; }
-        .schedule-item .tag { font-size: 8px; padding: 2px 8px; border-radius: 10px; background: #2f3844; color: #7a8494; }
-        .schedule-item .tag.upper { background: rgba(201,163,90,0.2); color: #c9a35a; }
-        .schedule-item .tag.grand { background: rgba(201,163,90,0.3); color: #e3c48a; }
-        .schedule-item .tag.done { background: rgba(76,175,80,0.15); color: #4caf50; }
-        .schedule-empty { color: #5f6773; text-align: center; padding: 20px; font-size: 13px; }
-
-        /* ===== MODAL ===== */
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
-        .modal-overlay.active { display: flex; }
-        .modal { background: #10141b; border: 1px solid #c9a35a; border-radius: 8px; padding: 28px 32px; max-width: 680px; width: 100%; max-height: 85vh; overflow-y: auto; position: relative; }
-        .modal-close { position: absolute; top: 12px; right: 16px; background: none; border: none; color: #5f6773; font-size: 22px; cursor: pointer; line-height: 1; }
-        .modal-close:hover { color: #eae6da; }
-
-        .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 18px; }
-        .modal-head-left { flex: 1; min-width: 0; }
-        .modal-head h2 { font-family: 'Unbounded', sans-serif; font-size: 22px; margin-bottom: 4px; word-break: break-word; }
-        .modal .sub { color: #97a0ac; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
-
-        .modal-logo { width: 140px; height: 140px; flex-shrink: 0; background: #0a0d12; border: 1px solid #242b35; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
-        .modal-logo img { max-width: 90%; max-height: 90%; object-fit: contain; display: block; }
-        .modal-logo .placeholder { font-family: 'Unbounded', sans-serif; font-size: 34px; font-weight: 600; color: #c9a35a; opacity: 0.6; }
-
-        .modal-players { margin-top: 4px; }
-        .modal .player { padding: 10px 4px; border-bottom: 1px solid #1a2029; font-size: 15px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #eae6da; }
-        .modal .player:last-child { border-bottom: none; }
-        .modal .player .nick { font-weight: 500; color: #eae6da; letter-spacing: 0.01em; }
-        .modal .player .role { font-family: 'Unbounded', sans-serif; font-size: 10px; font-weight: 500; color: #c9a35a; background: rgba(201, 163, 90, 0.12); border: 1px solid rgba(201, 163, 90, 0.3); padding: 3px 10px; border-radius: 4px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
-
-        .team-stats { margin-top: 18px; padding-top: 16px; border-top: 1px solid #242b35; display: flex; justify-content: space-around; gap: 12px; }
-        .team-stats .stat { text-align: center; }
-        .team-stats .stat .value { font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 600; color: #e3c48a; line-height: 1; }
-        .team-stats .stat .label { font-size: 10px; color: #5f6773; margin-top: 6px; letter-spacing: 0.12em; text-transform: uppercase; }
-        .team-stats .stat.loss .value { color: #b3695f; }
-
-        /* ===== FORMAT ===== */
-        .format-section { padding: 24px 0; border-top: 1px solid #242b35; margin-top: 16px; transition: opacity 0.8s ease; }
-        .format-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #242b35; }
-        .format-item { background: #0a0d12; padding: 14px 18px; border-left: 2px solid #c9a35a; }
-        .format-item h3 { font-family: 'Unbounded', sans-serif; font-weight: 500; font-size: 13px; margin-bottom: 4px; }
-        .format-item p { font-size: 12px; color: #97a0ac; line-height: 1.6; }
-        body.phase-3 .format-section { opacity: 0.35; }
-
-        /* ===== FOOTER ===== */
-        footer { border-top: 1px solid #242b35; padding: 20px 0; font-size: 11px; color: #5f6773; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: center; transition: opacity 0.8s ease; }
-        footer .f-links { display: flex; gap: 14px; flex-wrap: wrap; }
-        footer a { color: #97a0ac; text-decoration: none; transition: 0.2s; }
-        footer a:hover { color: #c9a35a; }
-        body.phase-3 footer { opacity: 0.4; }
-
-        /* ===== НАВЕРХ ===== */
-        .to-top { position: fixed; right: 24px; bottom: 24px; width: 44px; height: 44px; border-radius: 50%; background: #10141b; border: 1px solid rgba(201,163,90,0.4); color: #e3c48a; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 80; opacity: 0; transform: translateY(20px); pointer-events: none; transition: 0.3s; }
-        .to-top.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
-        .to-top:hover { background: #c9a35a; color: #0a0d12; border-color: #c9a35a; }
-
-        /* ===== ПОБЕДНЫЙ ЭКРАН ===== */
-        .winner-overlay { position: fixed; inset: 0; background: rgba(6, 8, 12, 0.88); backdrop-filter: blur(4px); z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px; opacity: 0; transition: opacity 0.6s ease; }
-        .winner-overlay.active { display: flex; }
-        .winner-overlay.visible { opacity: 1; }
-        .winner-card { position: relative; background: linear-gradient(180deg, #131822 0%, #0d1118 100%); border: 1px solid #c9a35a; border-radius: 12px; padding: 48px 56px 40px; max-width: 560px; width: 100%; text-align: center; box-shadow: 0 0 60px rgba(201,163,90,0.25), 0 0 120px rgba(201,163,90,0.1); animation: winnerCardIn 0.9s cubic-bezier(0.16, 1, 0.3, 1); }
-        @keyframes winnerCardIn { from { transform: scale(0.85) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
-        .winner-card::before { content: ''; position: absolute; inset: -1px; border-radius: 12px; padding: 1px; background: linear-gradient(90deg, transparent, #e3c48a, transparent, #c9a35a, transparent); background-size: 300% 100%; -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: borderRun 4s linear infinite; pointer-events: none; }
-        @keyframes borderRun { 0% { background-position: 0% 0; } 100% { background-position: 300% 0; } }
-        .winner-label { font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.34em; color: #7a8494; text-transform: uppercase; margin-bottom: 22px; }
-        .winner-logo { width: 180px; height: 180px; margin: 0 auto 22px; background: #0a0d12; border: 1px solid #242b35; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
-        .winner-logo img { max-width: 88%; max-height: 88%; object-fit: contain; }
-        .winner-logo .placeholder { font-family: 'Unbounded', sans-serif; font-size: 64px; font-weight: 600; color: #c9a35a; opacity: 0.7; }
-        .winner-name { font-family: 'Unbounded', sans-serif; font-size: 38px; font-weight: 600; color: #eae6da; line-height: 1.15; margin-bottom: 12px; word-break: break-word; }
-        .winner-sub { font-family: 'Manrope', sans-serif; font-size: 13px; color: #97a0ac; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 18px; }
-        .winner-podium { margin-top: 32px; padding-top: 24px; border-top: 1px solid #242b35; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .podium-item { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; background: #0a0d12; border: 1px solid #242b35; border-radius: 6px; transition: 0.2s; }
-        .podium-item.place-1 { border-color: rgba(201,163,90,0.5); background: rgba(201,163,90,0.06); }
-        .podium-item.place-2 { border-color: rgba(176,184,196,0.25); }
-        .podium-rank { font-family: 'Unbounded', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; color: #5f6773; }
-        .podium-item.place-1 .podium-rank { color: #e3c48a; }
-        .podium-name { font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 500; color: #eae6da; text-align: center; word-break: break-word; line-height: 1.3; }
-        .winner-close { margin-top: 26px; padding: 10px 24px; background: transparent; border: 1px solid rgba(201,163,90,0.4); color: #e3c48a; border-radius: 4px; font-family: 'Unbounded', sans-serif; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
-        .winner-close:hover { background: #c9a35a; color: #0a0d12; border-color: #c9a35a; }
-
-        .champion-chip { position: fixed; top: 82px; right: 24px; z-index: 90; display: none; align-items: center; gap: 10px; padding: 8px 16px 8px 12px; background: linear-gradient(90deg, rgba(201,163,90,0.15) 0%, rgba(201,163,90,0.05) 100%); border: 1px solid rgba(201,163,90,0.5); border-radius: 24px; cursor: pointer; transition: 0.2s; font-family: 'Manrope', sans-serif; font-size: 11px; color: #e3c48a; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-        .champion-chip.visible { display: flex; }
-        .champion-chip:hover { background: rgba(201,163,90,0.25); border-color: #c9a35a; }
-        .champion-chip .trophy { font-size: 14px; }
-        .champion-chip .name { color: #eae6da; font-weight: 500; letter-spacing: 0.04em; }
-
-        @media (max-width: 640px) {
-            .winner-card { padding: 32px 22px 28px; }
-            .winner-logo { width: 130px; height: 130px; }
-            .winner-name { font-size: 24px; }
-            .winner-podium { grid-template-columns: 1fr; gap: 8px; margin-top: 22px; padding-top: 18px; }
-            .podium-item { flex-direction: row; justify-content: space-between; padding: 10px 14px; }
-            .champion-chip { top: 72px; right: 12px; font-size: 10px; padding: 6px 12px 6px 10px; }
-        }
-
-        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
-
-        @media (max-width: 860px) {
-            .format-grid { grid-template-columns: 1fr; }
-            .bracket { gap: 0; }
-            .bracket-group { padding: 0 20px; }
-            .bracket-group-inner { gap: 20px; }
-            .round { min-width: 160px; }
-            .schedule-grid { grid-template-columns: 1fr; }
-            .timer-block .num { font-size: 44px; text-shadow: none; animation: none; }
-            .timer-block { min-width: 64px; }
-            .timer-sep { font-size: 30px; }
-            .timer-label { font-size: 10px; letter-spacing: 0.24em; }
-            .bracket-hint { display: block; }
-            .bracket-banner-title { font-size: 26px; }
-            .modal { padding: 22px 22px; }
-            .modal-logo { width: 110px; height: 110px; }
-            .modal-head h2 { font-size: 18px; }
-            .bracket-group-header { font-size: 11px; letter-spacing: 0.18em; }
-            .explain-card { padding: 18px 20px; }
-            .explain-text { font-size: 13px; }
-        }
-        @media (max-width: 640px) {
-            .hero-bg-inner { min-height: 240px; border-radius: 12px 12px 0 0; }
-            .hero-bg-inner::before { border-radius: 12px 12px 0 0; }
-            .hero-content { padding: 30px 20px 40px; }
-            .hero-content h1 { font-size: 22px; }
-            .hero-content p { font-size: 13px; }
-            .hero-fade { height: 50px; }
-            .container { padding: 0 12px; }
-            .wordmark { font-size: 14px; }
-            .twitch-wrap { margin: 14px auto 24px; }
-            .stream-collapsed { margin: 14px auto 24px; }
-            .bracket-banner { padding: 28px 0 18px; }
-            .bracket-banner-title { font-size: 22px; }
-            .bracket-banner-sub { font-size: 10px; letter-spacing: 0.18em; }
-            .menu-panel { width: 280px; padding: 80px 24px 24px; }
-            .to-top { right: 14px; bottom: 14px; width: 40px; height: 40px; }
-            .modal-overlay { padding: 12px; }
-            .modal { padding: 18px 16px; }
-            .modal-head { flex-direction: column; gap: 14px; }
-            .modal-logo { width: 100%; height: 120px; }
-            .modal-head h2 { font-size: 17px; }
-            .eliminated-list { flex-direction: column; }
-            .eliminated-item { min-width: 0; width: 100%; }
-        }
-        @media (max-width: 480px) {
-            .hero-content h1 { font-size: 18px; }
-            .hero-content { padding: 20px 16px 30px; }
-            .arena-stats { padding: 40px 0 30px; }
-            .timer-block .num { font-size: 32px; }
-            .timer-block { min-width: 52px; }
-            .timer-sep { font-size: 22px; }
-            .bracket { gap: 0; }
-            .bracket-group { padding: 0 14px; }
-            .bracket-group-inner { gap: 16px; }
-            .round { min-width: 140px; }
-            .match { padding: 8px 10px; min-height: 56px; }
-            .match .team { font-size: 11px; gap: 6px; }
-            .match .team .score { font-size: 12px; }
-            .bracket-banner-title { font-size: 18px; }
-            .stream-collapsed-toggle { padding: 14px 18px; font-size: 12px; }
-            .bracket-group-header { font-size: 10px; letter-spacing: 0.14em; }
-            .explain-card { padding: 14px 16px; border-left-width: 2px; }
-            .explain-title { font-size: 11px; }
-            .explain-text { font-size: 12.5px; line-height: 1.65; }
-        }
-    </style>
+/* ---------- Адаптив ---------- */
+@media (max-width: 820px) {
+  .hero { max-height: none; min-height: 100svh; }
+  body.phase-2 .hero, body.phase-3 .hero { min-height: 74svh; }
+  .hero-img img { object-position: 50% 20%; }
+  .hero-shade {
+    background:
+      linear-gradient(180deg, rgba(7,8,10,.55) 0%, rgba(7,8,10,0) 20%),
+      linear-gradient(0deg, var(--bg) 0%, rgba(7,8,10,.92) 34%, rgba(7,8,10,.2) 64%, rgba(7,8,10,0) 100%);
+  }
+  .hero-body { padding-bottom: 30px; }
+  .hero-cta .pill { flex: 1; justify-content: center; }
+  .cd-inner { grid-template-columns: 1fr; gap: 16px; }
+  .cd-nums { justify-content: space-between; }
+  .sec-head { grid-template-columns: 1fr; margin-bottom: 40px; }
+  .sec-copy { justify-self: start; }
+  .bracket-sec, .sched-sec { padding-top: 64px; }
+  .scroll-hint { display: block; }
+  .s-row { grid-template-columns: 1fr; gap: 10px; padding: 18px 2px; }
+  .s-when { display: flex; align-items: baseline; gap: 12px; }
+  .s-when b { margin: 0; }
+  .s-teams { font-size: 16px; }
+  .note-time { display: none; }
+  .chip { left: 14px; bottom: 14px; }
+}
+</style>
 </head>
-<body>
+<body class="phase-1">
 
-<header>
-    <div class="container header-row">
-        <div class="header-left">
-            <a href="/" class="wordmark">COMPASS <em>ARENA</em></a>
-        </div>
-        <button class="burger" id="burgerBtn" aria-label="Открыть меню">
-            <span></span><span></span><span></span>
-        </button>
-    </div>
+<header class="site-head" id="head">
+  <div class="wrap head-row">
+    <a class="brand" href="/" aria-label="Compass Arena — на главную">
+      <img src="/img/mark.webp" width="30" height="30" alt="">
+      <span>Compass <i>Arena</i></span>
+    </a>
+    <nav class="head-nav" aria-label="Основная навигация">
+      <a href="#bracket">Сетка</a>
+      <a href="/schedule.html">Расписание</a>
+      <a href="/rules.html">Правила</a>
+      <a class="pill" id="watchPill" href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Смотреть</a>
+    </nav>
+    <button class="burger" id="burgerBtn" aria-label="Открыть меню" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
 </header>
 
-<div class="menu-overlay" id="menuOverlay"></div>
-<nav class="menu-panel" id="menuPanel">
-    <a href="/">Главная</a>
-    <a href="/history.html">История турниров</a>
-    <a href="/schedule.html">Расписание</a>
-    <a href="/rules.html">Правила</a>
-    <a href="https://www.twitch.tv/compassarena" target="_blank">Twitch</a>
-    <a href="https://t.me/compassarenaa" target="_blank">Telegram</a>
+<nav class="menu" id="menuPanel" aria-label="Меню">
+  <a href="/">Главная</a>
+  <a href="#bracket">Сетка</a>
+  <a href="/schedule.html">Расписание</a>
+  <a href="/rules.html">Правила</a>
+  <a href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Twitch</a>
 </nav>
 
-<section class="arena-stats" id="arenaSection" data-phase="1">
-    <div class="container">
-        <div class="arena-inner">
-            <div class="arena-logo">
-                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="100" cy="100" r="90" fill="none" stroke="#c9a35a" stroke-width="2" opacity="0.3"/>
-                    <circle cx="100" cy="100" r="85" fill="none" stroke="#c9a35a" stroke-width="1" opacity="0.2"/>
-                    <g class="compass-needle">
-                        <polygon points="100,20 108,100 100,180 92,100" fill="#c9a35a" opacity="0.9"/>
-                        <polygon points="100,20 108,100 100,100 92,100" fill="#e3c48a"/>
-                        <circle cx="100" cy="100" r="6" fill="#0a0d12" stroke="#c9a35a" stroke-width="2"/>
-                    </g>
-                    <rect x="96" y="40" width="8" height="120" fill="#eae6da" opacity="0.85"/>
-                    <polygon points="100,30 104,45 96,45" fill="#e3c48a"/>
-                    <rect x="88" y="155" width="24" height="4" fill="#c9a35a"/>
-                    <rect x="92" y="159" width="16" height="6" fill="#c9a35a"/>
-                </svg>
-            </div>
-            <div class="arena-timer" id="arenaTimer">
-                <div class="timer-label">До старта турнира</div>
-                <div class="timer-blocks">
-                    <div class="timer-block"><span class="num" id="days">00</span><span class="unit">дней</span></div>
-                    <div class="timer-sep">:</div>
-                    <div class="timer-block"><span class="num" id="hours">00</span><span class="unit">часов</span></div>
-                    <div class="timer-sep">:</div>
-                    <div class="timer-block"><span class="num" id="minutes">00</span><span class="unit">минут</span></div>
-                    <div class="timer-sep">:</div>
-                    <div class="timer-block"><span class="num" id="seconds">00</span><span class="unit">секунд</span></div>
-                </div>
-                <div class="timer-announce" id="timerAnnounce"></div>
-                <div class="timer-date" id="timerDateLabel">26 сентября 2026 · 12:00</div>
+<main>
+<!-- ============ ПЕРВЫЙ ЭКРАН ============ -->
+<section class="hero" id="arenaSection">
+  <picture class="hero-img">
+    <source media="(max-width: 820px)" srcset="/img/hero-m.webp">
+    <img src="/img/hero.webp" alt="" fetchpriority="high" decoding="async">
+  </picture>
+  <div class="hero-shade"></div>
+  <canvas id="dust" aria-hidden="true"></canvas>
 
-                <div class="timer-progress">
-                    <div class="timer-progress-fill" id="timerProgressFill"></div>
-                </div>
-                <div class="timer-progress-label">
-                    <span>Старт проекта</span>
-                    <span id="timerProgressPercent">0%</span>
-                    <span>Турнир</span>
-                </div>
-            </div>
+  <div class="wrap hero-body">
+    <p class="hero-kicker">Турнир по Dota 2</p>
+    <h1>Здесь сражаются<br>не ради участия —<br><em>здесь доказывают</em></h1>
+    <p class="lede">Один шанс, полная концентрация и один трофей на всех. Первый турнир организации Compass Arena.</p>
+    <div class="hero-cta">
+      <a class="pill solid lg" href="#bracket">Турнирная сетка</a>
+      <a class="pill lg" href="/schedule.html">Расписание</a>
+    </div>
+  </div>
+
+  <div class="wrap cd" id="arenaTimer">
+    <div class="cd-inner">
+      <div class="cd-label">До старта турнира<b id="timerDateLabel">26 сентября 2026, 12:00</b></div>
+      <div class="cd-nums">
+        <div class="cd-num"><b id="days">00</b><small>дней</small></div>
+        <div class="cd-num"><b id="hours">00</b><small>часов</small></div>
+        <div class="cd-num"><b id="minutes">00</b><small>минут</small></div>
+        <div class="cd-num"><b id="seconds">00</b><small>секунд</small></div>
+      </div>
+      <div class="cd-announce" id="timerAnnounce"></div>
+      <div class="cd-track"><i id="timerProgressFill"></i></div>
+      <div class="cd-track-caption"><span>Старт проекта</span><span id="timerProgressPercent">0%</span><span>Турнир</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ЭФИР ============ -->
+<section class="wrap stream" id="stream">
+  <div id="streamCollapsed" class="note">
+    <button class="note-toggle" onclick="toggleStreamCard()" aria-expanded="false" aria-controls="streamBody">
+      <span>Прямая трансляция</span>
+      <span class="note-time" id="streamMiniTimer">До эфира — <b>—</b></span>
+      <svg viewBox="0 0 16 16" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l5 5 5-5"/></svg>
+    </button>
+    <div class="note-body" id="streamBody"><div>
+      <div class="note-inner">
+        <div>
+          <p>Друг, я понимаю, что ты ждёшь турнир больше всего на свете, но не мог бы ты ещё немного подождать.</p>
+          <p class="sign">С уважением, организация Compass Arena</p>
         </div>
-    </div>
+        <a class="pill" href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Напомнить в Twitch</a>
+      </div>
+    </div></div>
+  </div>
+
+  <div id="streamFull" class="player">
+    <div class="player-bar"><span class="live-dot"></span><span>Прямой эфир</span><a href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Открыть в Twitch</a></div>
+    <div class="player-frame"><iframe id="twitchFrame" title="Compass Arena — прямая трансляция" allowfullscreen allow="autoplay; fullscreen; encrypted-media; picture-in-picture"></iframe></div>
+  </div>
 </section>
 
-<section class="hero-bg">
-    <div class="container">
-        <div class="hero-bg-inner">
-            <div class="hero-content">
-                <h1>Здесь сражаются<br>не ради участия —<br><span class="accent">здесь доказывают</span></h1>
-                <p>Один шанс, полная концентрация и один трофей на всех. Первый турнир организации Compass Arena.</p>
-            </div>
-            <div class="hero-fade"></div>
-        </div>
+<!-- ============ СЕТКА ============ -->
+<section class="bracket-sec" id="bracket">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <p class="kicker">Bo3, шесть команд, без нижней сетки</p>
+        <h2 class="h2">Турнирная сетка</h2>
+      </div>
+      <p class="sec-copy">
+        В <em>Раунде 1</em> играют все шесть команд: три матча, каждый до двух побед. Победители <em>M1</em> и <em>M2</em> встречаются в полуфинале. Победитель <em>M3</em> проходит напрямую в гранд-финал и ждёт там соперника. Один матч — один трофей.
+      </p>
     </div>
+
+    <div class="bracket-scroll reveal">
+      <div class="bracket" id="bracketWrapper"></div>
+    </div>
+    <p class="scroll-hint">Сетку можно листать вбок</p>
+
+    <p class="footnote reveal">Из-за ограниченного эфирного времени мы отказались от нижней сетки, чтобы уместить весь турнир в расписание стримов. Просим за это прощения — зато все матчи пройдут в прямом эфире без утомительных пауз. Спасибо за понимание.</p>
+  </div>
 </section>
 
-<section class="container">
-    <div id="streamCollapsed" class="stream-collapsed" data-phase="1">
-        <button class="stream-collapsed-toggle" onclick="toggleStreamCard()">
-            <span class="stream-collapsed-title">Прямая трансляция</span>
-            <span class="stream-collapsed-arrow" id="streamArrow">▼</span>
-        </button>
-        <div class="stream-collapsed-body" id="streamBody">
-            <p>Друг, я понимаю, что ты ждёшь турнир больше всего на свете, но не мог бы ты ещё немного подождать.</p>
-            <p class="stream-collapsed-sign">С уважением, организация — Compass Arena ❤️</p>
-            <div class="stream-mini-timer" id="streamMiniTimer">До эфира — <b>—</b></div>
-            <a class="stream-collapsed-cta" href="https://www.twitch.tv/compassarena" target="_blank">Напомнить в Twitch</a>
-        </div>
-    </div>
-
-    <div id="streamFull" class="twitch-wrap" style="display:none;" data-phase="2">
-        <iframe
-            src="https://player.twitch.tv/?channel=compassarena&parent=compass-arena.pages.dev&parent=compassarena.ru&parent=compass-arena-test.pages.dev&muted=true&autoplay=true"
-            allowfullscreen="true"
-            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-            title="Compass Arena — прямая трансляция">
-        </iframe>
-    </div>
+<section class="out-sec" id="eliminatedSection">
+  <div class="wrap">
+    <div class="out-head" id="eliminatedHeader"><span>Выбывшие</span><span class="count" id="eliminatedCount"></span></div>
+    <div class="out-list" id="eliminatedList"></div>
+  </div>
 </section>
 
-<section class="bracket-banner" id="bracketBanner">
-    <div class="container">
-        <div class="bracket-banner-inner">
-            <h1 class="bracket-banner-title">Турнирная сетка</h1>
-            <div class="bracket-banner-sub">Custom Bracket · Bo3 · 6 команд</div>
-        </div>
+<!-- ============ РАСПИСАНИЕ ============ -->
+<section class="sched-sec">
+  <div class="wrap">
+    <div class="sched-top reveal">
+      <div>
+        <p class="kicker">Ближайшие и недавние матчи</p>
+        <h2 class="h2">Расписание</h2>
+      </div>
+      <a class="text-link" href="/schedule.html">Полное расписание</a>
     </div>
+    <div id="scheduleContainer" class="reveal"><div class="s-empty">Загрузка</div></div>
+  </div>
 </section>
+</main>
 
-<section class="explain-section">
-    <div class="container">
-        <div class="explain-card">
-            <div class="explain-title">
-                <span class="dot"></span>
-                Как устроена сетка
-            </div>
-            <p class="explain-text">
-                В <em>Раунде 1</em> играют все шесть команд: три матча, каждый — до двух побед (Bo3).
-                Победители <em>M1</em> и <em>M2</em> встречаются между собой в <em>Раунде 2</em> — это полуфинал верхней части.
-                Победитель <em>M3</em> получает особое преимущество: он <em>напрямую проходит в Гранд-финал</em> и ждёт там соперника.
-                Победитель полуфинала встречается с ним в финале. Один матч — один трофей.
-            </p>
-            <p class="explain-text">
-                <strong style="color:#e3c48a;">Формат:</strong> Bo3 — до двух побед в каждой серии.
-            </p>
-            <p class="explain-text">
-                <span class="accent-line">
-                    Из-за ограниченного эфирного времени мы решили отказаться от нижней сетки, чтобы уместить весь турнир в расписание стримов. Просим за это прощения — но это позволяет нам показать все матчи в прямом эфире без утомительных пауз. Спасибо за понимание.
-                </span>
-            </p>
-        </div>
+<footer class="site-foot">
+  <div class="wrap foot-row">
+    <span>Compass Arena — организатор турниров по Dota 2</span>
+    <div class="foot-links">
+      <a href="/schedule.html">Расписание</a>
+      <a href="/rules.html">Правила</a>
+      <a href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Twitch</a>
+      <a href="https://t.me/compassarenaa" target="_blank" rel="noopener">Telegram</a>
     </div>
-</section>
-
-<section class="bracket-section" id="bracketSection">
-    <div class="container">
-        <div class="bracket-wrapper" id="bracketWrapper"></div>
-        <div class="bracket-hint">← прокрутите, чтобы увидеть всю сетку →</div>
-    </div>
-</section>
-
-<section class="eliminated-section" id="eliminatedSection">
-    <div class="container eliminated-inner">
-        <div class="eliminated-header" id="eliminatedHeader">
-            <span>Выбывшие</span>
-            <span class="count" id="eliminatedCount"></span>
-        </div>
-        <div class="eliminated-list" id="eliminatedList"></div>
-    </div>
-</section>
-
-<section class="schedule-section">
-    <div class="container">
-        <h2>Расписание матчей</h2>
-        <div id="scheduleContainer"><div class="schedule-empty">Загрузка...</div></div>
-    </div>
-</section>
-
-<section class="format-section">
-    <div class="container">
-        <div class="format-grid">
-            <div class="format-item"><h3>Раунд 1</h3><p>Три матча — все шесть команд. Победители M1 и M2 идут в полуфинал, победитель M3 — сразу в финал.</p></div>
-            <div class="format-item"><h3>Раунд 2</h3><p>Победители M1 и M2 играют между собой. Победитель идёт в гранд-финал.</p></div>
-            <div class="format-item"><h3>Гранд-финал</h3><p>Победитель полуфинала vs победитель M3. Bo3 решает всё.</p></div>
-        </div>
-    </div>
-</section>
-
-<footer>
-    <div class="container" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center;">
-        <span>Compass Arena — организатор турниров по Dota 2</span>
-       <div class="f-links">
-    <a href="/">Главная</a>
-    <a href="/history.html">История</a>
-    <a href="/schedule.html">Расписание</a>
-    <a href="/rules.html">Правила</a>
-    <a href="https://www.twitch.tv/compassarena" target="_blank">Twitch</a>
-    <a href="https://t.me/compassarenaa" target="_blank">Telegram</a>
-</div>
-    </div>
+  </div>
 </footer>
 
-<div class="modal-overlay" id="modalOverlay">
-    <div class="modal">
-        <button class="modal-close" id="modalClose">&times;</button>
-        <div class="modal-head">
-            <div class="modal-head-left">
-                <h2 id="modalTitle">Team</h2>
-                <div class="sub" id="modalSub">Состав команды</div>
-            </div>
-            <div class="modal-logo" id="modalLogo">
-                <span class="placeholder" id="modalLogoPlaceholder">?</span>
-            </div>
-        </div>
-
-        <div class="modal-players" id="modalPlayers"></div>
-
-        <div class="team-stats" id="modalStats" style="display:none;">
-            <div class="stat win">
-                <div class="value" id="modalWins">0</div>
-                <div class="label">Победы</div>
-            </div>
-            <div class="stat loss">
-                <div class="value" id="modalLosses">0</div>
-                <div class="label">Поражения</div>
-            </div>
-            <div class="stat">
-                <div class="value" id="modalPlayed">0</div>
-                <div class="label">Матчей</div>
-            </div>
-        </div>
+<!-- ============ МОДАЛКА КОМАНДЫ ============ -->
+<div class="overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="sheet">
+    <button class="sheet-close" id="modalClose" aria-label="Закрыть"><svg viewBox="0 0 12 12" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></button>
+    <div class="sheet-head">
+      <div class="sheet-logo" id="modalLogo"><span class="ph">?</span></div>
+      <div>
+        <h2 id="modalTitle">Команда</h2>
+        <div class="sub" id="modalSub">Состав команды</div>
+      </div>
     </div>
-</div>
-
-<div class="winner-overlay" id="winnerOverlay">
-    <div class="winner-card">
-        <div class="winner-label">Победитель Compass Arena</div>
-        <div class="winner-logo" id="winnerLogo">
-            <span class="placeholder">?</span>
-        </div>
-        <div class="winner-name" id="winnerName">Команда</div>
-        <div class="winner-sub">Grand Final</div>
-
-        <div class="winner-podium" id="winnerPodium"></div>
-
-        <button class="winner-close" onclick="closeWinnerOverlay()">Посмотреть сетку</button>
+    <div class="players" id="modalPlayers"></div>
+    <div class="stats" id="modalStats">
+      <div class="stat win"><div class="v" id="modalWins">0</div><div class="l">Победы</div></div>
+      <div class="stat loss"><div class="v" id="modalLosses">0</div><div class="l">Поражения</div></div>
+      <div class="stat"><div class="v" id="modalPlayed">0</div><div class="l">Матчей</div></div>
     </div>
+  </div>
 </div>
 
-<div class="champion-chip" id="championChip" onclick="openWinnerOverlay()">
-    <span class="trophy">🏆</span>
-    <span>Победитель — <span class="name" id="chipName">—</span></span>
+<!-- ============ ЭКРАН ПОБЕДИТЕЛЯ ============ -->
+<div class="winner" id="winnerOverlay" role="dialog" aria-modal="true" aria-label="Победитель турнира">
+  <div class="winner-inner">
+    <div class="winner-label">Победитель Compass Arena</div>
+    <div class="winner-logo" id="winnerLogo"><span class="ph">?</span></div>
+    <div class="winner-name" id="winnerName">Команда</div>
+    <div class="winner-sub">Гранд-финал</div>
+    <div class="podium" id="winnerPodium"></div>
+    <button class="pill lg" onclick="closeWinnerOverlay()">Посмотреть сетку</button>
+  </div>
 </div>
 
-<button class="to-top" id="toTop" aria-label="Наверх">↑</button>
+<div class="chip" id="championChip" onclick="openWinnerOverlay()" role="button" tabindex="0">
+  <i></i><span>Победитель — <span class="name" id="chipName">—</span></span>
+</div>
 
-<canvas id="particles-canvas"></canvas>
+<button class="to-top" id="toTop" aria-label="Наверх"><svg viewBox="0 0 16 16" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l5-5 5 5"/></svg></button>
 
 <script>
 // ============================================================
@@ -824,7 +450,7 @@
 var ROLE_NAMES = { 1: 'Керри', 2: 'Мидер', 3: 'Офлейн', 4: 'Саппорт 4', 5: 'Саппорт 5' };
 
 // ============================================================
-// ДАННЫЕ
+// ДАННЫЕ (значения по умолчанию, пока не пришёл ответ /api/data)
 // ============================================================
 var DATA = {
     tournament: { name: "Compass Arena", game: "Dota 2", format: "Custom Bracket", matches: "Bo3", dates: "26 сентября 2026" },
@@ -859,38 +485,41 @@ var CURRENT_PHASE = 1;
 // Очередь анимаций "команда прошла дальше"
 var ANIMATION_QUEUE = [];
 var ANIMATION_RUNNING = false;
-
-var MATCH_RECEIVERS = {
-    1: 4,
-    2: 4,
-    3: 5,
-    4: 5
-};
+var MATCH_RECEIVERS = { 1: 4, 2: 4, 3: 5, 4: 5 };
 
 function hasSeenAnimation(matchId) {
-    try {
-        return localStorage.getItem('cmp_anim_seen_' + matchId) === '1';
-    } catch (e) {
-        return false;
-    }
+    try { return localStorage.getItem('cmp_anim_seen_' + matchId) === '1'; } catch (e) { return false; }
+}
+function markAnimationSeen(matchId) {
+    try { localStorage.setItem('cmp_anim_seen_' + matchId, '1'); } catch (e) {}
 }
 
-function markAnimationSeen(matchId) {
-    try {
-        localStorage.setItem('cmp_anim_seen_' + matchId, '1');
-    } catch (e) {}
+// Экранирование: имена и ники приходят из админки, вставляем через innerHTML
+function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
 }
 
 // ============================================================
 // ЗАГРУЗКА
 // ============================================================
+function fmtDateLabel(ts) {
+    try {
+        var d = new Date(ts);
+        var date = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).replace(' г.', '');
+        var time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }).replace('GMT+3', 'МСК');
+        return date + ', ' + time;
+    } catch (e) { return ''; }
+}
+
 function loadSavedData() {
     return fetch('/api/data', { cache: 'no-store' })
-        .then(function(res) {
+        .then(function (res) {
             if (!res.ok) throw new Error('bad response');
             return res.json();
         })
-        .then(function(parsed) {
+        .then(function (parsed) {
             if (parsed.teams) DATA.teams = parsed.teams;
             if (parsed.matches) DATA.matches = parsed.matches;
             if (parsed.schedule) DATA.schedule = parsed.schedule;
@@ -908,25 +537,18 @@ function loadSavedData() {
                 var p = new Date(DATA.projectStart).getTime();
                 if (!isNaN(p)) PROJECT_START = p;
             }
-
-            var label = document.getElementById('timerDateLabel');
-            if (label) {
-                try {
-                    var d = new Date(TOURNAMENT_START);
-                    label.textContent = d.toLocaleString('ru-RU', {
-                        day: '2-digit', month: 'long', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
-                    }).replace(',', ' ·');
-                } catch(e) {}
-            }
         })
-        .catch(function(err) {
+        .catch(function (err) {
             console.warn('Не удалось загрузить данные с сервера', err);
+        })
+        .then(function () {
+            var label = document.getElementById('timerDateLabel');
+            if (label) label.textContent = fmtDateLabel(TOURNAMENT_START);
         });
 }
 
 // ============================================================
-// ФАЗЫ
+// ФАЗЫ: 1 — до старта, 2 — эфир, 3 — есть победитель
 // ============================================================
 function computePhase() {
     var grand = getMatch(5);
@@ -935,32 +557,38 @@ function computePhase() {
     return 1;
 }
 
+function ensureTwitchFrame() {
+    var frame = document.getElementById('twitchFrame');
+    if (!frame || frame.getAttribute('src')) return;
+    // parent должен совпадать с доменом, на котором открыта страница
+    frame.src = 'https://player.twitch.tv/?channel=compassarena&parent=' +
+        encodeURIComponent(location.hostname) + '&muted=true&autoplay=true';
+}
+
 function applyPhase(phase) {
     CURRENT_PHASE = phase;
     document.body.classList.remove('phase-1', 'phase-2', 'phase-3');
     document.body.classList.add('phase-' + phase);
 
-    var arena = document.getElementById('arenaSection');
-    var streamCollapsed = document.getElementById('streamCollapsed');
-    var streamFull = document.getElementById('streamFull');
+    if (phase >= 2) ensureTwitchFrame();
 
-    if (arena) arena.style.display = (phase === 1) ? 'block' : 'none';
-    if (streamCollapsed) streamCollapsed.style.display = (phase === 1) ? 'block' : 'none';
-    if (streamFull) streamFull.style.display = (phase >= 2) ? 'block' : 'none';
+    var pill = document.getElementById('watchPill');
+    if (pill) {
+        pill.innerHTML = (phase === 2) ? '<span class="live-dot"></span>Смотреть эфир' : 'Смотреть';
+    }
 
     renderBracket();
     renderEliminated();
 
+    var chip = document.getElementById('championChip');
     if (phase === 3) {
-        var championChip = document.getElementById('championChip');
-        if (championChip) championChip.classList.add('visible');
+        if (chip) chip.classList.add('visible');
         renderWinnerOverlay();
         if (!sessionStorage.getItem('winnerShown')) {
             setTimeout(openWinnerOverlay, 400);
             sessionStorage.setItem('winnerShown', '1');
         }
     } else {
-        var chip = document.getElementById('championChip');
         if (chip) chip.classList.remove('visible');
         sessionStorage.removeItem('winnerShown');
     }
@@ -970,19 +598,12 @@ function applyPhase(phase) {
 // ВСПОМОГАТЕЛЬНЫЕ
 // ============================================================
 function getTeam(id) {
-    for (var i = 0; i < DATA.teams.length; i++) {
-        if (DATA.teams[i].id === id) return DATA.teams[i];
-    }
+    for (var i = 0; i < DATA.teams.length; i++) if (DATA.teams[i].id === id) return DATA.teams[i];
     return null;
 }
-function getTeamName(id) {
-    var t = getTeam(id);
-    return t ? t.name : '—';
-}
+function getTeamName(id) { var t = getTeam(id); return t ? t.name : '—'; }
 function getMatch(id) {
-    for (var i = 0; i < DATA.matches.length; i++) {
-        if (DATA.matches[i].id === id) return DATA.matches[i];
-    }
+    for (var i = 0; i < DATA.matches.length; i++) if (DATA.matches[i].id === id) return DATA.matches[i];
     return null;
 }
 function getLoser(m) {
@@ -993,132 +614,154 @@ function getLoser(m) {
 }
 
 // ============================================================
-// СВЯЗИ СЕТКИ
+// СВЯЗИ СЕТКИ: M1,M2 -> M4;  M4,M3 -> M5
 // ============================================================
 function updateMatchLinks() {
     var m = {};
-    for (var i = 0; i < DATA.matches.length; i++) {
-        m[DATA.matches[i].id] = DATA.matches[i];
-    }
+    for (var i = 0; i < DATA.matches.length; i++) m[DATA.matches[i].id] = DATA.matches[i];
 
-    if (m[4]) {
-        m[4].team1 = m[1] ? m[1].winner : null;
-        m[4].team2 = m[2] ? m[2].winner : null;
-    }
-    if (m[5]) {
-        m[5].team1 = m[4] ? m[4].winner : null;
-        m[5].team2 = m[3] ? m[3].winner : null;
-    }
+    if (m[4]) { m[4].team1 = m[1] ? m[1].winner : null; m[4].team2 = m[2] ? m[2].winner : null; }
+    if (m[5]) { m[5].team1 = m[4] ? m[4].winner : null; m[5].team2 = m[3] ? m[3].winner : null; }
 
     for (var k = 1; k <= 5; k++) {
         var mm = m[k];
         if (!mm || !mm.winner) continue;
-        if (mm.winner !== mm.team1 && mm.winner !== mm.team2) {
-            mm.winner = null;
-            mm.score1 = null;
-            mm.score2 = null;
-        }
+        if (mm.winner !== mm.team1 && mm.winner !== mm.team2) { mm.winner = null; mm.score1 = null; mm.score2 = null; }
     }
     for (var k2 = 1; k2 <= 5; k2++) {
         var mm2 = m[k2];
         if (!mm2) continue;
-        if ((mm2.team1 === null || mm2.team2 === null) && mm2.winner !== null) {
-            mm2.winner = null;
-            mm2.score1 = null;
-            mm2.score2 = null;
-        }
+        if ((mm2.team1 === null || mm2.team2 === null) && mm2.winner !== null) { mm2.winner = null; mm2.score1 = null; mm2.score2 = null; }
     }
 }
 
 // ============================================================
 // СЕТКА
 // ============================================================
+var CARD_H = 104, HEAD_H = 24, ROW_H = 40;
+// вертикальные позиции карточек внутри колонок (px)
+var POS = (function () {
+    var y1 = 0, y2 = y1 + CARD_H + 28, y3 = y2 + CARD_H + 56;
+    var c1 = y1 + CARD_H / 2, c2 = y2 + CARD_H / 2, c3 = y3 + CARD_H / 2;
+    var c4 = (c1 + c2) / 2, c5 = (c4 + c3) / 2;
+    return { 1: y1, 2: y2, 3: y3, 4: c4 - CARD_H / 2, 5: c5 - CARD_H / 2, height: y3 + CARD_H };
+})();
+
+function whenLabel(id) {
+    var t = DATA.schedule && DATA.schedule[id];
+    if (!t) return '';
+    try {
+        var d = new Date(t);
+        return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace('.', '') + ', ' +
+               d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return ''; }
+}
+
+var TBD_TEXT = { 4: ['Победитель M1', 'Победитель M2'], 5: ['Победитель M4', 'Победитель M3'] };
+
+function renderTeamRow(m, slot) {
+    var teamId = slot === 1 ? m.team1 : m.team2;
+    var team = getTeam(teamId);
+    var score = slot === 1 ? m.score1 : m.score2;
+    var hasScore = m.score1 != null && m.score2 != null;
+
+    if (!team) {
+        var tbd = TBD_TEXT[m.id] ? TBD_TEXT[m.id][slot - 1] : 'Ожидается';
+        return '<div class="team tbd" data-team=""><span class="seed"></span><span class="name">' + tbd + '</span></div>';
+    }
+    var cls = 'team';
+    if (m.winner) cls += (m.winner === teamId) ? ' is-winner' : ' is-loser';
+    var html = '<div class="' + cls + '" data-team="' + team.id + '">';
+    html += '<span class="seed">' + team.id + '</span><span class="name">' + esc(team.name) + '</span>';
+    if (hasScore) html += '<span class="score">' + score + '</span>';
+    html += '<span class="info-icon" title="Состав команды">i</span></div>';
+    return html;
+}
+
+function renderMatch(m, isGrand) {
+    if (!m) return '';
+    var t1 = getTeam(m.team1), t2 = getTeam(m.team2);
+    var isLive = DATA.liveMatchId === m.id;
+    var isWaiting = !m.winner && t1 && t2 && CURRENT_PHASE >= 2;
+    var isChampion = (CURRENT_PHASE === 3) && isGrand && m.winner;
+
+    var cls = 'match';
+    if (isGrand) cls += ' is-grand';
+    if (isLive) cls += ' is-live';
+    if (isWaiting) cls += ' is-waiting';
+    if (isChampion) cls += ' is-grand-champion';
+
+    var when = whenLabel(m.id);
+    var head = '<span>M' + m.id + '</span>' +
+        (isLive ? '<span class="live"><span class="live-dot"></span>В эфире</span>' : '<span>' + when + '</span>');
+
+    return '<div class="' + cls + '" data-match="' + m.id + '" style="top:' + POS[m.id] + 'px">' +
+        '<div class="m-head">' + head + '</div>' + renderTeamRow(m, 1) + renderTeamRow(m, 2) + '</div>';
+}
+
 function renderBracket() {
     var wrapper = document.getElementById('bracketWrapper');
     if (!wrapper) return;
     updateMatchLinks();
 
-    var m1 = getMatch(1), m2 = getMatch(2), m3 = getMatch(3), m4 = getMatch(4), m5 = getMatch(5);
-
-    var html = '<div class="bracket">';
-
-    html += '<div class="bracket-group upper">';
-    html += '<div class="bracket-group-header upper">Раунд 1</div>';
-    html += '<div class="bracket-group-inner">';
-    html += '<div class="round">';
-    html += '<div class="round-label">Матч 1</div>' + renderMatch(m1, false);
-    html += '<div class="round-label">Матч 2</div>' + renderMatch(m2, false);
-    html += '<div class="round-label">Матч 3</div>' + renderMatch(m3, false);
-    html += '</div>';
-    html += '</div></div>';
-
-    html += '<div class="bracket-group upper">';
-    html += '<div class="bracket-group-header upper">Раунд 2</div>';
-    html += '<div class="bracket-group-inner">';
-    html += '<div class="round">';
-    html += '<div class="round-label">Полуфинал</div>' + renderMatch(m4, false);
-    html += '</div>';
-    html += '</div></div>';
-
-    html += '<div class="bracket-group grand">';
-    html += '<div class="bracket-group-header grand">Финал</div>';
-    html += '<div class="bracket-group-inner">';
-    html += '<div class="round">';
-    html += '<div class="round-label">Гранд-финал</div>' + renderMatch(m5, true);
-    html += '</div>';
-    html += '</div></div>';
-
-    html += '</div>';
+    var body = 'style="height:' + POS.height + 'px"';
+    var html = '';
+    html += '<div class="b-col"><div class="b-col-head"><b>Раунд 1</b><span>3 матча</span></div><div class="b-col-body" ' + body + '>' +
+        renderMatch(getMatch(1)) + renderMatch(getMatch(2)) + renderMatch(getMatch(3)) + '</div></div>';
+    html += '<div class="b-col"><div class="b-col-head"><b>Полуфинал</b><span>Bo3</span></div><div class="b-col-body" ' + body + '>' +
+        renderMatch(getMatch(4)) + '</div></div>';
+    html += '<div class="b-col"><div class="b-col-head"><b>Гранд-финал</b><span>Bo3</span></div><div class="b-col-body" ' + body + '>' +
+        renderMatch(getMatch(5), true) + '</div></div>';
+    html += '<svg class="b-lines" aria-hidden="true"></svg>';
     wrapper.innerHTML = html;
+    drawLines();
 }
 
-function renderMatch(m, isGrand) {
-    if (!m) return '<div class="match-empty">—</div>';
-    var t1 = getTeam(m.team1);
-    var t2 = getTeam(m.team2);
-    if (!t1 && !t2) return '<div class="match-empty">ожидание</div>';
-
-    var name1 = t1 ? t1.name : '—';
-    var name2 = t2 ? t2.name : '—';
-    var id1 = t1 ? t1.id : null;
-    var id2 = t2 ? t2.id : null;
-    var isLive = DATA.liveMatchId === m.id;
-    var isWaiting = !m.winner && t1 && t2 && CURRENT_PHASE >= 2;
-    var isChampionMatch = (CURRENT_PHASE === 3) && (m.bracket === 'grand') && m.winner;
-
-    var team1Classes = 'team';
-    var team2Classes = 'team';
-    if (m.winner) {
-        if (m.winner === m.team1) { team1Classes += ' is-winner'; team2Classes += ' is-loser'; }
-        else if (m.winner === m.team2) { team2Classes += ' is-winner'; team1Classes += ' is-loser'; }
-    }
-
-    var w1 = (m.winner && m.winner === m.team1) ? 'win' : (m.winner ? 'loss' : null);
-    var w2 = (m.winner && m.winner === m.team2) ? 'win' : (m.winner ? 'loss' : null);
-
-    var classes = 'match';
-    if (isGrand) classes += ' is-grand';
-    if (isLive) classes += ' is-live';
-    if (isWaiting) classes += ' is-waiting';
-    if (isChampionMatch) classes += ' is-grand-champion';
-
-    var html = '<div class="' + classes + '" data-match="' + m.id + '">';
-    html += '<div class="' + team1Classes + '" data-team="' + id1 + '"><span class="seed">#' + (id1 || '?') + '</span><span class="name">' + name1 + '</span>';
-    if (w1) html += '<span class="status ' + w1 + '">' + (w1 === 'win' ? 'W' : 'L') + '</span>';
-    if (id1) html += '<span class="info-icon" title="Состав команды">i</span>';
-    html += '</div>';
-    html += '<div class="' + team2Classes + '" data-team="' + id2 + '"><span class="seed">#' + (id2 || '?') + '</span><span class="name">' + name2 + '</span>';
-    if (w2) html += '<span class="status ' + w2 + '">' + (w2 === 'win' ? 'W' : 'L') + '</span>';
-    if (id2) html += '<span class="info-icon" title="Состав команды">i</span>';
-    html += '</div>';
-
-    if (m.winner && m.score1 != null && m.score2 != null) {
-        html += '<div class="match-score"><span>' + m.score1 + ' : ' + m.score2 + '</span></div>';
-    }
-
-    html += '</div>';
-    return html;
+// Соединительные линии считаем по реальным координатам карточек
+function elbow(x1, y1, xm, y2, x2) {
+    var r = Math.min(9, Math.abs(y2 - y1) / 2, Math.max(0, xm - x1));
+    var d = y2 >= y1 ? 1 : -1;
+    if (Math.abs(y2 - y1) < 1) return 'M' + x1 + ' ' + y1 + ' H' + x2;
+    return 'M' + x1 + ' ' + y1 + ' H' + (xm - r) +
+        ' Q' + xm + ' ' + y1 + ' ' + xm + ' ' + (y1 + d * r) +
+        ' V' + (y2 - d * r) +
+        ' Q' + xm + ' ' + y2 + ' ' + (xm + r) + ' ' + y2 + ' H' + x2;
 }
+
+function drawLines() {
+    var br = document.getElementById('bracketWrapper');
+    if (!br) return;
+    var svg = br.querySelector('.b-lines');
+    if (!svg) return;
+    var box = br.getBoundingClientRect();
+    if (!box.width) return;
+    svg.setAttribute('width', box.width);
+    svg.setAttribute('height', box.height);
+    svg.setAttribute('viewBox', '0 0 ' + box.width + ' ' + box.height);
+
+    function card(id) { return br.querySelector('.match[data-match="' + id + '"]'); }
+    function rect(id) {
+        var el = card(id); if (!el) return null;
+        var r = el.getBoundingClientRect();
+        return { l: r.left - box.left, r: r.right - box.left, t: r.top - box.top, mid: r.top - box.top + r.height / 2 };
+    }
+    function rowY(rc, i) { return rc.t + HEAD_H + ROW_H * (i + 0.5); }
+
+    var R = {}; for (var i = 1; i <= 5; i++) R[i] = rect(i);
+    var paths = '';
+    function link(from, to, row) {
+        var a = R[from], b = R[to];
+        if (!a || !b) return;
+        var m = getMatch(from);
+        var xm = R[4] && R[5] ? (R[4].r + R[5].l) / 2 : (a.r + b.l) / 2;
+        if (to === 4) xm = (a.r + b.l) / 2;
+        var on = m && m.winner ? ' class="on"' : '';
+        paths += '<path' + on + ' d="' + elbow(a.r, a.mid, xm, rowY(b, row), b.l) + '"/>';
+    }
+    link(1, 4, 0); link(2, 4, 1); link(4, 5, 0); link(3, 5, 1);
+    svg.innerHTML = paths;
+}
+window.addEventListener('resize', function () { drawLines(); });
 
 // ============================================================
 // ВЫБЫВШИЕ
@@ -1137,99 +780,75 @@ function renderEliminated() {
         var team = getTeam(loserId);
         if (team) eliminated.push({ team: team, matchId: m.id });
     }
-
     if (count) count.textContent = eliminated.length > 0 ? (eliminated.length + ' из 6') : '';
 
-    list.innerHTML = '';
     if (eliminated.length === 0) {
-        list.innerHTML = '<div class="eliminated-empty">Пока никого — турнир только начинается</div>';
+        list.innerHTML = '<div class="out-empty">Пока никого — турнир только начинается</div>';
         return;
     }
-
+    var html = '';
     for (var e = 0; e < eliminated.length; e++) {
         var el = eliminated[e];
-        var div = document.createElement('div');
-        div.className = 'eliminated-item';
-        div.dataset.team = el.team.id;
-        div.innerHTML = '<span class="name">' + el.team.name + '</span><span class="meta">Выбыла в M' + el.matchId + '</span>';
-        list.appendChild(div);
+        html += '<div class="out-item" data-team="' + el.team.id + '"><span class="name">' + esc(el.team.name) + '</span><span class="meta">выбыла в M' + el.matchId + '</span></div>';
     }
+    list.innerHTML = html;
 }
 
-function formatTime(dt) {
-    if (!dt) return '';
+// ============================================================
+// РАСПИСАНИЕ (превью)
+// ============================================================
+function whenParts(dt) {
+    if (!dt) return { time: 'Время уточняется', date: '' };
     try {
         var d = new Date(dt);
-        return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    } catch(e) { return dt; }
+        return {
+            time: d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+            date: d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+        };
+    } catch (e) { return { time: String(dt), date: '' }; }
 }
 
-// ============================================================
-// РАСПИСАНИЕ
-// ============================================================
 function renderSchedule() {
     var container = document.getElementById('scheduleContainer');
     if (!container) return;
     var now = Date.now();
-    var upcoming = [];
-    var completed = [];
+    var upcoming = [], completed = [];
     for (var i = 0; i < DATA.matches.length; i++) {
         var m = DATA.matches[i];
         if (!m.team1 || !m.team2) continue;
         if (m.winner) { completed.push(m); continue; }
         var t = DATA.schedule && DATA.schedule[m.id];
-        if (t) {
-            try {
-                var ts = new Date(t).getTime();
-                if (ts >= now) upcoming.push({ m: m, ts: ts });
-            } catch(e) { upcoming.push({ m: m, ts: 0 }); }
-        } else {
-            upcoming.push({ m: m, ts: 0 });
-        }
+        var ts = 0;
+        if (t) { var p = new Date(t).getTime(); if (!isNaN(p)) ts = p; }
+        if (!t || ts >= now || m.id === DATA.liveMatchId) upcoming.push({ m: m, ts: ts });
     }
-    upcoming.sort(function(a, b) { return a.ts - b.ts; });
+    upcoming.sort(function (a, b) { return (a.ts || 9e15) - (b.ts || 9e15); });
     var preview = upcoming.slice(0, 3);
+    var doneShow = completed.slice(-4).reverse();
 
-    if (preview.length === 0 && completed.length === 0) {
-        container.innerHTML = '<div class="schedule-empty">Расписание пока не заполнено</div>';
+    if (preview.length === 0 && doneShow.length === 0) {
+        container.innerHTML = '<div class="s-list"><div class="s-empty">Расписание пока не заполнено</div></div>';
         return;
     }
 
-    var html = '<div class="schedule-grid">';
+    function tag(m) { return m.bracket === 'grand' ? 'Гранд-финал' : (m.round === 2 ? 'Полуфинал' : 'Раунд ' + m.round); }
 
-    // Предстоящие
-    for (var i = 0; i < preview.length; i++) {
-        var m = preview[i].m;
-        var time = (DATA.schedule && DATA.schedule[m.id]) ? formatTime(DATA.schedule[m.id]) : 'Время не указано';
-        var label = (m.bracket === 'grand') ? 'Финал' : ('Раунд ' + m.round);
-        var cls = (m.bracket === 'grand') ? 'grand' : 'upper';
-        html += '<div class="schedule-item">';
-        html += '<div class="teams"><span>' + getTeamName(m.team1) + '</span><span class="vs">vs</span><span>' + getTeamName(m.team2) + '</span></div>';
-        html += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><span class="time">' + time + '</span><span class="tag ' + cls + '">' + label + '</span></div>';
-        html += '</div>';
+    var html = '<div class="s-list">';
+    for (var a = 0; a < preview.length; a++) {
+        var pm = preview[a].m, w = whenParts(DATA.schedule && DATA.schedule[pm.id]);
+        html += '<div class="s-row"><div class="s-when"><b>' + w.time + '</b>' + w.date + '</div>' +
+            '<div class="s-teams"><span>' + esc(getTeamName(pm.team1)) + '</span><span class="vs">против</span><span>' + esc(getTeamName(pm.team2)) + '</span></div>' +
+            '<div class="s-tag">' + (pm.id === DATA.liveMatchId ? '<span class="s-live"><span class="live-dot"></span>В эфире</span>' : tag(pm)) + '</div></div>';
     }
-
-    // Завершённые — со счётом
-    var completedShow = completed.slice(-5).reverse();
-    for (var j = 0; j < completedShow.length; j++) {
-        var cm = completedShow[j];
-        var ctime = (DATA.schedule && DATA.schedule[cm.id]) ? formatTime(DATA.schedule[cm.id]) : 'Завершён';
-        var clabel = (cm.bracket === 'grand') ? 'Финал' : ('Раунд ' + cm.round);
-        var hasScore = (cm.score1 != null && cm.score2 != null);
-        var team1Cls = (cm.winner === cm.team1) ? 's-team-winner' : 's-team-loser';
-        var team2Cls = (cm.winner === cm.team2) ? 's-team-winner' : 's-team-loser';
-
-        html += '<div class="schedule-item done">';
-        html += '<div class="teams">';
-        html += '<span class="' + team1Cls + '">' + getTeamName(cm.team1) + '</span>';
-        if (hasScore) html += '<span class="s-score">' + cm.score1 + ':' + cm.score2 + '</span>';
-        else html += '<span class="vs">vs</span>';
-        html += '<span class="' + team2Cls + '">' + getTeamName(cm.team2) + '</span>';
-        html += '</div>';
-        html += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><span class="time">' + ctime + '</span><span class="tag done">✓ Завершён</span></div>';
-        html += '</div>';
+    for (var j = 0; j < doneShow.length; j++) {
+        var cm = doneShow[j], cw = whenParts(DATA.schedule && DATA.schedule[cm.id]);
+        var has = cm.score1 != null && cm.score2 != null;
+        html += '<div class="s-row done"><div class="s-when"><b>' + (DATA.schedule && DATA.schedule[cm.id] ? cw.time : 'Сыгран') + '</b>' + cw.date + '</div>' +
+            '<div class="s-teams"><span class="' + (cm.winner === cm.team1 ? 'win' : 'lose') + '">' + esc(getTeamName(cm.team1)) + '</span>' +
+            (has ? '<span class="sc">' + cm.score1 + ':' + cm.score2 + '</span>' : '<span class="vs">против</span>') +
+            '<span class="' + (cm.winner === cm.team2 ? 'win' : 'lose') + '">' + esc(getTeamName(cm.team2)) + '</span></div>' +
+            '<div class="s-tag">' + tag(cm) + '</div></div>';
     }
-
     html += '</div>';
     container.innerHTML = html;
 }
@@ -1242,10 +861,7 @@ function countTeamRecord(teamId) {
     for (var i = 0; i < DATA.matches.length; i++) {
         var m = DATA.matches[i];
         if (!m.winner) continue;
-        if (m.team1 === teamId || m.team2 === teamId) {
-            if (m.winner === teamId) wins++;
-            else losses++;
-        }
+        if (m.team1 === teamId || m.team2 === teamId) { if (m.winner === teamId) wins++; else losses++; }
     }
     return { wins: wins, losses: losses };
 }
@@ -1259,27 +875,21 @@ function openModal(teamId) {
     document.getElementById('modalSub').textContent = 'Состав команды';
 
     var logoEl = document.getElementById('modalLogo');
-    if (team.logo) {
-        logoEl.innerHTML = '<img src="' + team.logo + '" alt="' + team.name + '">';
-    } else {
-        logoEl.innerHTML = '<span class="placeholder">' + (team.name ? team.name.charAt(0).toUpperCase() : '?') + '</span>';
-    }
+    if (team.logo) logoEl.innerHTML = '<img src="' + esc(team.logo) + '" alt="' + esc(team.name) + '">';
+    else logoEl.innerHTML = '<span class="ph">' + esc(team.name ? team.name.charAt(0).toUpperCase() : '?') + '</span>';
 
     var container = document.getElementById('modalPlayers');
-    container.innerHTML = '';
     if (!team.players || team.players.length === 0) {
-        container.innerHTML = '<div class="player" style="color:#5f6773; padding: 12px 4px;">Состав пока не указан</div>';
+        container.innerHTML = '<div class="player-row none">Состав пока не указан</div>';
     } else {
+        var html = '';
         for (var i = 0; i < team.players.length; i++) {
             var p = team.players[i];
             var nick = typeof p === 'string' ? p : (p.nick || '');
             var role = typeof p === 'string' ? (i + 1) : (p.role || (i + 1));
-            var roleName = ROLE_NAMES[role] || ('Позиция ' + role);
-            var div = document.createElement('div');
-            div.className = 'player';
-            div.innerHTML = '<span class="nick">' + nick + '</span><span class="role">' + roleName + '</span>';
-            container.appendChild(div);
+            html += '<div class="player-row"><span class="nick">' + esc(nick) + '</span><span class="role">' + esc(ROLE_NAMES[role] || ('Позиция ' + role)) + '</span></div>';
         }
+        container.innerHTML = html;
     }
 
     var rec = countTeamRecord(teamId);
@@ -1289,144 +899,111 @@ function openModal(teamId) {
         document.getElementById('modalLosses').textContent = rec.losses;
         document.getElementById('modalPlayed').textContent = rec.wins + rec.losses;
         statsEl.style.display = 'flex';
-    } else {
-        statsEl.style.display = 'none';
-    }
+    } else statsEl.style.display = 'none';
 
     document.getElementById('modalOverlay').classList.add('active');
 }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
 
-function closeModal() {
-    document.getElementById('modalOverlay').classList.remove('active');
-}
-
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     var teamEl = e.target.closest('.team');
-    if (teamEl && teamEl.dataset.team) {
-        var id = parseInt(teamEl.dataset.team, 10);
-        if (id) openModal(id);
-        return;
-    }
-    var elimEl = e.target.closest('.eliminated-item');
-    if (elimEl && elimEl.dataset.team) {
-        var eid = parseInt(elimEl.dataset.team, 10);
-        if (eid) openModal(eid);
-    }
+    if (teamEl && teamEl.dataset.team) { var id = parseInt(teamEl.dataset.team, 10); if (id) openModal(id); return; }
+    var outEl = e.target.closest('.out-item');
+    if (outEl && outEl.dataset.team) { var eid = parseInt(outEl.dataset.team, 10); if (eid) openModal(eid); }
 });
-
 document.getElementById('modalClose').addEventListener('click', closeModal);
-document.getElementById('modalOverlay').addEventListener('click', function(e) {
-    if (e.target === this) closeModal();
-});
+document.getElementById('modalOverlay').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
 
 // ============================================================
-// ПОБЕДНЫЙ ЭКРАН
+// ЭКРАН ПОБЕДИТЕЛЯ
 // ============================================================
 function renderWinnerOverlay() {
     var grand = getMatch(5);
     if (!grand || !grand.winner) return;
-
     var champion = getTeam(grand.winner);
     var loserId = getLoser(grand);
     var runnerUp = loserId ? getTeam(loserId) : null;
 
     var logoEl = document.getElementById('winnerLogo');
-    if (champion && champion.logo) {
-        logoEl.innerHTML = '<img src="' + champion.logo + '" alt="">';
-    } else {
-        var ch = champion && champion.name ? champion.name.charAt(0).toUpperCase() : '?';
-        logoEl.innerHTML = '<span class="placeholder">' + ch + '</span>';
-    }
+    if (champion && champion.logo) logoEl.innerHTML = '<img src="' + esc(champion.logo) + '" alt="">';
+    else logoEl.innerHTML = '<span class="ph">' + esc(champion && champion.name ? champion.name.charAt(0).toUpperCase() : '?') + '</span>';
 
     document.getElementById('winnerName').textContent = champion ? champion.name : '—';
 
     var podium = document.getElementById('winnerPodium');
-    podium.innerHTML = '';
-    var places = [
-        { rank: '1 МЕСТО', team: champion, cls: 'place-1' },
-        { rank: '2 МЕСТО', team: runnerUp, cls: 'place-2' }
-    ];
+    var places = [{ rank: '1 место', team: champion, cls: 'place-1' }, { rank: '2 место', team: runnerUp, cls: 'place-2' }];
+    var html = '';
     for (var i = 0; i < places.length; i++) {
-        var pl = places[i];
-        if (!pl.team) continue;
-        var div = document.createElement('div');
-        div.className = 'podium-item ' + pl.cls;
-        div.innerHTML = '<div class="podium-rank">' + pl.rank + '</div><div class="podium-name">' + pl.team.name + '</div>';
-        podium.appendChild(div);
+        if (!places[i].team) continue;
+        html += '<div class="podium-item ' + places[i].cls + '"><div class="podium-rank">' + places[i].rank + '</div><div class="podium-name">' + esc(places[i].team.name) + '</div></div>';
     }
+    podium.innerHTML = html;
 
     var chipName = document.getElementById('chipName');
     if (chipName && champion) chipName.textContent = champion.name;
 }
-
 function openWinnerOverlay() {
     var ov = document.getElementById('winnerOverlay');
     if (!ov) return;
     ov.classList.add('active');
-    setTimeout(function() { ov.classList.add('visible'); }, 20);
+    setTimeout(function () { ov.classList.add('visible'); }, 20);
 }
 function closeWinnerOverlay() {
     var ov = document.getElementById('winnerOverlay');
     if (!ov) return;
     ov.classList.remove('visible');
-    setTimeout(function() { ov.classList.remove('active'); }, 600);
+    setTimeout(function () { ov.classList.remove('active'); }, 600);
 }
 window.openWinnerOverlay = openWinnerOverlay;
 window.closeWinnerOverlay = closeWinnerOverlay;
 
 // ============================================================
-// МЕНЮ
+// МЕНЮ, ШАПКА, «НАВЕРХ»
 // ============================================================
 function toggleMenu(force) {
     var burger = document.getElementById('burgerBtn');
     var panel = document.getElementById('menuPanel');
-    var overlay = document.getElementById('menuOverlay');
-    var willOpen = (typeof force === 'boolean') ? force : !panel.classList.contains('active');
-    if (willOpen) {
-        burger.classList.add('open');
-        panel.classList.add('active');
-        overlay.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    } else {
-        burger.classList.remove('open');
-        panel.classList.remove('active');
-        overlay.classList.remove('active');
-        document.body.style.overflow = '';
-    }
+    var willOpen = (typeof force === 'boolean') ? force : !panel.classList.contains('open');
+    burger.classList.toggle('open', willOpen);
+    panel.classList.toggle('open', willOpen);
+    burger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    document.body.style.overflow = willOpen ? 'hidden' : '';
 }
-document.getElementById('burgerBtn').addEventListener('click', function() { toggleMenu(); });
-document.getElementById('menuOverlay').addEventListener('click', function() { toggleMenu(false); });
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        toggleMenu(false);
-        closeModal();
-        closeWinnerOverlay();
-    }
+document.getElementById('burgerBtn').addEventListener('click', function () { toggleMenu(); });
+document.getElementById('menuPanel').addEventListener('click', function (e) { if (e.target.closest('a')) toggleMenu(false); });
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { toggleMenu(false); closeModal(); closeWinnerOverlay(); }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.id === 'championChip') { e.preventDefault(); openWinnerOverlay(); }
 });
 
-// ============================================================
-// TWITCH-КАРТОЧКА
-// ============================================================
 function toggleStreamCard() {
     var card = document.getElementById('streamCollapsed');
-    if (card) card.classList.toggle('open');
+    if (!card) return;
+    card.classList.toggle('open');
+    var btn = card.querySelector('.note-toggle');
+    if (btn) btn.setAttribute('aria-expanded', card.classList.contains('open') ? 'true' : 'false');
 }
 
-// ============================================================
-// КНОПКА «НАВЕРХ»
-// ============================================================
-function initToTop() {
-    var btn = document.getElementById('toTop');
-    if (!btn) return;
-    window.addEventListener('scroll', function() {
-        if (window.scrollY > 600) btn.classList.add('visible');
-        else btn.classList.remove('visible');
-    }, { passive: true });
-    btn.addEventListener('click', function() {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-}
+(function initChrome() {
+    var head = document.getElementById('head');
+    var top = document.getElementById('toTop');
+    function onScroll() {
+        head.classList.toggle('solid', window.scrollY > 24);
+        top.classList.toggle('visible', window.scrollY > 700);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    top.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+    if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+        }, { threshold: .12 });
+        document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+    } else {
+        document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
+    }
+})();
 
 // ============================================================
 // АНИМАЦИЯ "КОМАНДА ПРОШЛА ДАЛЬШЕ"
@@ -1437,83 +1014,56 @@ function checkForNewWinners() {
     var newOnes = [];
     for (var i = 0; i < DATA.matches.length; i++) {
         var m = DATA.matches[i];
-        if (!m.winner) continue;
-        if (m.id === 5) continue;
+        if (!m.winner || m.id === 5) continue;
         if (MATCH_RECEIVERS[m.id] === undefined) continue;
         if (hasSeenAnimation(m.id)) continue;
         newOnes.push(m.id);
         markAnimationSeen(m.id);
     }
-    if (newOnes.length === 0) return;
-    for (var j = 0; j < newOnes.length; j++) {
-        var receiverId = MATCH_RECEIVERS[newOnes[j]];
-        ANIMATION_QUEUE.push({ sourceId: newOnes[j], receiverId: receiverId });
-    }
-    runAnimationQueue();
+    for (var j = 0; j < newOnes.length; j++) ANIMATION_QUEUE.push({ sourceId: newOnes[j], receiverId: MATCH_RECEIVERS[newOnes[j]] });
+    if (newOnes.length) runAnimationQueue();
 }
-
 function runAnimationQueue() {
-    if (ANIMATION_RUNNING) return;
-    if (ANIMATION_QUEUE.length === 0) return;
+    if (ANIMATION_RUNNING || ANIMATION_QUEUE.length === 0) return;
     ANIMATION_RUNNING = true;
     var item = ANIMATION_QUEUE.shift();
-    playReceiverAnimation(item.receiverId, function() {
+    playReceiverAnimation(item.receiverId, function () {
         ANIMATION_RUNNING = false;
-        if (ANIMATION_QUEUE.length > 0) {
-            setTimeout(runAnimationQueue, 1000);
-        }
+        if (ANIMATION_QUEUE.length > 0) setTimeout(runAnimationQueue, 1000);
     });
 }
-
 function playReceiverAnimation(receiverId, callback) {
-    var receiverEl = document.querySelector('.match[data-match="' + receiverId + '"]');
-    if (!receiverEl) {
-        if (callback) callback();
-        return;
-    }
-
-    setTimeout(function() {
-        receiverEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 200);
-
-    setTimeout(function() {
-        receiverEl.classList.add('is-receiving');
-        setTimeout(function() {
-            receiverEl.classList.remove('is-receiving');
-            if (callback) callback();
-        }, 5000);
+    var el = document.querySelector('.match[data-match="' + receiverId + '"]');
+    if (!el) { if (callback) callback(); return; }
+    setTimeout(function () { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
+    setTimeout(function () {
+        el.classList.add('is-receiving');
+        setTimeout(function () { el.classList.remove('is-receiving'); if (callback) callback(); }, 5000);
     }, 800);
 }
 
 // ============================================================
 // РЕНДЕР + ИНИЦИАЛИЗАЦИЯ
 // ============================================================
-function renderAll() {
-    renderBracket();
-    renderEliminated();
-    renderSchedule();
-}
+function renderAll() { renderBracket(); renderEliminated(); renderSchedule(); }
 
 function refresh() {
-    return loadSavedData().then(function() {
-        var phase = computePhase();
-        applyPhase(phase);
+    return loadSavedData().then(function () {
+        applyPhase(computePhase());
         renderAll();
         checkForNewWinners();
     });
 }
-
 function init() {
     refresh();
     setInterval(refresh, 60000);
-    initToTop();
-    window.getTournamentData = function() { return DATA; };
+    window.getTournamentData = function () { return DATA; };
     window.renderBracket = renderBracket;
     window.renderEliminated = renderEliminated;
     window.renderSchedule = renderSchedule;
     window.toggleStreamCard = toggleStreamCard;
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawLines);
 }
-
 document.addEventListener('DOMContentLoaded', init);
 
 // ============================================================
@@ -1521,10 +1071,8 @@ document.addEventListener('DOMContentLoaded', init);
 // ============================================================
 function formatHHMMSS(ms) {
     var total = Math.max(0, Math.floor(ms / 1000));
-    var h = Math.floor(total / 3600);
-    var m = Math.floor((total % 3600) / 60);
-    var s = total % 60;
-    var pad = function(n) { return String(n).padStart(2, '0'); };
+    var h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+    var pad = function (n) { return String(n).padStart(2, '0'); };
     return pad(h) + ':' + pad(m) + ':' + pad(s);
 }
 
@@ -1533,109 +1081,85 @@ function updateTimer() {
     var diff = TOURNAMENT_START - now;
 
     if (diff <= 0) {
-        if (CURRENT_PHASE === 1) {
-            applyPhase(computePhase());
-        }
+        if (CURRENT_PHASE === 1) applyPhase(computePhase());
         return;
     }
-
     var daysEl = document.getElementById('days');
-    var hoursEl = document.getElementById('hours');
-    var minutesEl = document.getElementById('minutes');
-    var secondsEl = document.getElementById('seconds');
     if (!daysEl) return;
 
-    var days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    var hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    var seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    var days = Math.floor(diff / 86400000);
+    var hours = Math.floor((diff % 86400000) / 3600000);
+    var minutes = Math.floor((diff % 3600000) / 60000);
+    var seconds = Math.floor((diff % 60000) / 1000);
     daysEl.textContent = String(days).padStart(2, '0');
-    hoursEl.textContent = String(hours).padStart(2, '0');
-    minutesEl.textContent = String(minutes).padStart(2, '0');
-    secondsEl.textContent = String(seconds).padStart(2, '0');
+    document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+    document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+    document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
 
     var timerEl = document.getElementById('arenaTimer');
     var announceEl = document.getElementById('timerAnnounce');
-    if (diff <= 24 * 60 * 60 * 1000) {
-        if (timerEl) timerEl.classList.add('final-stretch');
-        if (announceEl) {
-            announceEl.textContent = (diff <= 12 * 60 * 60 * 1000 && days === 0 && hours < 12)
-                ? 'Стартуем сегодня'
-                : 'Стартуем завтра';
-            announceEl.classList.add('visible');
-        }
+    if (diff <= 24 * 3600000) {
+        timerEl.classList.add('final-stretch');
+        announceEl.textContent = (diff <= 12 * 3600000 && days === 0 && hours < 12) ? 'Стартуем сегодня' : 'Стартуем завтра';
+        announceEl.classList.add('visible');
     } else {
-        if (timerEl) timerEl.classList.remove('final-stretch');
-        if (announceEl) announceEl.classList.remove('visible');
+        timerEl.classList.remove('final-stretch');
+        announceEl.classList.remove('visible');
     }
 
     var total = TOURNAMENT_START - PROJECT_START;
-    var passed = now - PROJECT_START;
-    var percent = total > 0 ? Math.max(0, Math.min(100, (passed / total) * 100)) : 100;
-    var fill = document.getElementById('timerProgressFill');
-    var percentLabel = document.getElementById('timerProgressPercent');
-    if (fill) fill.style.width = percent.toFixed(2) + '%';
-    if (percentLabel) percentLabel.textContent = percent.toFixed(1) + '%';
+    var percent = total > 0 ? Math.max(0, Math.min(100, ((now - PROJECT_START) / total) * 100)) : 100;
+    document.getElementById('timerProgressFill').style.width = percent.toFixed(2) + '%';
+    document.getElementById('timerProgressPercent').textContent = percent.toFixed(1) + '%';
 
     var mini = document.getElementById('streamMiniTimer');
-    if (mini) {
-        mini.innerHTML = 'До эфира — <b>' + formatHHMMSS(diff) + '</b>';
-    }
+    if (mini) mini.innerHTML = 'До эфира — <b>' + formatHHMMSS(diff) + '</b>';
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-    setInterval(updateTimer, 1000);
-    updateTimer();
-});
+document.addEventListener('DOMContentLoaded', function () { setInterval(updateTimer, 1000); updateTimer(); });
 
 // ============================================================
-// ЧАСТИЦЫ
+// ПЫЛЬ НА ПЕРВОМ ЭКРАНЕ (только там, спокойно)
 // ============================================================
-(function initParticles() {
-    var canvas = document.getElementById('particles-canvas');
+(function initDust() {
+    var canvas = document.getElementById('dust');
     if (!canvas) return;
-    var isMobile = window.innerWidth < 860;
-    var ctx = canvas.getContext('2d');
-    var particles = [];
-    var PARTICLE_COUNT = isMobile ? 40 : 90;
-
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var ctx = canvas.getContext('2d'), parts = [], w = 0, h = 0, running = true;
+    var count = window.innerWidth < 820 ? 18 : 38;
     function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        var r = canvas.getBoundingClientRect();
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        w = r.width; h = r.height;
+        canvas.width = w * dpr; canvas.height = h * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     resize();
     window.addEventListener('resize', resize);
-
-    for (var i = 0; i < PARTICLE_COUNT; i++) {
-        particles.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            r: Math.random() * 2.5 + 1.2,
-            vx: (Math.random() - 0.5) * 0.35,
-            vy: -Math.random() * 0.6 - 0.15,
-            alpha: Math.random() * 0.6 + 0.4
-        });
+    for (var i = 0; i < count; i++) {
+        parts.push({ x: Math.random() * w, y: Math.random() * h, r: Math.random() * 1.3 + .4, vx: (Math.random() - .5) * .12, vy: -Math.random() * .22 - .04, a: Math.random() * .5 + .15 });
     }
-
-    function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (var i = 0; i < particles.length; i++) {
-            var p = particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            if (p.y < 0) { p.y = canvas.height; p.x = Math.random() * canvas.width; }
-            if (p.x < 0) p.x = canvas.width;
-            if (p.x > canvas.width) p.x = 0;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(201, 163, 90, ' + p.alpha + ')';
-            ctx.fill();
+    function frame() {
+        if (!running) return;
+        ctx.clearRect(0, 0, w, h);
+        for (var i = 0; i < parts.length; i++) {
+            var p = parts[i];
+            p.x += p.vx; p.y += p.vy;
+            if (p.y < -4) { p.y = h + 4; p.x = Math.random() * w; }
+            if (p.x < -4) p.x = w + 4; if (p.x > w + 4) p.x = -4;
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283);
+            ctx.fillStyle = 'rgba(232,205,147,' + p.a + ')'; ctx.fill();
         }
-        requestAnimationFrame(animate);
+        requestAnimationFrame(frame);
     }
-    animate();
+    // не жжём батарею, пока первый экран не виден
+    if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (en) {
+            var was = running; running = en[0].isIntersecting;
+            if (running && !was) requestAnimationFrame(frame);
+        }).observe(canvas);
+    }
+    requestAnimationFrame(frame);
 })();
 </script>
-
 </body>
 </html>

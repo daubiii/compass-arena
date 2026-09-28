@@ -2,117 +2,187 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Правила турнира — Compass Arena</title>
+<meta name="description" content="Регламент турнира Compass Arena по Dota 2: регистрация, чек-ин, неявка, спорные ситуации.">
+<meta name="theme-color" content="#07080a">
 <link rel="icon" type="image/png" href="/favicon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Compass Arena">
+<meta property="og:title" content="Правила турнира — Compass Arena">
+<meta property="og:description" content="Регистрация, чек-ин, неявка и спорные ситуации.">
+<meta property="og:image" content="https://compassarena.ru/img/og-image.jpg">
+<meta property="og:url" content="https://compassarena.ru/rules.html">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preload" href="/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/onest-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site.css">
 <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0a0d12; color: #eae6da; font-family: 'Manrope', sans-serif; line-height: 1.6; }
-    .container { max-width: 820px; margin: 0 auto; padding: 0 20px; }
+.page-hero { position: relative; padding: calc(var(--head-h) + 88px) 0 56px; overflow: hidden; }
+.page-hero::before { content: ''; position: absolute; inset: 0; background: url('/img/hero.webp') 82% 30% / cover no-repeat; opacity: .5; }
+.page-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--bg) 8%, rgba(7,8,10,.55) 60%, rgba(7,8,10,.85) 100%), linear-gradient(0deg, var(--bg) 0%, rgba(7,8,10,0) 60%); }
+.page-hero .wrap { position: relative; z-index: 1; }
+.page-hero h1 { font-family: var(--display); font-weight: 300; font-size: clamp(34px, 5vw, 64px); line-height: 1.06; letter-spacing: -.025em; margin-bottom: 20px; }
+.page-hero .lead { max-width: 46ch; }
 
-    header { padding: 16px 0; border-bottom: 1px solid #242b35; }
-    .header-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-    .wordmark { font-family: 'Unbounded', sans-serif; font-weight: 500; font-size: 16px; color: #eae6da; text-decoration: none; }
-    .wordmark em { font-style: normal; color: #c9a35a; }
-    .btn { padding: 6px 16px; border: 1px solid #c9a35a; background: transparent; color: #e3c48a; border-radius: 4px; font-family: 'Unbounded', sans-serif; font-size: 10px; cursor: pointer; transition: 0.2s; text-decoration: none; display: inline-block; }
-    .btn:hover { background: #c9a35a; color: #0a0d12; }
+.rules { padding: 24px 0 96px; }
+.rule { display: grid; grid-template-columns: 96px minmax(0, 300px) 1fr; gap: 12px 40px; padding: 44px 0; border-top: 1px solid var(--line); }
+.rule:last-of-type { border-bottom: 1px solid var(--line); }
+.rule .n { font-family: var(--display); font-weight: 200; font-size: 34px; line-height: 1; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.rule h2 { font-family: var(--display); font-weight: 400; font-size: 21px; line-height: 1.25; }
+.rule .body p { color: var(--text); margin-bottom: 14px; max-width: 62ch; }
+.rule .body ul { list-style: none; max-width: 62ch; }
+.rule .body li { position: relative; padding: 0 0 10px 24px; color: var(--text-2); }
+.rule .body li::before { content: ''; position: absolute; left: 0; top: .75em; width: 10px; height: 1px; background: var(--gold); }
+.rule.warn .body li::before { background: var(--blood); }
+.rule a { color: var(--gold-hi); text-underline-offset: 4px; text-decoration-color: rgba(201,163,90,.4); transition: text-decoration-color .2s; }
+.rule a:hover { text-decoration-color: var(--gold-hi); }
 
-    main { padding: 56px 0 80px; }
-    h1 { font-family: 'Unbounded', sans-serif; font-weight: 600; font-size: 34px; margin-bottom: 8px; }
-    .lede { color: #97a0ac; font-size: 15px; margin-bottom: 44px; max-width: 560px; }
+.contacts { padding: 0 0 110px; }
+.contacts-card { border: 1px solid var(--line); border-radius: 18px; background: var(--raise); padding: 34px 36px; display: grid; grid-template-columns: 1fr auto; gap: 24px 48px; align-items: center; }
+.contacts-card h2 { font-family: var(--display); font-weight: 300; font-size: 26px; margin-bottom: 8px; }
+.contacts-card p { color: var(--text-2); max-width: 44ch; }
+.contact-list { display: flex; flex-wrap: wrap; gap: 10px; }
 
-    section.rule { margin-bottom: 36px; padding-left: 20px; border-left: 2px solid #c9a35a; }
-    section.rule.ox { border-left-color: #b3695f; }
-    section.rule h2 { font-family: 'Unbounded', sans-serif; font-weight: 500; font-size: 18px; margin-bottom: 12px; color: #e3c48a; }
-    section.rule.ox h2 { color: #b3695f; }
-    section.rule p, section.rule li { color: #c9cdd4; font-size: 14.5px; }
-    section.rule ul { margin: 8px 0 0 20px; }
-    section.rule li { margin-bottom: 6px; }
-    .note { margin-top: 60px; padding: 16px 20px; background: #10141b; border: 1px dashed #242b35; border-radius: 6px; font-size: 13px; color: #5f6773; }
-    .note strong { color: #97a0ac; }
-    .note a { color: #c9a35a; text-decoration: none; }
-    .note a:hover { text-decoration: underline; }
-
-    footer { border-top: 1px solid #242b35; padding: 24px 0; font-size: 12.5px; color: #5f6773; }
+@media (max-width: 820px) {
+  .page-hero { padding-top: calc(var(--head-h) + 56px); }
+  .rule { grid-template-columns: 1fr; gap: 10px; padding: 32px 0; }
+  .rule .n { font-size: 26px; }
+  .contacts-card { grid-template-columns: 1fr; padding: 26px 22px; }
+}
 </style>
 </head>
 <body>
 
-<header>
-    <div class="container header-row">
-        <a href="/" class="wordmark">COMPASS <em>ARENA</em></a>
-        <a href="/" class="btn">← На сайт</a>
-    </div>
+<header class="site-head" id="head">
+  <div class="wrap head-row">
+    <a class="brand" href="/" aria-label="Compass Arena — на главную">
+      <img src="/img/mark.webp" width="30" height="30" alt="">
+      <span>Compass <i>Arena</i></span>
+    </a>
+    <nav class="head-nav" aria-label="Основная навигация">
+      <a href="/#bracket">Сетка</a>
+      <a href="/schedule.html">Расписание</a>
+      <a href="/rules.html" aria-current="page">Правила</a>
+      <a class="pill" href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Смотреть</a>
+    </nav>
+    <button class="burger" id="burgerBtn" aria-label="Открыть меню" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
 </header>
+<nav class="menu" id="menuPanel" aria-label="Меню">
+  <a href="/">Главная</a>
+  <a href="/#bracket">Сетка</a>
+  <a href="/schedule.html">Расписание</a>
+  <a href="/rules.html">Правила</a>
+  <a href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Twitch</a>
+</nav>
 
 <main>
-    <div class="container">
-        <h1>Правила турнира</h1>
-        <p class="lede">Compass Arena · Dota 2 · Double Elimination · Bo3. Этот регламент будет дополняться — если появится вопрос, которого здесь нет, пиши организатору (контакт внизу страницы).</p>
-
-        <section class="rule">
-            <h2>Регистрация и чек-ин</h2>
-            <p>Регистрация проходит по специальной форме регистрации команд в Telegram-канале турнира. Заполненную форму нужно отправить в личные сообщения организатору <a href="https://t.me/G0gg1a" target="_blank" style="color:#c9a35a;">@G0gg1a</a>.</p>
-            <ul>
-                <li>Заявки принимаются до объявленной даты закрытия регистрации.</li>
-                <li>Полный состав команды (5 игроков) нужно подтвердить организатору не позднее чем за 24 часа до первого матча.</li>
-                <li>Каждая команда обязана пройти чек-ин за 15 минут до назначенного времени своего матча — любым удобным способом связи с организатором.</li>
-                <li>Замена игрока в составе после начала турнира согласовывается с организатором отдельно.</li>
-            </ul>
-        </section>
-
-        <section class="rule ox">
-            <h2>Неявка</h2>
-            <p>Если команда не выходит на связь и не готова начать матч в течение 15 минут после назначенного времени — засчитывается техническое поражение (0:2).</p>
-            <ul>
-                <li>При неявке на 2 матча подряд команда снимается с турнира.</li>
-                <li>Форс-мажор (обрыв связи, технические проблемы) рассматривается индивидуально при своевременном обращении к организатору.</li>
-            </ul>
-        </section>
-
-        <section class="rule">
-            <h2>Формат матчей</h2>
-            <p>Все матчи, включая гранд-финал, проходят по формату Bo3 (до двух побед).</p>
-            <ul>
-                <li>Пик/бан карт — стандартный для турнирного режима Dota 2.</li>
-                <li>Настройки лобби (регион сервера, режим) сообщаются организатором перед матчем.</li>
-            </ul>
-        </section>
-
-        <section class="rule ox">
-            <h2>Спорные ситуации</h2>
-            <p>Любой спор фиксируется скриншотом/записью и направляется организатору сразу после матча — рассмотрение споров постфактум без доказательств не проводится.</p>
-            <ul>
-                <li>Решение организатора по спорному вопросу — финальное.</li>
-                <li>Использование багов, эксплойтов или стороннего софта — дисквалификация без права обжалования.</li>
-            </ul>
-        </section>
-
-        <section class="rule">
-            <h2>Трансляция</h2>
-            <p>Матчи транслируются на Twitch и ВКонтакте. Команды соглашаются на использование записей матчей в трансляции и последующих материалах турнира.</p>
-        </section>
-
-        <div class="note">
-            <strong>Контакты организаторов:</strong>
-            <ul style="margin: 10px 0 0 20px; list-style: none; padding: 0;">
-                <li style="margin-bottom: 6px;">📩 <a href="https://t.me/G0gg1a" target="_blank">@G0gg1a</a></li>
-                <li style="margin-bottom: 6px;">📩 <a href="https://t.me/uuutt7" target="_blank">@uuutt7</a></li>
-                <li style="margin-bottom: 6px;">📩 <a href="https://t.me/maushury" target="_blank">@maushury</a></li>
-            </ul>
-            <p style="margin-top: 12px;">По всем вопросам, связанным с турниром, пишите в Telegram.</p>
-        </div>
+  <section class="page-hero">
+    <div class="wrap">
+      <p class="kicker">Регламент</p>
+      <h1>Правила турнира</h1>
+      <p class="lead">Compass Arena · Dota 2 · шесть команд, серии до двух побед (Bo3). Регламент будет дополняться — если появится вопрос, которого здесь нет, пишите организаторам.</p>
     </div>
+  </section>
+
+  <section class="rules">
+    <div class="wrap">
+
+      <article class="rule reveal">
+        <div class="n">01</div>
+        <h2>Регистрация и чек-ин</h2>
+        <div class="body">
+          <p>Регистрация проходит по специальной форме регистрации команд в Telegram-канале турнира. Заполненную форму нужно отправить в личные сообщения организатору <a href="https://t.me/G0gg1a" target="_blank" rel="noopener">@G0gg1a</a>.</p>
+          <ul>
+            <li>Заявки принимаются до объявленной даты закрытия регистрации.</li>
+            <li>Полный состав команды (5 игроков) нужно подтвердить организатору не позднее чем за 24 часа до первого матча.</li>
+            <li>Каждая команда обязана пройти чек-ин за 15 минут до назначенного времени своего матча — любым удобным способом связи с организатором.</li>
+            <li>Замена игрока в составе после начала турнира согласовывается с организатором отдельно.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="rule warn reveal">
+        <div class="n">02</div>
+        <h2>Неявка</h2>
+        <div class="body">
+          <p>Если команда не выходит на связь и не готова начать матч в течение 15 минут после назначенного времени — засчитывается техническое поражение (0:2).</p>
+          <ul>
+            <li>При неявке на 2 матча подряд команда снимается с турнира.</li>
+            <li>Форс-мажор (обрыв связи, технические проблемы) рассматривается индивидуально при своевременном обращении к организатору.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="rule reveal">
+        <div class="n">03</div>
+        <h2>Формат матчей</h2>
+        <div class="body">
+          <p>Все матчи, включая гранд-финал, проходят по формату Bo3 (до двух побед).</p>
+          <ul>
+            <li>Пик/бан карт — стандартный для турнирного режима Dota 2.</li>
+            <li>Настройки лобби (регион сервера, режим) сообщаются организатором перед матчем.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="rule warn reveal">
+        <div class="n">04</div>
+        <h2>Спорные ситуации</h2>
+        <div class="body">
+          <p>Любой спор фиксируется скриншотом/записью и направляется организатору сразу после матча — рассмотрение споров постфактум без доказательств не проводится.</p>
+          <ul>
+            <li>Решение организатора по спорному вопросу — финальное.</li>
+            <li>Использование багов, эксплойтов или стороннего софта — дисквалификация без права обжалования.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="rule reveal">
+        <div class="n">05</div>
+        <h2>Трансляция</h2>
+        <div class="body">
+          <p>Матчи транслируются на Twitch и ВКонтакте. Команды соглашаются на использование записей матчей в трансляции и последующих материалах турнира.</p>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="contacts">
+    <div class="wrap">
+      <div class="contacts-card reveal">
+        <div>
+          <h2>Контакты организаторов</h2>
+          <p>По всем вопросам, связанным с турниром, пишите в Telegram.</p>
+        </div>
+        <div class="contact-list">
+          <a class="pill" href="https://t.me/G0gg1a" target="_blank" rel="noopener">@G0gg1a</a>
+          <a class="pill" href="https://t.me/uuutt7" target="_blank" rel="noopener">@uuutt7</a>
+          <a class="pill" href="https://t.me/maushury" target="_blank" rel="noopener">@maushury</a>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
-<footer>
-    <div class="container">
-        Compass Arena — организатор турниров по Dota 2
+<footer class="site-foot">
+  <div class="wrap foot-row">
+    <span>Compass Arena — организатор турниров по Dota 2</span>
+    <div class="foot-links">
+      <a href="/">Главная</a>
+      <a href="/schedule.html">Расписание</a>
+      <a href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Twitch</a>
+      <a href="https://t.me/compassarenaa" target="_blank" rel="noopener">Telegram</a>
     </div>
+  </div>
 </footer>
 
+<button class="to-top" id="toTop" aria-label="Наверх"><svg viewBox="0 0 16 16" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l5-5 5 5"/></svg></button>
+<script src="/site.js"></script>
 </body>
 </html>
