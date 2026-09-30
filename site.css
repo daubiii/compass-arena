@@ -130,6 +130,7 @@ button { font: inherit; color: inherit; }
 .menu.open a:nth-child(3) { transition-delay: .1s; }
 .menu.open a:nth-child(4) { transition-delay: .15s; }
 .menu.open a:nth-child(5) { transition-delay: .2s; }
+.menu.open a:nth-child(6) { transition-delay: .25s; }
 .menu a:hover { color: var(--gold-hi); }
 
 /* ---------- Кнопки ---------- */
