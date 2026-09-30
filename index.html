@@ -435,7 +435,10 @@ body.phase-2 .player, body.phase-3 .player { display: block; }
     <div class="winner-name" id="winnerName">Команда</div>
     <div class="winner-sub">Гранд-финал</div>
     <div class="podium" id="winnerPodium"></div>
-    <button class="pill lg" onclick="closeWinnerOverlay()">Посмотреть сетку</button>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <button class="pill lg" onclick="closeWinnerOverlay()">Посмотреть сетку</button>
+      <a class="pill lg solid" href="/history.html">История турниров</a>
+    </div>
   </div>
 </div>
 
