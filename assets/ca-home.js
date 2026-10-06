@@ -309,7 +309,23 @@
   function renderTeams(d) {
     var grid = document.getElementById('teamsGrid');
     if (!grid) return;
-    grid.innerHTML = d.teams.map(function (t) {
+    var teams = (d.realTeams && d.realTeams.length) ? d.realTeams : (d.teams || []).filter(D.isRealTeam);
+
+    /* Команд ещё нет (в данных слоты) — показываем состояние регистрации,
+       а не шесть карточек «Слот 1…6». */
+    if (!teams.length) {
+      grid.innerHTML = '<div class="teams-empty reveal">' +
+        '<span class="te-ic">' + ic('users', 'ic-32') + '</span>' +
+        '<div class="te-body"><h3 class="h3">Идёт регистрация команд</h3>' +
+        '<p class="lead-sm">Составы нового сезона ещё собираются. Как только команды подтвердят участие, они появятся здесь, ' +
+        'а на этой странице откроется турнирная сетка.</p></div>' +
+        '<a class="btn btn-gold" href="https://t.me/compassarenaa" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку</a>' +
+        '</div>';
+      U.observeReveals(grid);
+      return;
+    }
+
+    grid.innerHTML = teams.map(function (t) {
       var rec = d.stats.records[t.id] || { wins: 0, losses: 0, played: 0 };
       var logo = t.logo
         ? '<img src="' + esc(t.logo) + '" alt="Логотип ' + esc(t.name) + '" width="52" height="52" loading="lazy">'

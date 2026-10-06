@@ -155,6 +155,33 @@
 .ch-end { padding: 52px 0; }
 .ch-end .rule { height: 1px; background: var(--line); }
 
+/* ---------- Разделение турниров ---------- */
+.ch.is-alt { background: linear-gradient(180deg, rgba(255,255,255,.016), rgba(255,255,255,0) 34%); }
+.ch.is-alt::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line-2) 22%, var(--line-2) 78%, transparent);
+}
+.ch-divider { position: relative; padding: 40px 0 6px; }
+.ch-divider .orn { margin-bottom: 14px; }
+.ch-divider-meta {
+  text-align: center; font-size: 12px; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.ch-end-meta {
+  margin-top: 14px; display: flex; justify-content: space-between;
+  gap: 8px 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-3);
+}
+.ch-empty { position: relative; padding: 40px 0 30px; }
+.ch-empty .orn { margin-bottom: 26px; }
+.ch-empty .h2 { margin-bottom: 14px; }
+.ch-empty .lead { max-width: 60ch; }
+.h-chip .ttl { max-width: 34ch; overflow: hidden; text-overflow: ellipsis; }
+.h-chip .dt { color: var(--text-3); font-size: 11.5px; }
+.h-chip.is-active .dt { color: #55575c; }
+.h-chip.is-current { border-color: rgba(201,163,90,.5); color: var(--gold-hi); }
+.h-chip.is-current .no { opacity: 1; }
+.now-empty .btn { margin-top: 16px; }
+
 /* ---------- Сводные таблицы ---------- */
 .h-tables { padding-top: 20px; }
 .h-table-block + .h-table-block { margin-top: 64px; }
@@ -208,6 +235,9 @@
   .h-figures { grid-template-columns: 1fr; }
   .h-mark { gap: 12px; }
   .h-mark .date { display: none; }
+  .h-chip .dt { display: none; }
+  .h-chip .ttl { max-width: 22ch; }
+  .ch-end-meta { flex-direction: column; gap: 4px; }
 }
 </style>
 </head>

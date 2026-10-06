@@ -76,6 +76,17 @@
     var s = String(name == null ? '' : name).trim();
     return s ? s.charAt(0).toUpperCase() : '?';
   }
+  /* «Слот 1», «Команда 2», «Team 3» и пустые имена — это не команда, а место под неё.
+     Нужно, чтобы после сброса сезона заглушки не становились «чемпионами» и не попадали в статистику. */
+  var SLOT_RE = /^(слот|команда|team|участник)\s*[№#]?\s*\d*$/i;
+  function isPlaceholderName(name) {
+    var s = String(name == null ? '' : name).trim();
+    if (!s) return true;
+    if (SLOT_RE.test(s)) return true;
+    if (/^(слот|команда)\b/i.test(s) && /\d/.test(s)) return true;
+    return false;
+  }
+  function isRealTeam(t) { return !!t && !isPlaceholderName(t.name); }
 
   /* ---------- Время (всё показываем по Москве + местное рядом) ---------- */
   function mskDate(ts, opts) {
@@ -237,8 +248,15 @@
     var now = Date.now();
     var grand = D.byId[5];
     D.grandFinal = grand || null;
+    /* Чемпионом считается только реально существующая команда: если после сброса сезона
+       в сетке остался старый winner, а команда удалена (или подставлена заглушка «Слот N»),
+       турнир не должен выглядеть завершённым. */
     D.champion = grand && grand.winner ? team(D, grand.winner) : null;
+    if (!isRealTeam(D.champion)) D.champion = null;
     D.runnerUp = grand && grand.winner ? team(D, loserOf(grand)) : null;
+    if (!isRealTeam(D.runnerUp)) D.runnerUp = null;
+    D.realTeams = D.teams.filter(isRealTeam);
+    D.isRegistration = D.realTeams.length === 0;
 
     // Следующий матч: сначала живой эфир, потом ближайший по расписанию
     var live = null, soon = null, late = null;
@@ -260,7 +278,7 @@
 
     // Фаза: до старта → эфир → после финала.
     // Дата-заглушка не может «включить» эфир — только реальная дата из админки.
-    if (grand && grand.winner) D.phase = 'post';
+    if (grand && grand.winner && D.champion) D.phase = 'post';
     else if (live || (D.startFromServer && now >= D.tournamentStart)) D.phase = 'live';
     else D.phase = 'pre';
 
@@ -285,7 +303,7 @@
   /* ---------- Статистика ---------- */
   function computeStats(D) {
     var st = {
-      teams: D.teams.length,
+      teams: (D.realTeams || D.teams).length,
       matchesTotal: D.matches.length,
       played: 0,
       remaining: 0,
@@ -297,6 +315,7 @@
       standings: []
     };
     D.teams.forEach(function (t) {
+      if (!isRealTeam(t)) return;
       st.records[t.id] = { team: t, played: 0, wins: 0, losses: 0, mapsWon: 0, mapsLost: 0, out: null };
     });
     D.matches.forEach(function (m) {
@@ -345,9 +364,10 @@
   var TBD = { 4: ['Победитель M1', 'Победитель M2'], 5: ['Победитель M4', 'Победитель M3'] };
   function slotLabel(D, m, slot) {
     var t = team(D, slot === 1 ? m.team1 : m.team2);
-    if (t) return { text: t.name, team: t, known: true };
     var hint = TBD[m.id] ? TBD[m.id][slot - 1] : 'Ожидается';
-    return { text: hint, team: null, known: false };
+    /* Заглушка («Слот 3») — это не участник: показываем подсказку, откуда придёт команда */
+    if (!isRealTeam(t)) return { text: hint, team: null, known: false };
+    return { text: t.name, team: t, known: true };
   }
 
   /* ---------- Календарь (.ics) ---------- */
@@ -471,6 +491,8 @@
     attr: attr,
     initials: initials,
     plural: plural,
+    isPlaceholderName: isPlaceholderName,
+    isRealTeam: isRealTeam,
     roleName: roleName,
     normPlayers: normPlayers,
     team: function (id) { return team(D, id); },

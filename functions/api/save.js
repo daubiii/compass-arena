@@ -51,18 +51,29 @@ export async function onRequestPost(context) {
 
   // ---- Сохраняем основное состояние турнира ----
   // history храним отдельно, чтобы не раздувать основной ключ.
-  const { history, ...tournamentData } = data;
+  const { history, clearHistory, ...tournamentData } = data;
 
   await env.COMPASS_KV.put('tournament', JSON.stringify(tournamentData));
 
   // ---- Сохраняем историю (если передана) ----
+  let historyKept = false;
   if (Array.isArray(history)) {
     // Защита от разрастания: лимит 20 турниров, каждый с ограничением размера
     const trimmedHistory = history.slice(0, 20);
-    await env.COMPASS_KV.put('history', JSON.stringify(trimmedHistory));
+
+    // Защита от потери архива: пустой список затирает историю только
+    // по явному запросу (кнопка «Очистить архив» в админке).
+    const stored = await env.COMPASS_KV.get('history', { type: 'json' });
+    const storedCount = Array.isArray(stored) ? stored.length : 0;
+
+    if (trimmedHistory.length > 0 || storedCount === 0 || clearHistory === true) {
+      await env.COMPASS_KV.put('history', JSON.stringify(trimmedHistory));
+    } else {
+      historyKept = true;
+    }
   }
 
-  return new Response(JSON.stringify({ ok: true }), {
+  return new Response(JSON.stringify({ ok: true, historyKept }), {
     headers: { 'Content-Type': 'application/json' }
   });
 }

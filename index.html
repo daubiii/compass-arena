@@ -164,6 +164,21 @@ body[data-phase="live"] .hero, body[data-phase="post"] .hero { min-height: clamp
 .tc-players { color: var(--text-3); font-size: 13px; line-height: 1.5; }
 .tc-rec { color: var(--text-2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 
+/* Состояние «команд ещё нет»: слоты не показываем как участников */
+.teams-empty {
+  grid-column: 1 / -1;
+  display: grid; grid-template-columns: auto 1fr auto; gap: 20px 24px; align-items: center;
+  padding: 26px 28px; border: 1px dashed var(--line-2); border-radius: var(--r-lg);
+  background: linear-gradient(180deg, rgba(201,163,90,.05), transparent 70%);
+}
+.teams-empty .te-ic {
+  width: 54px; height: 54px; border-radius: 16px; flex: none;
+  display: grid; place-items: center;
+  background: rgba(201,163,90,.12); color: var(--gold-hi);
+}
+.teams-empty .h3 { margin-bottom: 8px; }
+.teams-empty .lead-sm { margin: 0; }
+
 /* ---------- Следующий сезон ---------- */
 .ns-grid { display: grid; grid-template-columns: 1.25fr .85fr; gap: 44px; align-items: start; }
 .ns-when { display: inline-flex; align-items: center; gap: 10px; margin-top: 22px; color: var(--text-2); font-size: 14px; }
@@ -187,6 +202,7 @@ body[data-phase="live"] .hero, body[data-phase="post"] .hero { min-height: clamp
 
 @media (max-width: 900px) {
   .ns-grid { grid-template-columns: 1fr; gap: 28px; }
+  .teams-empty { grid-template-columns: 1fr; }
 }
 @media (max-width: 820px) {
   .hero { min-height: 100svh; }

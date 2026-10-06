@@ -117,7 +117,7 @@ console.log('\nhistory.html — пустая история (текущий се
 
   // текущий сезон — единственная глава
   ok(!!d.getElementById('ch-now'), 'блок текущего сезона отрисован');
-  ok(d.body.textContent.includes('Глава 01'), 'марка «Глава 01»');
+  ok(d.body.textContent.includes('Сезон №1'), 'марка текущего сезона');
   ok(d.querySelectorAll('#chapters .now').length === 1, 'ровно один блок текущего сезона');
   ok(d.querySelectorAll('#books .ch').length === 0, 'глав архива нет');
   ok(d.getElementById('chapterNav').hidden === true, 'панель навигации скрыта при одной главе');
@@ -164,8 +164,8 @@ console.log('\nhistory.html — архив из двух турниров');
   const ch1 = d.getElementById('ch-ca-2025-05-10');
   const ch2 = d.getElementById('ch-ca-2026-02-14');
   ok(ch1.textContent.includes('Compass Arena — весна 2025'), 'название первой главы');
-  ok(ch1.textContent.includes('Глава 02 / 03'), 'нумерация глав', ch1.querySelector('.h-mark .no').textContent);
-  ok(ch2.textContent.includes('Глава 03 / 03'), 'последняя глава — 03');
+  ok(ch1.textContent.includes('Турнир №1 из 02'), 'нумерация турниров', ch1.querySelector('.h-mark .no').textContent);
+  ok(ch2.textContent.includes('Турнир №2 из 02'), 'последний турнир — №2', ch2.querySelector('.h-mark .no').textContent);
   ok(ch1.textContent.includes('Team Spirit'), 'чемпион первой главы');
   ok(ch1.textContent.includes('Yatoro'), 'состав чемпиона');
   ok(ch2.textContent.includes('Quinn'), 'состав второй главы');

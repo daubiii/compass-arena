@@ -32,9 +32,12 @@
     var has = m.score1 != null && m.score2 != null;
     var ca = m.winner ? (m.winner === m.team1 ? 'win' : 'lose') : (a.known ? '' : 'tbd');
     var cb = m.winner ? (m.winner === m.team2 ? 'win' : 'lose') : (b.known ? '' : 'tbd');
+    /* Победителя называем только если это реальная команда, а не заглушка «Слот N» */
+    var winner = D.team(m.winner);
+    var sr = (has && D.isRealTeam(winner)) ? '<span class="sr">победитель ' + esc(winner.name) + '</span>' : '';
     return '<div class="s-teams">' +
       '<span class="' + ca + '">' + esc(a.text) + '</span>' +
-      (has ? '<span class="sc">' + esc(m.score1) + ':' + esc(m.score2) + '</span>' + '<span class="sr">победитель ' + esc(D.teamName(m.winner)) + '</span>'
+      (has ? '<span class="sc">' + esc(m.score1) + ':' + esc(m.score2) + '</span>' + sr
            : '<span class="vs">против</span>') +
       '<span class="' + cb + '">' + esc(b.text) + '</span>' +
       '</div>';
@@ -87,6 +90,8 @@
       if (!m.winner) return;
       var id = D.loserOf(m);
       if (id == null || seen[id]) return;
+      /* Заглушка вместо команды («Слот 2») выбывшей не считается */
+      if (!D.isRealTeam(D.team(id))) return;
       seen[id] = true;
       rows.push({ id: id, name: D.teamName(id), matchId: m.id });
     });

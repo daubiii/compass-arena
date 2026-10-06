@@ -65,7 +65,32 @@
     return D().whenDate(t, { day: 'numeric', month: 'long', year: 'numeric' });
   }
   function isSlotName(name) {
-    return !name || /^Слот\s*\d+$/i.test(String(name).trim());
+    /* «Слот 1», «Команда 3» и пустые имена — заглушки, а не команды */
+    return D().isPlaceholderName ? D().isPlaceholderName(name) : (!name || /^Слот\s*\d+$/i.test(String(name).trim()));
+  }
+
+  /* ---------- Нумерация турниров ----------
+     Одинаковые названия («Compass Arena» и «Compass Arena») разводим
+     номерами: «Compass Arena #1», «Compass Arena #2». */
+  function decorateSeasons(sorted) {
+    var counts = {}, seen = {};
+    for (var i = 0; i < sorted.length; i++) {
+      var k = String((sorted[i] && sorted[i].name) || 'Compass Arena').trim().toLowerCase();
+      counts[k] = (counts[k] || 0) + 1;
+    }
+    return sorted.map(function (h, i) {
+      var key = String((h && h.name) || 'Compass Arena').trim().toLowerCase();
+      seen[key] = (seen[key] || 0) + 1;
+      var base = (h && h.name) || 'Compass Arena';
+      return {
+        h: h,
+        index: i,
+        season: i + 1,
+        ordinal: seen[key],
+        repeat: counts[key] > 1,
+        label: counts[key] > 1 ? base + ' #' + seen[key] : base
+      };
+    });
   }
   function plural(n, one, few, many) { return D().plural(n, one, few, many); }
   function teamCardName(name, mark, cls) {
@@ -149,6 +174,7 @@
     var seenTeams = {};
 
     function club(team) {
+      if (!team || isSlotName(team.name)) return null;
       var key = String(team.id) + ':' + String(team.name);
       var c = res.clubs[key];
       if (!c) {
@@ -182,16 +208,20 @@
         var l = byId(teams, loserOf(m));
         if (w) {
           var cw = club(w);
-          cw.played++;
-          cw.wins++;
-          if (has) { cw.mapsWon += (m.winner === m.team1 ? s1 : s2); cw.mapsLost += (m.winner === m.team1 ? s2 : s1); }
+          if (cw) {
+            cw.played++;
+            cw.wins++;
+            if (has) { cw.mapsWon += (m.winner === m.team1 ? s1 : s2); cw.mapsLost += (m.winner === m.team1 ? s2 : s1); }
+          }
           if (isCurrent) res.currentPlayed = true;
         }
         if (l) {
           var cl = club(l);
-          cl.played++;
-          cl.losses++;
-          if (has) { cl.mapsWon += (l.id === m.team1 ? s1 : s2); cl.mapsLost += (l.id === m.team1 ? s2 : s1); }
+          if (cl) {
+            cl.played++;
+            cl.losses++;
+            if (has) { cl.mapsWon += (l.id === m.team1 ? s1 : s2); cl.mapsLost += (l.id === m.team1 ? s2 : s1); }
+          }
           if (isCurrent) res.currentPlayed = true;
         }
       }
@@ -206,10 +236,12 @@
       var runner = byId(teams, h.runnerUpId);
       if (champ) {
         var cc = club(champ);
-        cc.titles++;
-        cc.finals++;
+        if (cc) { cc.titles++; cc.finals++; }
       }
-      if (runner) club(runner).finals++;
+      if (runner) {
+        var cr = club(runner);
+        if (cr) cr.finals++;
+      }
     }
 
     /* Текущий сезон попадает в сводку матчей всегда, а в титулы —
@@ -225,9 +257,11 @@
     if (d.champion) {
       account(liveTeams, liveMatches, true);
       var lc = club(d.champion);
-      lc.titles++;
-      lc.finals++;
-      if (d.runnerUp) club(d.runnerUp).finals++;
+      if (lc) { lc.titles++; lc.finals++; }
+      if (d.runnerUp) {
+        var lr = club(d.runnerUp);
+        if (lr) lr.finals++;
+      }
     } else {
       collectTeams(liveTeams);
       res.matches += liveMatches.length;
@@ -339,12 +373,13 @@
     return '<span class="h-fact">' + ic('flag') + 'До старта</span>';
   }
 
-  function currentHtml(s, no) {
+  function currentHtml(s, season, archiveCount) {
     var played = s.stats ? s.stats.played : 0;
     var total = (s.stats && s.stats.matchesTotal) ? s.stats.matchesTotal : (s.matches ? s.matches.length : 0);
     var pct = total ? Math.max(0, Math.min(100, Math.round(played / total * 100))) : 0;
     var champion = s.champion;
     var runner = s.runnerUp;
+    var state = champion ? 'завершён' : (s.phase === 'live' ? 'идёт' : (s.teams.length ? 'скоро старт' : 'регистрация'));
 
     var roster = '';
     if (s.teams.length) {
@@ -355,7 +390,8 @@
         }).join('') + '</div>';
     } else {
       roster = '<div class="now-empty">' + ic('users') +
-        '<p>Составы ещё не объявлены. Как только команды подтвердят участие, они появятся здесь, а сетка — на главной.</p></div>';
+        '<p>Составы нового сезона ещё не объявлены. Как только команды подтвердят участие, они появятся здесь, а сетка — на главной.</p>' +
+        '<a class="btn btn-ghost btn-sm" href="https://t.me/compassarenaa" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку</a></div>';
     }
 
     var lead;
@@ -363,24 +399,27 @@
       lead = 'Сезон доигран: гранд-финал позади, трофей у «' + champion.name + '». Эта глава станет архивной, как только организаторы зафиксируют итоги.';
     } else if (s.phase === 'live') {
       lead = 'Сезон идёт прямо сейчас: матчи по расписанию, сетка обновляется после каждой серии. Чемпион определится в гранд-финале.';
-    } else {
+    } else if (s.teams.length) {
       lead = 'Сезон ещё не стартовал. Ниже — состав участников и путь к трофею: как только прозвучит первый сигнал, глава начнёт заполняться.';
+    } else {
+      lead = 'Идёт регистрация нового сезона: команды собирают составы, сетка появится после жеребьёвки. Предыдущие турниры организации — в архиве ниже.';
     }
 
     var side =
       '<div class="now-side">' +
         '<div class="now-card"><span class="k">Статус</span><span class="v">' +
-          (champion ? 'Завершён' : (s.phase === 'live' ? 'Идёт' : 'До старта')) + '</span></div>' +
+          (champion ? 'Завершён' : (s.phase === 'live' ? 'Идёт' : (s.teams.length ? 'Скоро старт' : 'Регистрация'))) + '</span></div>' +
         (champion ? '<div class="now-card"><span class="k">Чемпион</span><span class="v gold">' + esc(champion.name) + '</span></div>' : '') +
         (runner ? '<div class="now-card"><span class="k">Финалист</span><span class="v">' + esc(runner.name) + '</span></div>' : '') +
         (s.format ? '<div class="now-card"><span class="k">Формат</span><span class="v">' + esc(s.format) + '</span></div>' : '') +
         (s.dates ? '<div class="now-card"><span class="k">Даты</span><span class="v">' + esc(s.dates) + '</span></div>' : '') +
         '<div class="now-card"><span class="k">Матчи</span><span class="v">' + played + ' / ' + total + '</span></div>' +
+        (archiveCount ? '<div class="now-card"><span class="k">В архиве</span><span class="v">' + archiveCount + ' ' + plural(archiveCount, 'турнир', 'турнира', 'турниров') + '</span></div>' : '') +
       '</div>';
 
-    return '<section class="now arena" id="ch-now" data-chapter="' + esc(no) + '" data-title="' + esc(s.name) + '">' +
+    return '<section class="now arena" id="ch-now" data-chapter="00" data-season="' + season + '" data-title="' + esc(s.name) + '">' +
         '<div class="wrap">' +
-          '<div class="h-mark"><span class="no">Глава ' + no + '</span><span class="rule"></span><span class="date">' + esc(s.dates || 'текущий сезон') + '</span></div>' +
+          '<div class="h-mark"><span class="no">Сезон №' + season + ' · ' + state + '</span><span class="rule"></span><span class="date">' + esc(s.dates || 'даты уточняются') + '</span></div>' +
           '<div class="now-grid">' +
             '<div>' +
               '<p class="h-eyebrow">' + ic('compass') + ' Текущий сезон · ' + esc(s.game) + '</p>' +
@@ -450,7 +489,10 @@
       }).join('') + '</div>';
   }
 
-  function chapterHtml(item, index, dur) {
+  function chapterHtml(entry, dur) {
+    var item = (entry && entry.h) || {};
+    var index = entry && entry.index != null ? entry.index : 0;
+    var season = entry && entry.season ? entry.season : index + 1;
     var teams = item.teams || [];
     var list = matchesOf(item);
     var champion = byId(teams, item.championId);
@@ -458,9 +500,9 @@
     var photos = photosOf(item);
     var cover = photos.length ? photos[0] : null;
     var gallery = cover ? photos.slice(1) : photos;
-    var no = pad2(index + 1);
+    var no = pad2(season);
     var chapterId = 'ch-' + (item.id != null ? item.id : index);
-    var title = item.name || 'Compass Arena';
+    var title = (entry && entry.label) || item.name || 'Compass Arena';
     var grand = grandOf(list);
     var score = scoreOf(grand);
     var date = dateText(item);
@@ -534,10 +576,13 @@
       facts.push('<span class="h-fact">' + playedCount + ' ' + plural(playedCount, 'серия', 'серии', 'серий') + '</span>');
     }
 
-    return '<section class="ch" id="' + esc(chapterId) + '" data-chapter="' + no + '" data-title="' + esc(title) + '">' +
+    return '<section class="ch' + (season % 2 === 0 ? ' is-alt' : '') + '" id="' + esc(chapterId) +
+        '" data-chapter="' + no + '" data-season="' + season + '" data-title="' + esc(title) + '">' +
         '<div class="wrap">' +
-          '<div class="h-mark"><span class="no">Глава ' + no + ' / ' + pad2(dur) + '</span><span class="rule"></span><span class="date">' + esc(date) + '</span></div>' +
-          '<div class="ch-title reveal"><h2>' + esc(title) + '</h2><div class="ch-meta">' + facts.join('') + '</div></div>' +
+          '<div class="h-mark"><span class="no">Турнир №' + season + ' из ' + pad2(dur) + '</span><span class="rule"></span><span class="date">' + esc(date) + '</span></div>' +
+          '<div class="ch-title reveal">' +
+            '<p class="h-eyebrow">' + ic('trophy') + ' Турнир №' + season + ' · ' + esc(date || 'дата не указана') + '</p>' +
+            '<h2>' + esc(title) + '</h2><div class="ch-meta">' + facts.join('') + '</div></div>' +
           coverHtml +
           '<div class="ch-story">' +
             '<div class="ch-block reveal"><p class="h-eyebrow">' + ic('trophy') + ' Чемпион и состав</p>' + champBlock + '</div>' +
@@ -545,7 +590,8 @@
           '</div>' +
           ladderHtml +
           galleryBlock +
-          '<div class="ch-end"><div class="rule"></div></div>' +
+          '<div class="ch-end"><div class="rule"></div><div class="ch-end-meta">Конец турнира №' + season +
+            ' · ' + esc(title) + (date ? ' · ' + esc(date) : '') + '</div></div>' +
         '</div>' +
       '</section>';
   }
@@ -564,26 +610,28 @@
     }
     nav.hidden = false;
     inner.innerHTML = chapters.map(function (c) {
-      return '<a class="h-chip" href="#' + esc(c.id) + '" data-target="' + esc(c.id) + '">' +
-        '<span class="no">' + esc(c.no) + '</span>' + esc(c.title) + '</a>';
+      return '<a class="h-chip' + (c.current ? ' is-current' : '') + '" href="#' + esc(c.id) + '" data-target="' + esc(c.id) + '">' +
+        '<span class="no">' + esc(c.no) + '</span><span class="ttl">' + esc(c.title) + '</span>' +
+        (c.date ? '<span class="dt">' + esc(c.date) + '</span>' : '') + '</a>';
     }).join('');
   }
 
   /* ==========================================================
      Сводные таблицы
      ========================================================== */
-  function championsTable(sorted) {
-    if (!sorted.length) return '';
-    var rows = sorted.map(function (item, i) {
+  function championsTable(entries) {
+    if (!entries.length) return '';
+    var rows = entries.map(function (entry) {
+      var item = entry.h || {};
       var teams = item.teams || [];
       var champ = byId(teams, item.championId);
       var runner = byId(teams, item.runnerUpId);
       var score = scoreOf(grandOf(matchesOf(item)));
       var date = dateText(item);
       return '<tr>' +
-        '<td class="num dim">' + pad2(i + 1) + '</td>' +
+        '<td class="num gold">№' + entry.season + '</td>' +
         '<td class="dim">' + (date ? esc(date) : '—') + '</td>' +
-        '<td class="name"><a class="text-link" href="#ch-' + esc(item.id != null ? item.id : i) + '">' + esc(item.name || 'Compass Arena') + '</a></td>' +
+        '<td class="name"><a class="text-link" href="#ch-' + esc(item.id != null ? item.id : entry.index) + '">' + esc(entry.label) + '</a></td>' +
         '<td class="name' + (champ ? ' gold' : '') + '">' + (champ ? esc(champ.name) : '—') + '</td>' +
         '<td class="dim">' + (runner ? esc(runner.name) : '—') + '</td>' +
         '<td class="num">' + (score ? esc(score) : '—') + '</td>' +
@@ -592,10 +640,10 @@
 
     return '<div class="h-table-block reveal">' +
       '<h3 class="h3">Чемпионы турниров</h3>' +
-      '<p class="h-table-hint">Все главы организации сверху вниз — от первого турнира до последнего.</p>' +
+      '<p class="h-table-hint">Турниры по порядку: №1 — первый, дальше по возрастанию. Название в таблице совпадает с заголовком главы ниже.</p>' +
       '<div class="tbl-scroll"><table class="tbl">' +
-        '<caption>Титулы Compass Arena по сезонам</caption>' +
-        '<thead><tr><th class="num">№</th><th>Дата</th><th>Турнир</th><th>Чемпион</th><th>Финалист</th><th class="num">Финал</th></tr></thead>' +
+        '<caption>Титулы Compass Arena по турнирам</caption>' +
+        '<thead><tr><th class="num">Турнир</th><th>Дата</th><th>Название</th><th>Чемпион</th><th>Финалист</th><th class="num">Финал</th></tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
       '</table></div></div>';
   }
@@ -628,19 +676,20 @@
   /* ==========================================================
      Витрина MVP
      ========================================================== */
-  function mvpShowcase(sorted) {
+  function mvpShowcase(entries) {
     var items = [];
-    for (var i = 0; i < sorted.length; i++) {
-      var h = sorted[i];
+    for (var i = 0; i < entries.length; i++) {
+      var entry = entries[i];
+      var h = entry.h || {};
       if (!h.mvp || !h.mvp.playerNick) continue;
       var team = byId(h.teams, h.mvp.teamId);
       items.push({
         nick: h.mvp.playerNick,
         team: team ? team.name : '',
         note: h.mvp.note || '',
-        title: h.name || 'Compass Arena',
-        id: 'ch-' + (h.id != null ? h.id : i),
-        no: pad2(i + 1)
+        title: entry.label,
+        id: 'ch-' + (h.id != null ? h.id : entry.index),
+        season: entry.season
       });
     }
     if (!items.length) return '';
@@ -655,7 +704,7 @@
             '<div class="nick">' + esc(m.nick) + '</div>' +
             (m.team ? '<div class="team">' + esc(m.team) + '</div>' : '') +
             (m.note ? '<div class="note">' + esc(m.note) + '</div>' : '') +
-            '<div class="src">' + ic('trophy') + 'Глава ' + esc(m.no) + ' · ' + esc(m.title) + '</div>' +
+            '<div class="src">' + ic('trophy') + 'Турнир №' + m.season + ' · ' + esc(m.title) + '</div>' +
             '</a>';
         }).join('') + '</div>' +
       '</div></section>';
@@ -667,21 +716,22 @@
   function idUrl(id) {
     return 'https://compassarena.ru/history.html#' + id;
   }
-  function injectSchema(d, sorted) {
-    var items = sorted.map(function (h, i) {
+  function injectSchema(d, entries) {
+    var items = entries.map(function (entry) {
+      var h = entry.h || {};
       var teams = h.teams || [];
       var champ = byId(teams, h.championId);
       var runner = byId(teams, h.runnerUpId);
-      var id = 'ch-' + (h.id != null ? h.id : i);
+      var id = 'ch-' + (h.id != null ? h.id : entry.index);
       var item = {
         '@type': 'ListItem',
-        position: i + 1,
+        position: entry.season,
         url: idUrl(id),
-        name: h.name || 'Compass Arena'
+        name: entry.label
       };
-      var ev = { '@type': 'SportsEvent', name: h.name || 'Compass Arena', sport: 'Esports', url: idUrl(id) };
+      var ev = { '@type': 'SportsEvent', name: entry.label, sport: 'Esports', url: idUrl(id) };
       var date = dateText(h);
-      if (date) ev.description = 'Турнир по Dota 2 — ' + date;
+      if (date) ev.description = 'Турнир №' + entry.season + ' по Dota 2 — ' + date;
       if (h.game) ev.about = h.game;
       ev.competitor = teams.filter(function (t) { return t && !isSlotName(t.name); })
         .map(function (t) { return { '@type': 'SportsTeam', name: t.name }; });
@@ -893,40 +943,78 @@
   /* ==========================================================
      Полный рендер
      ========================================================== */
+  /* Разделитель между турнирами: линия + компас */
+  function divider(nextSeason) {
+    return '<div class="ch-divider">' +
+      '<div class="wrap">' +
+        '<div class="orn"><svg class="ic" aria-hidden="true"><use href="#i-compass"></use></svg></div>' +
+        '<p class="ch-divider-meta">Ниже — турнир №' + nextSeason + '</p>' +
+      '</div>' +
+      '</div>';
+  }
+
+  function safe(fn, fallback, label) {
+    try { return fn(); } catch (e) {
+      if (global.console) console.warn('[CA.history] блок «' + label + '» не отрисован:', e);
+      return fallback || '';
+    }
+  }
+
   function render(d) {
-    var sorted = sortHistory(d.history);
-    var at = allTime(d);
-    var total = sorted.length + 1;
+    /* Ни один блок не должен ронять страницу целиком: архив обязан
+       показываться даже если текущий сезон пустой или битый. */
+    var sorted = safe(function () { return sortHistory(d.history); }, [], 'история');
+    var entries = safe(function () { return decorateSeasons(sorted); }, [], 'нумерация турниров');
+    var at = safe(function () { return allTime(d); }, { tournaments: 0, matches: 0, teams: [], clubList: [], currentPlayed: false }, 'сводка');
     var chapters = [];
+    var archiveCount = entries.length;
+    var currentSeasonNo = archiveCount + 1;
 
-    renderHero(d, sorted, at);
+    safe(function () { renderHero(d, sorted, at); }, null, 'первый экран');
 
-    var html = currentHtml(currentSeason(d), pad2(1));
-    chapters.push({ id: 'ch-now', no: pad2(1), title: (d.tournament.name || 'Compass Arena') + ' — текущий сезон' });
+    var html = safe(function () { return currentHtml(currentSeason(d), currentSeasonNo, archiveCount); }, '', 'текущий сезон');
+    chapters.push({ id: 'ch-now', no: '№' + currentSeasonNo, title: 'Текущий сезон', date: '', current: true });
 
     var archive = '';
-    for (var i = 0; i < sorted.length; i++) {
-      var item = sorted[i];
-      var no = pad2(i + 2);
-      var id = 'ch-' + (item.id != null ? item.id : i);
-      archive += chapterHtml(item, i + 1, total);
-      chapters.push({ id: id, no: no, title: item.name || 'Compass Arena' });
+    for (var i = 0; i < entries.length; i++) {
+      (function (entry) {
+        if (i > 0) archive += divider(entry.season);
+        archive += safe(function () { return chapterHtml(entry, archiveCount); }, chapterFallback(entry), 'турнир №' + entry.season);
+        chapters.push({
+          id: 'ch-' + (entry.h && entry.h.id != null ? entry.h.id : entry.index),
+          no: '№' + entry.season,
+          title: entry.label,
+          date: dateText(entry.h),
+          current: false
+        });
+      })(entries[i]);
+    }
+
+    if (!entries.length) {
+      archive = '<section class="ch-empty wrap reveal">' +
+        '<div class="orn"><svg class="ic" aria-hidden="true"><use href="#i-compass"></use></svg></div>' +
+        '<h2 class="h2">Архив пока пуст</h2>' +
+        '<p class="lead">Здесь появятся завершённые турниры организации: чемпион, состав, путь к титулу и кадры. ' +
+        'Когда сезон доигран, организаторы фиксируют его в админке — и он встаёт в хронику отдельным турниром.</p>' +
+        '<div class="row" style="margin-top:22px"><a class="btn btn-gold" href="/#bracket">' + ic('bracket') + 'Текущая сетка</a>' +
+        '<a class="btn btn-ghost" href="/schedule.html">' + ic('calendar') + 'Расписание</a></div>' +
+        '</section>';
     }
 
     /* Сводки: чемпионы, клубы, MVP */
     var extras = '';
-    var champs = championsTable(sorted);
-    var clubs = clubsTable(at);
+    var champs = safe(function () { return championsTable(entries); }, '', 'таблица чемпионов');
+    var clubs = safe(function () { return clubsTable(at); }, '', 'таблица клубов');
     if (champs || clubs) {
       extras += '<section class="h-sec" id="summary"><div class="wrap">' +
         '<div class="h-sec-head">' +
           '<div><p class="h-eyebrow">' + ic('trophy') + ' Итоги организации</p><h2 class="h2">Сводка чемпионов</h2></div>' +
-          '<p class="h-note">Одна таблица на всю историю: какой турнир, кто взял титул и с каким счётом закончился финал.</p>' +
+          '<p class="h-note">Одна таблица на всю историю: номер турнира, кто взял титул и с каким счётом закончился финал.</p>' +
         '</div>' +
         '<div class="h-tables">' + champs + clubs + '</div>' +
       '</div></section>';
     }
-    var mvp = mvpShowcase(sorted);
+    var mvp = safe(function () { return mvpShowcase(entries); }, '', 'витрина MVP');
 
     /* Текущий сезон первым, дальше — главы хроники */
     var root = document.getElementById('chapters');
@@ -934,21 +1022,35 @@
     var books = document.getElementById('books');
     if (books) books.innerHTML = archive + extras + mvp;
 
-    renderNav(chapters);
-    injectSchema(d, sorted);
+    safe(function () { renderNav(chapters); }, null, 'навигация');
+    safe(function () { injectSchema(d, entries); }, null, 'schema.org');
 
-    U().observeReveals(document);
-    initCoverObserver();
-    collectGroups();
-    initSpy();
-    initLightbox();
+    safe(function () { U().observeReveals(document); }, null, 'анимации');
+    safe(function () { initCoverObserver(); }, null, 'обложки');
+    safe(function () { collectGroups(); }, null, 'галереи');
+    safe(function () { initSpy(); }, null, 'активная глава');
+    safe(function () { initLightbox(); }, null, 'лайтбокс');
 
     var progress = 0;
     if (d.stats && d.stats.matchesTotal) progress = d.stats.played / d.stats.matchesTotal;
-    U().setProgress(progress);
+    safe(function () { U().setProgress(d.phase === 'post' ? 1 : progress); }, null, 'прогресс');
 
     /* та же фаза, что на других страницах: от неё зависит плашка «идёт эфир» в шапке */
     document.body.setAttribute('data-phase', d.phase || 'pre');
+  }
+
+  /* Запасной вариант главы: если турнир почему-то не отрисовался,
+     показываем хотя бы его номер, название и дату — без дыр в хронике. */
+  function chapterFallback(entry) {
+    var item = (entry && entry.h) || {};
+    var date = dateText(item);
+    return '<section class="ch' + (entry.season % 2 === 0 ? ' is-alt' : '') + '" id="ch-' +
+        esc(item.id != null ? item.id : entry.index) + '" data-season="' + entry.season + '">' +
+      '<div class="wrap">' +
+        '<div class="h-mark"><span class="no">Турнир №' + entry.season + '</span><span class="rule"></span><span class="date">' + esc(date) + '</span></div>' +
+        '<div class="ch-title reveal"><h2>' + esc(entry.label) + '</h2></div>' +
+        '<p class="ch-quiet">Данные этого турнира не удалось отрисовать. Попробуйте обновить страницу — сами записи архива целы.</p>' +
+      '</div></section>';
   }
 
   /* ==========================================================

@@ -268,6 +268,7 @@
             </div>
             <div class="team-list" id="teamList"></div>
             <p class="hint" style="margin-top:12px;">⚠️ Порядок команд = список в админке. Тащи за <b>⋮⋮</b> слева, чтобы переставить.</p>
+            <p class="hint">🧹 Перед новым сезоном сначала зафиксируй завершённый турнир в истории (вкладка «История»), и только потом удаляй команды — иначе результаты сезона исчезнут. При удалении команды админка сама предложит это сделать.</p>
         </div>
         <div class="card">
             <div class="card-header">
@@ -299,11 +300,17 @@
                 <span id="historyCount" style="color:#5f6773;font-size:12px;">0 турниров</span>
             </div>
             <p class="hint" style="margin-bottom:12px;">
-                Зафиксируй текущий турнир в историю (кнопка ниже — активна, когда в финале есть победитель), затем отредактируй MVP, добавь фото и описание.
+                Каждый турнир — отдельная глава архива: номер, дата, чемпион, MVP и фото. Зафиксируй текущий турнир кнопкой ниже,
+                затем отредактируй главу.
             </p>
             <div class="btn-group" style="margin-bottom:14px;">
                 <button class="btn btn-primary" onclick="snapshotCurrentTournament()">📌 Зафиксировать текущий турнир в историю</button>
+                <button class="btn btn-danger" onclick="clearHistory()">🗑️ Очистить архив</button>
             </div>
+            <p class="hint" style="margin-bottom:14px;">
+                ⚠️ «Сбросить текущий турнир» на вкладке настроек архив <b>не</b> удаляет — команды и матчи нового сезона начинаются с чистого листа,
+                а прошлые турниры остаются здесь, в истории.
+            </p>
             <div class="history-list" id="historyList"></div>
         </div>
     </div>
@@ -354,9 +361,9 @@
                 <button class="btn" onclick="exportData()">📤 Экспорт JSON</button>
                 <button class="btn" onclick="document.getElementById('importFile').click()">📥 Импорт JSON</button>
                 <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
-                <button class="btn btn-danger" onclick="resetData()">🔄 Сбросить всё</button>
+                <button class="btn btn-danger" onclick="resetData()">🔄 Сбросить текущий турнир</button>
             </div>
-            <p class="hint" style="margin-top:10px;">⚠️ «Сбросить всё» перезапишет KV дефолтом: 6 команд, 5 матчей. История тоже будет очищена.</p>
+            <p class="hint" style="margin-top:10px;">⚠️ «Сбросить текущий турнир» обнуляет команды, матчи и расписание — для регистрации нового сезона. Архив турниров при этом <b>не удаляется</b> (очистить его можно во вкладке «История»).</p>
         </div>
     </div>
 </div>
@@ -692,6 +699,13 @@ function clearEditLogo() {
 // ============================================================
 // ЗАГРУЗКА/СОХРАНЕНИЕ
 // ============================================================
+/* Данные считаются загруженными только после успешного ответа сервера.
+   Пока флаг false, сохранять нельзя: иначе пустые DATA/HISTORY затрут KV
+   (главная причина «пропавшей» истории). */
+var DATA_READY = false;
+var SERVER_HISTORY_N = 0;
+var LAST_LOAD_FAILED = false;
+
 function loadData() {
     return fetch('/api/data', { cache: 'no-store' })
         .then(function(res) {
@@ -719,9 +733,15 @@ function loadData() {
                 if (DATA.matches[k].score2 === undefined) DATA.matches[k].score2 = null;
                 if (DATA.matches[k].vod === undefined) DATA.matches[k].vod = '';
             }
+            DATA_READY = true;
+            LAST_LOAD_FAILED = false;
+            SERVER_HISTORY_N = HISTORY.length;
         })
         .catch(function(err) {
             console.warn('Не удалось загрузить данные', err);
+            DATA_READY = false;
+            LAST_LOAD_FAILED = true;
+            showToast('⚠️ Данные не загрузились — сохранение заблокировано, чтобы не потерять архив');
         });
 }
 
@@ -786,11 +806,25 @@ function renderEverything() {
     renderHistory();
 }
 
-function saveData() {
+function saveData(force) {
+    if (!DATA_READY) {
+        showToast('⏳ Данные ещё не загружены — сохранение отменено (обновите страницу)');
+        return Promise.resolve(false);
+    }
+    /* Пустая история поверх непустой — это почти всегда потеря архива.
+       Требуем явного подтверждения (или force из кнопки «Очистить архив»). */
+    if (!force && HISTORY.length === 0 && SERVER_HISTORY_N > 0) {
+        var sure = confirm('⚠️ Вы сохраняете ПУСТУЮ историю.\n\nЭто удалит из архива ' + SERVER_HISTORY_N + ' ' +
+            pluralT(SERVER_HISTORY_N) + ' вместе с чемпионами, MVP и фото.\n\nПродолжить?');
+        if (!sure) {
+            showToast('💾 Сохранение отменено — архив на месте');
+            return Promise.resolve(false);
+        }
+    }
     updateMatchLinks();
     var pw = ensurePassword();
     // Собираем payload: DATA + history отдельным полем
-    var payload = Object.assign({}, DATA, { history: HISTORY });
+    var payload = Object.assign({}, DATA, { history: HISTORY, clearHistory: !!force });
 
     return fetch('/api/save', {
         method: 'POST',
@@ -809,6 +843,14 @@ function saveData() {
             });
         }
         if (!res.ok) throw new Error('save failed: ' + res.status);
+        return res.json().catch(function() { return {}; });
+    }).then(function(out) {
+        if (out && out.historyKept) {
+            showToast('⚠️ Сервер сохранил прежний архив — чтобы очистить его, используйте «Очистить архив»');
+            return loadData().then(renderEverything);
+        }
+        SERVER_HISTORY_N = HISTORY.length;
+        return true;
     }).catch(function(err) {
         console.warn('Не удалось сохранить', err);
         showToast('⚠️ Не удалось сохранить — экран возвращён к серверным данным');
@@ -1502,6 +1544,79 @@ function escapeHtml(s) {
         .replace(/'/g, '&#39;');
 }
 
+/* Снапшот текущего турнира. Отдельная функция, потому что она нужна
+   не только кнопке «Зафиксировать», но и сбросу сезона / удалению команд. */
+function buildSnapshot() {
+    updateMatchLinks();
+    var grand = getMatch(5);
+    var now = new Date();
+    var id = 'ca-' + now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate()) + '-' + now.getTime();
+    var dateStr = DATA.tournament.dates || (pad2(now.getDate()) + '.' + pad2(now.getMonth() + 1) + '.' + now.getFullYear());
+
+    return {
+        id: id,
+        name: DATA.tournament.name || 'Compass Arena',
+        date: dateStr,
+        format: (DATA.tournament.format || 'Custom Bracket') + ' · ' + (DATA.tournament.matches || 'Bo3'),
+        game: DATA.tournament.game || 'Dota 2',
+        createdAt: now.toISOString(),
+        // Снапшот данных на момент фиксации
+        teams: JSON.parse(JSON.stringify(DATA.teams || [])),
+        matches: JSON.parse(JSON.stringify(DATA.matches || [])),
+        championId: grand ? grand.winner : null,
+        runnerUpId: grand ? getLoser(grand) : null,
+        mvp: { teamId: null, playerNick: '', note: '' },
+        photos: []
+    };
+}
+
+/* Добавить текущий турнир в архив без открытия модалки (для сброса/удаления команд) */
+function archiveCurrentSeason() {
+    var snapshot = buildSnapshot();
+    HISTORY.unshift(snapshot);
+    if (HISTORY.length > 20) HISTORY = HISTORY.slice(0, 20);
+    return snapshot;
+}
+
+/* Турнир выглядит завершённым: есть победитель финала или сыграны все матчи */
+function tournamentLooksFinished() {
+    updateMatchLinks();
+    var grand = getMatch(5);
+    if (grand && grand.winner) return true;
+    for (var i = 0; i < DATA.matches.length; i++) if (DATA.matches[i].winner) return true;
+    return false;
+}
+
+/* Есть ли уже снапшот текущего турнира в архиве */
+function currentSeasonArchived() {
+    for (var i = 0; i < HISTORY.length; i++) {
+        var h = HISTORY[i];
+        if (!h || !Array.isArray(h.matches)) continue;
+        var sameMatch = false;
+        for (var j = 0; j < DATA.matches.length; j++) {
+            var cur = DATA.matches[j];
+            var old = null;
+            for (var k = 0; k < h.matches.length; k++) if (h.matches[k] && h.matches[k].id === cur.id) old = h.matches[k];
+            if (old && cur.winner && old.winner === cur.winner && cur.id === 5) { sameMatch = true; break; }
+        }
+        if (sameMatch) return true;
+    }
+    return false;
+}
+
+/* Предложить зафиксировать завершённый турнир перед тем, как его разрушить.
+   Возвращает true, если можно продолжать действие. */
+function offerArchiveBefore(action) {
+    if (!tournamentLooksFinished() || currentSeasonArchived()) return true;
+    var yes = confirm('Турнир выглядит завершённым.\n\nЗафиксировать его в историю перед тем, как ' + action + '?\n\n' +
+        '«ОК» — сначала сохраним главу в архив, «Отмена» — продолжим без сохранения (результаты будут потеряны).');
+    if (yes) {
+        var snap = archiveCurrentSeason();
+        showToast('📌 Турнир добавлен в историю — открыт как «' + (snap.name || 'Compass Arena') + '»');
+    }
+    return true;
+}
+
 function snapshotCurrentTournament() {
     updateMatchLinks();
     var grand = getMatch(5);
@@ -1509,40 +1624,12 @@ function snapshotCurrentTournament() {
         if (!confirm('В финале (M5) ещё нет победителя. Зафиксировать всё равно? (снапшот будет без чемпиона)')) return;
     }
 
-    var championId = grand ? grand.winner : null;
-    var runnerUpId = grand ? getLoser(grand) : null;
-
-    // Уникальный id
-    var now = new Date();
-    var id = 'ca-' + now.getFullYear() + '-' + pad2(now.getMonth()+1) + '-' + pad2(now.getDate()) + '-' + now.getTime();
-
-    // Дата: берём из tournament.dates, если есть, иначе — сегодня
-    var dateText = DATA.tournament.dates || (pad2(now.getDate()) + '.' + pad2(now.getMonth()+1) + '.' + now.getFullYear());
-
-    var snapshot = {
-        id: id,
-        name: DATA.tournament.name || 'Compass Arena',
-        date: dateText,
-        format: (DATA.tournament.format || 'Custom Bracket') + ' · ' + (DATA.tournament.matches || 'Bo3'),
-        game: DATA.tournament.game || 'Dota 2',
-        createdAt: now.toISOString(),
-        // Снапшот данных на момент фиксации
-        teams: JSON.parse(JSON.stringify(DATA.teams || [])),
-        matches: JSON.parse(JSON.stringify(DATA.matches || [])),
-        championId: championId,
-        runnerUpId: runnerUpId,
-        mvp: { teamId: null, playerNick: '', note: '' },
-        photos: []
-    };
-
-    HISTORY.unshift(snapshot);
-    if (HISTORY.length > 20) HISTORY = HISTORY.slice(0, 20);
-
+    var snapshot = archiveCurrentSeason();
     saveData();
     renderHistory();
     showToast('📌 Турнир зафиксирован в истории. Открой ✏️ чтобы добавить MVP и фото.');
 
-    setTimeout(function() { openHistoryModal(id); }, 300);
+    setTimeout(function() { openHistoryModal(snapshot.id); }, 300);
 }
 
 function pad2(n) { return String(n).padStart(2, '0'); }
@@ -1708,6 +1795,7 @@ function addTeam() {
 
 function deleteTeam(id) {
     if (!confirm('Удалить команду #' + id + '?')) return;
+    offerArchiveBefore('удалить команды текущего турнира');
     var newTeams = [];
     for (var i = 0; i < DATA.teams.length; i++) {
         if (DATA.teams[i].id !== id) newTeams.push(DATA.teams[i]);
@@ -1842,13 +1930,25 @@ function importData(event) {
 }
 
 function resetData() {
-    if (!confirm('⚠️ Сбросить ВСЕ данные на дефолт (6 команд, 5 матчей)?')) return;
-    if (!confirm('Точно? Это перезапишет KV. История тоже будет очищена.')) return;
+    if (!confirm('Сбросить текущий турнир?\n\nКоманды, матчи, расписание и счёт обнулятся — чтобы зарегистрировать новый сезон.\nАрхив (история турниров) останется на месте.')) return;
+    offerArchiveBefore('начать новый сезон');
     DATA = getDefaultData();
-    HISTORY = [];
+    // HISTORY не трогаем: архив переживает смену сезона
     saveData();
     renderEverything();
-    showToast('🔄 Данные сброшены');
+    showToast('🔄 Текущий турнир сброшен. Архив на месте — ' + HISTORY.length + ' ' + pluralT(HISTORY.length));
+}
+
+/* Полная очистка архива — отдельное осознанное действие */
+function clearHistory() {
+    if (!HISTORY.length) { showToast('Архив уже пуст'); return; }
+    if (!confirm('Очистить ВЕСЬ архив организации?\n\nБудет удалено ' + HISTORY.length + ' ' + pluralT(HISTORY.length) +
+        ' вместе с чемпионами, MVP и фотографиями. Это необратимо.')) return;
+    if (!confirm('Точно очистить архив? Отменить это будет нельзя.')) return;
+    HISTORY = [];
+    saveData(true);
+    renderHistory();
+    showToast('🗑️ Архив очищен');
 }
 
 function showToast(msg) {
@@ -1907,6 +2007,8 @@ window.saveSettings = saveSettings;
 window.exportData = exportData;
 window.importData = importData;
 window.resetData = resetData;
+window.clearHistory = clearHistory;
+window.snapshotCurrentTournament = snapshotCurrentTournament;
 window.showToast = showToast;
 window.onNewTeamLogo = onNewTeamLogo;
 window.onEditLogo = onEditLogo;

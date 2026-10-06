@@ -3,12 +3,12 @@
   "private": true,
   "scripts": {
     "serve": "node tests/server.mjs",
-    "test": "node tests/audit.mjs && node tests/smoke.mjs && node tests/smoke-history.mjs"
+    "test": "node tests/syntax.mjs && node tests/audit.mjs && node tests/smoke.mjs && node tests/smoke-history.mjs && node tests/regression-seasons.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "latest"
   },
   "devDependencies": {
-    "jsdom": "^30.0.0"
+    "jsdom": "^30.1.2"
   }
 }
