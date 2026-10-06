@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "serve": "node tests/server.mjs",
-    "test": "node tests/syntax.mjs && node tests/audit.mjs && node tests/smoke.mjs && node tests/smoke-history.mjs && node tests/regression-seasons.mjs"
+    "test": "node tests/syntax.mjs && node tests/audit.mjs && node tests/smoke.mjs && node tests/smoke-history.mjs && node tests/regression-seasons.mjs && node tests/admin-archive.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "latest"

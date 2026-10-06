@@ -191,6 +191,19 @@
         .history-item .h-info .h-meta { font-size: 11px; color: #7a8494; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .history-item .h-info .h-meta .champ { color: #e3c48a; }
         .history-item .h-actions { display: flex; gap: 4px; flex-shrink: 0; }
+        .history-item.is-dupe { border-color: #6b4a2a; background: #1a1512; }
+        .history-item .h-no { color: #c9a35a; font-family: 'Unbounded', sans-serif; font-size: 10px; letter-spacing: 0.04em; margin-right: 4px; }
+        .h-badge { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 400; letter-spacing: 0.02em; background: rgba(201,163,90,0.16); color: #e3c48a; border: 1px solid rgba(201,163,90,0.35); }
+        .h-badge.warn { background: rgba(231,76,60,0.14); color: #f0a79e; border-color: rgba(231,76,60,0.45); }
+        .archive-status {
+            display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; justify-content: space-between;
+            margin: 12px 0 14px; padding: 12px 16px; border-radius: 6px;
+            border: 1px solid #242b35; background: #0d1118; font-size: 12.5px; color: #7a8494;
+        }
+        .archive-status .as-text { flex: 1; min-width: 240px; }
+        .archive-status .as-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .archive-status.ok { border-color: rgba(76,175,80,0.45); background: rgba(76,175,80,0.07); color: #a9d6ab; }
+        .archive-status.warn { border-color: rgba(231,76,60,0.5); background: rgba(231,76,60,0.07); color: #f0b3ab; }
 
         .photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; }
         .photo-thumb { position: relative; aspect-ratio: 1; background: #0a0d12; border: 1px solid #242b35; border-radius: 4px; overflow: hidden; }
@@ -268,7 +281,7 @@
             </div>
             <div class="team-list" id="teamList"></div>
             <p class="hint" style="margin-top:12px;">⚠️ Порядок команд = список в админке. Тащи за <b>⋮⋮</b> слева, чтобы переставить.</p>
-            <p class="hint">🧹 Перед новым сезоном сначала зафиксируй завершённый турнир в истории (вкладка «История»), и только потом удаляй команды — иначе результаты сезона исчезнут. При удалении команды админка сама предложит это сделать.</p>
+            <div id="teamsArchiveStatus" class="archive-status"></div>
         </div>
         <div class="card">
             <div class="card-header">
@@ -300,11 +313,14 @@
                 <span id="historyCount" style="color:#5f6773;font-size:12px;">0 турниров</span>
             </div>
             <p class="hint" style="margin-bottom:12px;">
-                Каждый турнир — отдельная глава архива: номер, дата, чемпион, MVP и фото. Зафиксируй текущий турнир кнопкой ниже,
-                затем отредактируй главу.
+                Каждый турнир — отдельная глава архива: номер, дата, чемпион, MVP и фото. Фиксация строгая: один сезон = одна глава,
+                повторное нажатие обновляет её, а не создаёт новую.
             </p>
+            <div id="historyStatus" class="archive-status"></div>
             <div class="btn-group" style="margin-bottom:14px;">
                 <button class="btn btn-primary" onclick="snapshotCurrentTournament()">📌 Зафиксировать текущий турнир в историю</button>
+                <button class="btn" onclick="refreshArchivedChapter()">🔄 Обновить главу сезона</button>
+                <button class="btn" onclick="dedupeHistory()">🧹 Убрать дубликаты глав</button>
                 <button class="btn btn-danger" onclick="clearHistory()">🗑️ Очистить архив</button>
             </div>
             <p class="hint" style="margin-bottom:14px;">
@@ -416,6 +432,15 @@
         <div class="form-group" style="margin-bottom:10px;">
             <label>Формат (текстом)</label>
             <input type="text" id="histFormat" placeholder="Custom Bracket · Bo3">
+        </div>
+
+        <div class="form-group" style="margin-bottom:10px; border-top:1px solid #242b35; padding-top:12px;">
+            <label>Слить с другой главой (если результаты турнира разъехались по двум главам)</label>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <select id="histMergeSelect" style="flex:1; min-width:220px;"><option value="">— выбери главу —</option></select>
+                <button class="btn" onclick="mergeHistoryIntoCurrent()">🔗 Слить в эту главу</button>
+            </div>
+            <span class="hint">Результаты, составы, фото и MVP из выбранной главы добавятся сюда, а сама выбранная глава удалится.</span>
         </div>
 
         <div class="form-row">
@@ -753,6 +778,42 @@ function ensurePassword() {
     return ADMIN_PW;
 }
 
+/* Состояние фиксации на вкладке команд: видно до того, как что-то удалять */
+function renderTeamsArchiveStatus() {
+    var box = document.getElementById('teamsArchiveStatus');
+    if (!box) return;
+    var finished = tournamentLooksFinished();
+    var archived = currentSeasonArchived();
+    var h = archivedChapter();
+
+    var cls, text;
+    if (!finished) {
+        cls = 'neutral';
+        text = 'Сезон идёт: команды и матчи можно менять свободно. Перед новым сезоном зафиксируй турнир в истории — иначе результаты исчезнут.';
+    } else if (!archived) {
+        cls = 'warn';
+        text = '⚠️ Турнир завершён и ещё НЕ зафиксирован в истории. Нажми «Зафиксировать сезон» перед удалением команд или сбросом.';
+    } else {
+        cls = 'ok';
+        text = '✅ Турнир зафиксирован в истории' + (h ? ' (глава «' + escapeHtml(h.date || '') + '»)' : '') +
+            '. Можно удалять команды и сбрасывать сезон — архив останется.';
+    }
+
+    box.className = 'archive-status ' + cls;
+    box.innerHTML = '<div class="as-text">' + text + '</div>' +
+        '<div class="as-actions">' +
+            (finished && !archived ? '<button class="btn btn-sm btn-primary" onclick="snapshotCurrentTournament()">📌 Зафиксировать сезон</button>' : '') +
+            '<button class="btn btn-sm" onclick="switchTab(\'history\')">📜 Открыть архив</button>' +
+        '</div>';
+}
+
+function switchTab(name) {
+    var tabs = document.querySelectorAll('.tab');
+    for (var i = 0; i < tabs.length; i++) {
+        if (tabs[i].dataset.tab === name) { tabs[i].click(); return; }
+    }
+}
+
 function renderEverything() {
     var nameEl = document.getElementById('settingsName');
     if (nameEl) nameEl.value = DATA.tournament.name || 'Compass Arena';
@@ -804,6 +865,7 @@ function renderEverything() {
     renderSchedule();
     renderPreview();
     renderHistory();
+    renderTeamsArchiveStatus();
 }
 
 function saveData(force) {
@@ -1479,22 +1541,34 @@ function renderHistory() {
     var countEl = document.getElementById('historyCount');
     if (!container) return;
 
-    if (countEl) countEl.textContent = HISTORY.length + ' ' + pluralT(HISTORY.length);
+    var dupes = findDuplicates();
+    var dupeCount = Object.keys(dupes).length;
+    if (countEl) {
+        countEl.textContent = HISTORY.length + ' ' + pluralT(HISTORY.length) +
+            (dupeCount ? ' · дубликатов: ' + dupeCount : '');
+    }
+
+    renderHistoryStatus(dupes);
 
     if (HISTORY.length === 0) {
         container.innerHTML = '<div style="color:#5f6773;font-size:13px;text-align:center;padding:20px;font-style:italic;">Пока ни одного турнира в истории</div>';
         return;
     }
 
-    var sorted = HISTORY.slice().sort(function(a, b) {
-        var ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        var tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return tb - ta;
+    /* Номера турниров — как на сайте: по хронологии, первый турнир = №1 */
+    var chrono = HISTORY.slice().sort(function(a, b) {
+        return (new Date(a.createdAt || 0).getTime()) - (new Date(b.createdAt || 0).getTime());
     });
+    var seasonOf = {};
+    for (var s = 0; s < chrono.length; s++) seasonOf[chrono[s].id] = s + 1;
+
+    /* А в списке админки — свежие сверху */
+    var sorted = chrono.slice().reverse();
 
     container.innerHTML = '';
     for (var i = 0; i < sorted.length; i++) {
         var t = sorted[i];
+        var season = seasonOf[t.id] || (sorted.length - i);
         var champ = null;
         if (t.teams) {
             for (var k = 0; k < t.teams.length; k++) {
@@ -1507,23 +1581,72 @@ function renderHistory() {
         else if (champ && champ.name) logoHtml = '<span class="placeholder">' + champ.name.charAt(0).toUpperCase() + '</span>';
         else logoHtml = '<span class="placeholder">?</span>';
 
+        var decided = 0;
+        var matches = t.matches || [];
+        for (var d = 0; d < matches.length; d++) if (matches[d] && matches[d].winner) decided++;
+
         var mvpText = (t.mvp && t.mvp.playerNick) ? (' · MVP: ' + t.mvp.playerNick) : '';
         var photosText = (t.photos && t.photos.length) ? (' · ' + t.photos.length + ' фото') : '';
 
+        var badges = '';
+        if (DATA.archivedSnapshotId === t.id) {
+            badges += '<span class="h-badge">текущий сезон</span>';
+            if (chapterIsStale()) badges += '<span class="h-badge warn">результаты изменились — обнови главу</span>';
+        }
+        if (dupes[t.id]) {
+            badges += '<span class="h-badge warn">дубликат главы №' + (seasonOf[dupes[t.id]] || '?') + '</span>';
+        }
+
         var div = document.createElement('div');
-        div.className = 'history-item';
+        div.className = 'history-item' + (dupes[t.id] ? ' is-dupe' : '');
         div.innerHTML =
             '<div class="h-logo">' + logoHtml + '</div>' +
             '<div class="h-info">' +
-                '<div class="h-name">' + escapeHtml(t.name) + '</div>' +
-                '<div class="h-meta">' + escapeHtml(t.date || '') + ' · Победитель: <span class="champ">' + escapeHtml(champ ? champ.name : '—') + '</span>' + escapeHtml(mvpText + photosText) + '</div>' +
+                '<div class="h-name"><span class="h-no">Турнир №' + season + '</span> ' + escapeHtml(t.name) + badges + '</div>' +
+                '<div class="h-meta">' + escapeHtml(t.date || '') + ' · Победитель: <span class="champ">' + escapeHtml(champ ? champ.name : '—') + '</span>' +
+                    ' · серий: ' + decided + escapeHtml(mvpText + photosText) + '</div>' +
             '</div>' +
             '<div class="h-actions">' +
-                '<button class="btn btn-sm" onclick="openHistoryModal(\'' + escapeHtml(t.id) + '\')">✏️</button>' +
-                '<button class="btn btn-sm btn-danger" onclick="deleteHistoryItem(\'' + escapeHtml(t.id) + '\')">✕</button>' +
+                '<a class="btn btn-sm" href="/history.html#ch-' + encodeURIComponent(t.id) + '" target="_blank" rel="noopener" title="Открыть главу на сайте">🔗</a>' +
+                '<button class="btn btn-sm" onclick="openHistoryModal(\'' + escapeHtml(t.id) + '\')" title="Редактировать главу">✏️</button>' +
+                '<button class="btn btn-sm btn-danger" onclick="deleteHistoryItem(\'' + escapeHtml(t.id) + '\')" title="Удалить главу">✕</button>' +
             '</div>';
         container.appendChild(div);
     }
+}
+
+/* Строка состояния фиксации: что с текущим сезоном и что с дублями */
+function renderHistoryStatus(dupes) {
+    var box = document.getElementById('historyStatus');
+    if (!box) return;
+    var archived = currentSeasonArchived();
+    var h = archivedChapter();
+    var stale = archived && chapterIsStale();
+    var dupeCount = dupes ? Object.keys(dupes).length : Object.keys(findDuplicates()).length;
+    var finished = tournamentLooksFinished();
+
+    var stateClass = !finished ? 'neutral' : (archived ? (stale ? 'warn' : 'ok') : 'warn');
+    var stateText;
+    if (!finished) {
+        stateText = 'Текущий сезон ещё не завершён — фиксировать пока нечего.';
+    } else if (!archived) {
+        stateText = '⚠️ Турнир завершён, но в истории его ещё нет. Нажми «Зафиксировать» — иначе результаты потеряются при сбросе.';
+    } else if (stale) {
+        stateText = '⚠️ Глава текущего сезона' + (h ? ' («' + escapeHtml(h.date || '') + '»)' : '') +
+            ' зафиксирована, но результаты после этого изменились. Нажми «Обновить главу сезона».';
+    } else {
+        stateText = '✅ Текущий сезон зафиксирован' + (h ? ' (глава «' + escapeHtml(h.date || '') + '»)' : '') +
+            '. Правки в MVP и фото сохраняются обычной кнопкой в окне главы.';
+    }
+
+    box.className = 'archive-status ' + stateClass;
+    box.innerHTML =
+        '<div class="as-text">' + stateText + '</div>' +
+        '<div class="as-actions">' +
+            '<button class="btn btn-sm" onclick="snapshotCurrentTournament()">📌 Зафиксировать / обновить сезон</button>' +
+            (archived ? '<button class="btn btn-sm" onclick="refreshArchivedChapter()">🔄 Обновить главу сезона</button>' : '') +
+            (dupeCount ? '<button class="btn btn-sm btn-danger" onclick="dedupeHistory()">🧹 Убрать дубликаты (' + dupeCount + ')</button>' : '') +
+        '</div>';
 }
 
 function pluralT(n) {
@@ -1544,8 +1667,147 @@ function escapeHtml(s) {
         .replace(/'/g, '&#39;');
 }
 
-/* Снапшот текущего турнира. Отдельная функция, потому что она нужна
-   не только кнопке «Зафиксировать», но и сбросу сезона / удалению команд. */
+/* ============================================================
+   ФИКСАЦИЯ ТУРНИРА В ИСТОРИЮ
+   ------------------------------------------------------------
+   Жёсткие правила, чтобы главы не плодились и не расползались:
+   1. У сезона есть отпечаток (fingerprint) — состав команд и все
+      результаты матчей. Он пишется в главу при фиксации.
+   2. Сезон фиксируется ОДИН раз: id главы запоминается в
+      DATA.archivedSnapshotId. Пока он там — автоподсказок больше нет.
+   3. Если после фиксации результаты изменились, глава помечается
+      «устарела» и её можно обновить, не теряя MVP и фото.
+   4. Дубликаты глав (частичные копии одного турнира) находятся по
+      вложенности результатов и убираются одной кнопкой.
+   ============================================================ */
+function seasonFingerprint() {
+    updateMatchLinks();
+    var parts = [];
+    for (var i = 0; i < (DATA.matches || []).length; i++) {
+        var m = DATA.matches[i] || {};
+        parts.push([m.id, m.team1 || '', m.team2 || '', m.winner || '',
+            m.score1 == null ? '' : m.score1, m.score2 == null ? '' : m.score2].join(':'));
+    }
+    var teams = (DATA.teams || []).map(function(t) { return t.id + '=' + (t.name || ''); }).sort();
+    return parts.join('|') + '#' + teams.join(',');
+}
+
+/* Отпечаток записи архива: у новых глав он сохранён, у старых считаем на месте */
+function chapterFingerprint(h) {
+    if (h && h.fingerprint) return h.fingerprint;
+    var parts = [];
+    var list = (h && h.matches) || [];
+    for (var i = 0; i < list.length; i++) {
+        var m = list[i] || {};
+        parts.push([m.id, m.team1 || '', m.team2 || '', m.winner || '',
+            m.score1 == null ? '' : m.score1, m.score2 == null ? '' : m.score2].join(':'));
+    }
+    var teams = ((h && h.teams) || []).map(function(t) { return t.id + '=' + (t.name || ''); }).sort();
+    return parts.join('|') + '#' + teams.join(',');
+}
+
+/* Карта результатов главы: «матч:победитель:счёт» → 1. Нужна для поиска дублей */
+function chapterResults(h) {
+    var out = {};
+    var list = (h && h.matches) || [];
+    for (var i = 0; i < list.length; i++) {
+        var m = list[i];
+        if (!m || !m.winner) continue;
+        out[m.id + ':' + m.winner + ':' + (m.score1 == null ? '' : m.score1) + '-' + (m.score2 == null ? '' : m.score2)] = 1;
+    }
+    return out;
+}
+function resultCoverage(a, b) {
+    /* сколько результатов из a есть в b и сколько не нашлось */
+    var covered = 0, missing = 0;
+    for (var k in a) { if (b[k]) covered++; else missing++; }
+    return { covered: covered, missing: missing, total: covered + missing };
+}
+function countKeys(o) { var n = 0; for (var k in o) n++; return n; }
+
+/* Какие главы — дубликаты (одна и та же дата/название):
+   • точные повторы (те же результаты) — оставляем более «богатую» главу (фото/MVP) и более новую;
+   • частичные копии (результаты вложены в другую главу) — дубликат меньшая. */
+function chapterValue(h) {
+    var v = 0;
+    if (h && h.photos && h.photos.length) v += 2;
+    if (h && h.mvp && h.mvp.playerNick) v += 1;
+    return v;
+}
+function preferChapter(a, b) {
+    var va = chapterValue(a), vb = chapterValue(b);
+    if (va !== vb) return va > vb;
+    var ta = new Date((a && a.createdAt) || 0).getTime();
+    var tb = new Date((b && b.createdAt) || 0).getTime();
+    if (ta !== tb) return ta > tb;
+    return String((a && a.id) || '') > String((b && b.id) || '');
+}
+
+function findDuplicates() {
+    var sorted = HISTORY.slice().sort(function(a, b) {
+        return (new Date(a.createdAt || 0).getTime()) - (new Date(b.createdAt || 0).getTime());
+    });
+    var dupes = {};   /* id главы → id главы, дубликатом которой она является */
+    for (var i = 0; i < sorted.length; i++) {
+        for (var j = 0; j < sorted.length; j++) {
+            if (i === j) continue;
+            var a = sorted[i], b = sorted[j];
+            if (!a || !b || !a.id || !b.id) continue;
+            if (dupes[a.id]) continue;
+            if (String(a.date || '') !== String(b.date || '')) continue;
+            if (String(a.name || '') !== String(b.name || '')) continue;
+            var ra = chapterResults(a), rb = chapterResults(b);
+            var ca = countKeys(ra), cb = countKeys(rb);
+            if (ca && ca === cb) {
+                /* точный повтор: помечаем худшую копию */
+                if (!preferChapter(a, b)) dupes[a.id] = b.id;
+                continue;
+            }
+            if (!ca || !cb || ca >= cb) continue;          /* частичной копией считаем только «меньшую» */
+            var cov = resultCoverage(ra, rb);
+            if (cov.missing === 0) dupes[a.id] = b.id;      /* все результаты a есть в b → a частичная копия */
+        }
+    }
+    return dupes;
+}
+
+/* Перенести фото и MVP из удаляемой копии в сохраняемую главу */
+function mergeChapterData(from, to) {
+    var moved = { photos: 0, mvp: false };
+    if (!from || !to) return moved;
+    if (from.photos && from.photos.length) {
+        to.photos = (to.photos || []).concat(from.photos);
+        moved.photos = from.photos.length;
+    }
+    if (from.mvp && from.mvp.playerNick && !(to.mvp && to.mvp.playerNick)) {
+        to.mvp = from.mvp;
+        moved.mvp = true;
+    }
+    return moved;
+}
+
+function currentSeasonArchived() {
+    if (!DATA.archivedSnapshotId) return false;
+    for (var i = 0; i < HISTORY.length; i++) {
+        if (HISTORY[i] && HISTORY[i].id === DATA.archivedSnapshotId) return true;
+    }
+    /* Главу удалили вручную — считаем сезон незафиксированным */
+    return false;
+}
+function archivedChapter() {
+    if (!DATA.archivedSnapshotId) return null;
+    for (var i = 0; i < HISTORY.length; i++) {
+        if (HISTORY[i] && HISTORY[i].id === DATA.archivedSnapshotId) return HISTORY[i];
+    }
+    return null;
+}
+function chapterIsStale() {
+    var h = archivedChapter();
+    if (!h) return false;
+    return chapterFingerprint(h) !== seasonFingerprint();
+}
+
+/* Снапшот текущего турнира (без записи в HISTORY) */
 function buildSnapshot() {
     updateMatchLinks();
     var grand = getMatch(5);
@@ -1560,6 +1822,7 @@ function buildSnapshot() {
         format: (DATA.tournament.format || 'Custom Bracket') + ' · ' + (DATA.tournament.matches || 'Bo3'),
         game: DATA.tournament.game || 'Dota 2',
         createdAt: now.toISOString(),
+        fingerprint: seasonFingerprint(),
         // Снапшот данных на момент фиксации
         teams: JSON.parse(JSON.stringify(DATA.teams || [])),
         matches: JSON.parse(JSON.stringify(DATA.matches || [])),
@@ -1570,15 +1833,7 @@ function buildSnapshot() {
     };
 }
 
-/* Добавить текущий турнир в архив без открытия модалки (для сброса/удаления команд) */
-function archiveCurrentSeason() {
-    var snapshot = buildSnapshot();
-    HISTORY.unshift(snapshot);
-    if (HISTORY.length > 20) HISTORY = HISTORY.slice(0, 20);
-    return snapshot;
-}
-
-/* Турнир выглядит завершённым: есть победитель финала или сыграны все матчи */
+/* Турнир выглядит завершённым: есть победитель финала или сыграны матчи */
 function tournamentLooksFinished() {
     updateMatchLinks();
     var grand = getMatch(5);
@@ -1587,41 +1842,79 @@ function tournamentLooksFinished() {
     return false;
 }
 
-/* Есть ли уже снапшот текущего турнира в архиве */
-function currentSeasonArchived() {
-    for (var i = 0; i < HISTORY.length; i++) {
-        var h = HISTORY[i];
-        if (!h || !Array.isArray(h.matches)) continue;
-        var sameMatch = false;
-        for (var j = 0; j < DATA.matches.length; j++) {
-            var cur = DATA.matches[j];
-            var old = null;
-            for (var k = 0; k < h.matches.length; k++) if (h.matches[k] && h.matches[k].id === cur.id) old = h.matches[k];
-            if (old && cur.winner && old.winner === cur.winner && cur.id === 5) { sameMatch = true; break; }
-        }
-        if (sameMatch) return true;
-    }
-    return false;
+/* Первая фиксация сезона. Повторно сама не вызывается — только по кнопке. */
+function archiveCurrentSeason() {
+    var snapshot = buildSnapshot();
+    HISTORY.unshift(snapshot);
+    if (HISTORY.length > 20) HISTORY = HISTORY.slice(0, 20);
+    DATA.archivedSnapshotId = snapshot.id;
+    return snapshot;
 }
 
-/* Предложить зафиксировать завершённый турнир перед тем, как его разрушить.
-   Возвращает true, если можно продолжать действие. */
+/* Обновить уже зафиксированную главу текущими результатами, сохранив MVP и фото */
+function updateArchivedChapter() {
+    var h = archivedChapter();
+    if (!h) return null;
+    var fresh = buildSnapshot();
+    h.teams = fresh.teams;
+    h.matches = fresh.matches;
+    h.championId = fresh.championId;
+    h.runnerUpId = fresh.runnerUpId;
+    h.fingerprint = fresh.fingerprint;
+    h.updatedAt = fresh.createdAt;
+    h.format = h.format || fresh.format;
+    h.game = h.game || fresh.game;
+    return h;
+}
+
+/* Однократная подсказка перед разрушением незафиксированного сезона.
+   Повторно не спрашиваем: отказ запоминается на сессию. */
+var ARCHIVE_PROMPT_DECLINED = false;
+
 function offerArchiveBefore(action) {
-    if (!tournamentLooksFinished() || currentSeasonArchived()) return true;
-    var yes = confirm('Турнир выглядит завершённым.\n\nЗафиксировать его в историю перед тем, как ' + action + '?\n\n' +
-        '«ОК» — сначала сохраним главу в архив, «Отмена» — продолжим без сохранения (результаты будут потеряны).');
+    if (!tournamentLooksFinished() || currentSeasonArchived() || ARCHIVE_PROMPT_DECLINED) return true;
+    var yes = confirm('Турнир выглядит завершённым, но в истории его ещё нет.\n\n' +
+        'Зафиксировать сезон перед тем, как ' + action + '?\n\n' +
+        '«ОК» — сохраню главу в архив (один раз; MVP и фото добавишь потом).\n' +
+        '«Отмена» — продолжу без сохранения: результаты сезона будут потеряны, больше спрашивать не буду.');
     if (yes) {
         var snap = archiveCurrentSeason();
-        showToast('📌 Турнир добавлен в историю — открыт как «' + (snap.name || 'Compass Arena') + '»');
+        saveData();
+        renderHistory();
+        showToast('📌 Сезон зафиксирован в истории — глава «' + (snap.name || 'Compass Arena') + '»');
+    } else {
+        ARCHIVE_PROMPT_DECLINED = true;
+        showToast('⚠️ Сезон не зафиксирован — результаты будут потеряны при удалении');
     }
     return true;
 }
 
+/* Кнопка «Зафиксировать»: строгий сценарий без дублей */
 function snapshotCurrentTournament() {
     updateMatchLinks();
     var grand = getMatch(5);
+
+    if (currentSeasonArchived()) {
+        var h = archivedChapter();
+        var stale = chapterIsStale();
+        var answer = confirm('Текущий сезон уже зафиксирован в истории' +
+            (h ? ' (глава «' + (h.name || 'Compass Arena') + '», ' + (h.date || '') + ')' : '') + '.\n\n' +
+            (stale ? '⚠️ Результаты турнира изменились после фиксации.\n\n' : '') +
+            '«ОК» — обновить эту главу текущими результатами (MVP и фото сохранятся).\n' +
+            '«Отмена» — ничего не менять.');
+        if (answer) {
+            var updated = updateArchivedChapter();
+            saveData();
+            renderHistory();
+            showToast(updated && updated.mvp && updated.mvp.playerNick
+                ? '🔄 Глава обновлена, MVP и фото на месте'
+                : '🔄 Глава обновлена текущими результатами');
+        }
+        return;
+    }
+
     if (!grand || !grand.winner) {
-        if (!confirm('В финале (M5) ещё нет победителя. Зафиксировать всё равно? (снапшот будет без чемпиона)')) return;
+        if (!confirm('В финале (M5) ещё нет победителя. Зафиксировать всё равно? (глава будет без чемпиона)')) return;
     }
 
     var snapshot = archiveCurrentSeason();
@@ -1630,6 +1923,62 @@ function snapshotCurrentTournament() {
     showToast('📌 Турнир зафиксирован в истории. Открой ✏️ чтобы добавить MVP и фото.');
 
     setTimeout(function() { openHistoryModal(snapshot.id); }, 300);
+}
+
+/* Обновить главу текущего сезона вручную (кнопка во вкладке «История») */
+function refreshArchivedChapter() {
+    if (!currentSeasonArchived()) { showToast('Сезон ещё не зафиксирован'); return; }
+    if (!confirm('Обновить главу текущего сезона? MVP, фото и название главы сохранятся.')) return;
+    var h = updateArchivedChapter();
+    saveData();
+    renderHistory();
+    showToast(h ? '🔄 Глава «' + (h.name || 'Compass Arena') + '» обновлена' : 'Нечего обновлять');
+}
+
+/* Убрать частичные дубликаты глав (одна и та же дата/название, результаты вложены) */
+function dedupeHistory() {
+    var dupes = findDuplicates();
+    var ids = Object.keys(dupes);
+    if (!ids.length) { showToast('Дубликатов глав не найдено'); return; }
+    var lines = ids.map(function(id) {
+        var a = null, b = null;
+        for (var i = 0; i < HISTORY.length; i++) {
+            if (HISTORY[i].id === id) a = HISTORY[i];
+            if (HISTORY[i].id === dupes[id]) b = HISTORY[i];
+        }
+        return '• «' + ((a && a.date) || '') + '» — копия главы «' + ((b && b.date) || '') + '»' +
+            (a && a.photos && a.photos.length ? ' (' + a.photos.length + ' фото переедет)' : '') +
+            (a && a.mvp && a.mvp.playerNick ? ' (MVP: ' + escapeHtml(a.mvp.playerNick) + ')' : '');
+    });
+    if (!confirm('Найдены дубликаты глав (' + ids.length + '):\n\n' + lines.join('\n') +
+        '\n\nУдалить лишние копии? Фото и MVP из них перенесём в сохраняемые главы, полные главы останутся на месте.')) return;
+
+    var kept = [];
+    var removedPhotos = 0;
+    var movedPhotos = 0;
+    var movedMvp = 0;
+    for (var i = 0; i < HISTORY.length; i++) {
+        var h = HISTORY[i];
+        if (dupes[h.id]) {
+            /* переносим ценное в ту главу, которую оставляем */
+            var target = null;
+            for (var t = 0; t < HISTORY.length; t++) if (HISTORY[t].id === dupes[h.id]) target = HISTORY[t];
+            var moved = mergeChapterData(h, target);
+            movedPhotos += moved.photos;
+            if (moved.mvp) movedMvp++;
+            removedPhotos += (h.photos || []).length;
+            if (DATA.archivedSnapshotId === h.id) DATA.archivedSnapshotId = dupes[h.id];
+            continue;
+        }
+        kept.push(h);
+    }
+    HISTORY = kept;
+    saveData();
+    renderHistory();
+    renderTeamsArchiveStatus();
+    showToast('🧹 Удалено дубликатов: ' + ids.length +
+        (movedPhotos ? ' · перенесено фото: ' + movedPhotos : '') +
+        (movedMvp ? ' · перенесён MVP: ' + movedMvp : ''));
 }
 
 function pad2(n) { return String(n).padStart(2, '0'); }
@@ -1666,7 +2015,96 @@ function openHistoryModal(id) {
 
     renderHistoryPhotos();
     setLogoMeta('histPhotoMeta', '', '');
+    renderMergeSelect(id);
     document.getElementById('historyModal').classList.add('active');
+}
+
+/* Список других глав для слияния (кроме той, что открыта) */
+function renderMergeSelect(currentId) {
+    var sel = document.getElementById('histMergeSelect');
+    if (!sel) return;
+    var chrono = HISTORY.slice().sort(function(a, b) {
+        return (new Date(a.createdAt || 0).getTime()) - (new Date(b.createdAt || 0).getTime());
+    });
+    var opts = '<option value="">— выбери главу —</option>';
+    for (var i = 0; i < chrono.length; i++) {
+        var h = chrono[i];
+        if (!h || h.id === currentId) continue;
+        var decided = 0;
+        for (var k = 0; k < (h.matches || []).length; k++) if (h.matches[k] && h.matches[k].winner) decided++;
+        opts += '<option value="' + escapeHtml(h.id) + '">№' + (i + 1) + ' · ' + escapeHtml(h.name || '') +
+            ' · ' + escapeHtml(h.date || '') + ' · серий: ' + decided +
+            ((h.photos && h.photos.length) ? ' · фото: ' + h.photos.length : '') + '</option>';
+    }
+    sel.innerHTML = opts;
+}
+
+/* Слить выбранную главу в текущую (ту, что открыта в окне редактирования) */
+function mergeHistoryIntoCurrent() {
+    if (!EDITING_HISTORY_ID) return;
+    var sel = document.getElementById('histMergeSelect');
+    var srcId = sel ? sel.value : '';
+    if (!srcId) { showToast('Выбери главу для слияния'); return; }
+
+    var target = null, source = null;
+    for (var i = 0; i < HISTORY.length; i++) {
+        if (HISTORY[i].id === EDITING_HISTORY_ID) target = HISTORY[i];
+        if (HISTORY[i].id === srcId) source = HISTORY[i];
+    }
+    if (!target || !source) { showToast('Главы не найдены'); return; }
+
+    var srcDecided = 0;
+    for (var d = 0; d < (source.matches || []).length; d++) if (source.matches[d] && source.matches[d].winner) srcDecided++;
+    if (!confirm('Слить главу «' + (source.date || '') + '» (серий: ' + srcDecided + ') в текущую «' + (target.date || '') + '»?\n\n' +
+        'Выбранная глава будет удалена, всё ценное перенесётся сюда.')) return;
+
+    /* Команды: объединяем по id, заполняем то, чего нет */
+    var teamsById = {};
+    target.teams = target.teams || [];
+    for (var t = 0; t < target.teams.length; t++) teamsById[target.teams[t].id] = target.teams[t];
+    for (var s = 0; s < (source.teams || []).length; s++) {
+        var st = source.teams[s];
+        if (!st) continue;
+        if (!teamsById[st.id]) { target.teams.push(JSON.parse(JSON.stringify(st))); teamsById[st.id] = st; }
+        else if ((!teamsById[st.id].name || /^слот/i.test(teamsById[st.id].name)) && st.name) {
+            teamsById[st.id].name = st.name;
+            teamsById[st.id].players = teamsById[st.id].players && teamsById[st.id].players.length ? teamsById[st.id].players : st.players;
+        }
+    }
+
+    /* Матчи: объединяем по id, приоритет — заполненные поля */
+    var byId = {};
+    target.matches = target.matches || [];
+    for (var m = 0; m < target.matches.length; m++) byId[target.matches[m].id] = target.matches[m];
+    for (var n = 0; n < (source.matches || []).length; n++) {
+        var sm = source.matches[n];
+        if (!sm) continue;
+        var tm = byId[sm.id];
+        if (!tm) { target.matches.push(JSON.parse(JSON.stringify(sm))); continue; }
+        if (sm.team1 && !tm.team1) tm.team1 = sm.team1;
+        if (sm.team2 && !tm.team2) tm.team2 = sm.team2;
+        if (sm.winner && !tm.winner) { tm.winner = sm.winner; tm.score1 = sm.score1; tm.score2 = sm.score2; }
+        if (sm.vod && !tm.vod) tm.vod = sm.vod;
+    }
+
+    /* Чемпион, финалист, MVP, фото */
+    if (!target.championId && source.championId) target.championId = source.championId;
+    if (!target.runnerUpId && source.runnerUpId) target.runnerUpId = source.runnerUpId;
+    if ((!target.mvp || !target.mvp.playerNick) && source.mvp && source.mvp.playerNick) target.mvp = source.mvp;
+    if (source.photos && source.photos.length) target.photos = (target.photos || []).concat(source.photos);
+    target.updatedAt = new Date().toISOString();
+
+    /* Удаляем источник */
+    var kept = [];
+    for (var k = 0; k < HISTORY.length; k++) if (HISTORY[k].id !== srcId) kept.push(HISTORY[k]);
+    HISTORY = kept;
+    if (DATA.archivedSnapshotId === srcId) DATA.archivedSnapshotId = target.id;
+
+    saveData();
+    renderHistory();
+    renderTeamsArchiveStatus();
+    closeHistoryModal();
+    showToast('🔗 Главы слиты: результаты, фото и MVP перенесены');
 }
 
 function closeHistoryModal() {
@@ -1763,8 +2201,10 @@ function deleteHistoryItem(id) {
         if (HISTORY[i].id !== id) newH.push(HISTORY[i]);
     }
     HISTORY = newH;
+    if (DATA.archivedSnapshotId === id) DATA.archivedSnapshotId = null;
     saveData();
     renderHistory();
+    renderTeamsArchiveStatus();
     showToast('🗑️ Турнир удалён из истории');
 }
 
@@ -1810,6 +2250,7 @@ function deleteTeam(id) {
     renderTeams();
     renderMatches();
     renderSchedule();
+    renderTeamsArchiveStatus();
     showToast('🗑️ Команда удалена');
 }
 
@@ -1912,18 +2353,44 @@ function importData(event) {
     if (!file) return;
     var reader = new FileReader();
     reader.onload = function(e) {
+        var data;
         try {
-            var data = JSON.parse(e.target.result);
-            if (!data.teams || !data.matches) throw new Error('bad format');
-            HISTORY = Array.isArray(data.history) ? data.history : [];
-            delete data.history;
-            DATA = data;
-            saveData();
-            renderEverything();
-            showToast('📥 Данные импортированы');
-        } catch(err) {
-            showToast('❌ Ошибка импорта: неверный формат');
+            data = JSON.parse(e.target.result);
+            if (!data || typeof data !== 'object' || !data.matches) throw new Error('bad format');
+        } catch (err) {
+            showToast('❌ Ошибка импорта: неверный формат файла');
+            return;
         }
+
+        var fileHistory = Array.isArray(data.history) ? data.history : [];
+        delete data.history;
+
+        /* Импорт заменяет и текущий турнир, и архив — поэтому спрашиваем про архив явно */
+        var serverHistory = HISTORY.slice();
+        var forceHistory = false;
+        if (!fileHistory.length && serverHistory.length > 0) {
+            var keep = confirm('В файле НЕТ истории турниров, а сейчас в архиве ' + serverHistory.length + ' ' + pluralT(serverHistory.length) + '.\n\n' +
+                '«ОК» — оставить архив как есть (рекомендуется).\n' +
+                '«Отмена» — очистить архив, потому что в файле его нет.');
+            if (keep) {
+                HISTORY = serverHistory;
+            } else {
+                HISTORY = [];
+                forceHistory = true;
+            }
+        } else {
+            HISTORY = fileHistory;
+        }
+
+        DATA = data;
+        if (!DATA.archivedSnapshotId) DATA.archivedSnapshotId = null;
+        DATA_READY = true;                    /* данные пришли из файла, сохранять можно */
+        ARCHIVE_PROMPT_DECLINED = false;
+
+        saveData(forceHistory).then(function() {
+            renderEverything();
+        });
+        showToast('📥 Данные импортированы' + (forceHistory ? ' · архив очищен' : ' · архив: ' + HISTORY.length));
     };
     reader.readAsText(file);
     event.target.value = '';
@@ -1933,7 +2400,10 @@ function resetData() {
     if (!confirm('Сбросить текущий турнир?\n\nКоманды, матчи, расписание и счёт обнулятся — чтобы зарегистрировать новый сезон.\nАрхив (история турниров) останется на месте.')) return;
     offerArchiveBefore('начать новый сезон');
     DATA = getDefaultData();
-    // HISTORY не трогаем: архив переживает смену сезона
+    // HISTORY не трогаем: архив переживает смену сезона.
+    // И снимаем привязку «сезон зафиксирован» — у нового сезона будет своя глава.
+    DATA.archivedSnapshotId = null;
+    ARCHIVE_PROMPT_DECLINED = false;
     saveData();
     renderEverything();
     showToast('🔄 Текущий турнир сброшен. Архив на месте — ' + HISTORY.length + ' ' + pluralT(HISTORY.length));
@@ -2009,6 +2479,11 @@ window.importData = importData;
 window.resetData = resetData;
 window.clearHistory = clearHistory;
 window.snapshotCurrentTournament = snapshotCurrentTournament;
+window.refreshArchivedChapter = refreshArchivedChapter;
+window.dedupeHistory = dedupeHistory;
+window.deleteHistoryItem = deleteHistoryItem;
+window.mergeHistoryIntoCurrent = mergeHistoryIntoCurrent;
+window.switchTab = switchTab;
 window.showToast = showToast;
 window.onNewTeamLogo = onNewTeamLogo;
 window.onEditLogo = onEditLogo;

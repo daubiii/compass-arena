@@ -37,6 +37,9 @@ const DEFAULT_DATA = {
   tournamentStart: null,
   projectStart: null,
   nextSeason: null,
+  // id главы архива, которой зафиксирован текущий сезон (null — ещё не зафиксирован).
+  // Нужен админке, чтобы один сезон = одна глава и не появлялись дубликаты.
+  archivedSnapshotId: null,
   alwaysShowBracketBanner: true
 };
 
