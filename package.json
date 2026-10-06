@@ -1,7 +1,14 @@
 {
   "name": "compass-arena",
   "private": true,
+  "scripts": {
+    "serve": "node tests/server.mjs",
+    "test": "node tests/audit.mjs && node tests/smoke.mjs && node tests/smoke-history.mjs"
+  },
   "dependencies": {
     "@netlify/blobs": "latest"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.0"
   }
 }

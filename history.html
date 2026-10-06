@@ -1,837 +1,332 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>История турниров — Compass Arena</title>
-    <meta name="description" content="История турниров Compass Arena по Dota 2. Победители, MVP, фотографии и сетки.">
-    <meta name="theme-color" content="#0a0d12">
-    <link rel="icon" type="image/png" href="/favicon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0a0d12; color: #eae6da; font-family: 'Manrope', sans-serif; position: relative; }
-        .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>История Compass Arena — архив турниров, чемпионы и MVP</title>
+<meta name="description" content="Полный архив организации Compass Arena: все турниры по Dota 2, чемпионы, финалисты, MVP, хроники глав и сводка титулов.">
+<meta name="theme-color" content="#08090c">
+<link rel="canonical" href="https://compassarena.ru/history.html">
 
-        header, main, footer { position: relative; z-index: 1; }
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png">
 
-        header { padding: 14px 0; border-bottom: 1px solid #242b35; }
-        .header-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-        .wordmark { font-family: 'Unbounded', sans-serif; font-weight: 500; font-size: 16px; color: #eae6da; text-decoration: none; }
-        .wordmark em { font-style: normal; color: #c9a35a; }
-        .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .btn {
-            padding: 8px 16px;
-            border: 1px solid rgba(201, 163, 90, 0.3);
-            background: transparent;
-            color: #e3c48a;
-            border-radius: 4px;
-            font-family: 'Manrope', sans-serif;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-            cursor: pointer;
-            transition: 0.2s;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            white-space: nowrap;
-            text-transform: uppercase;
-        }
-        .btn:hover { background: #c9a35a; color: #0a0d12; border-color: #c9a35a; }
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Compass Arena">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:title" content="История Compass Arena — архив турниров">
+<meta property="og:description" content="Все турниры организации: чемпионы, финалисты, MVP и живые кадры с трансляций.">
+<meta property="og:image" content="https://compassarena.ru/img/og-image.jpg">
+<meta property="og:url" content="https://compassarena.ru/history.html">
+<meta name="twitter:card" content="summary_large_image">
 
-        main { padding: 32px 0 60px; }
-        h1 { font-family: 'Unbounded', sans-serif; font-weight: 600; font-size: 30px; margin-bottom: 8px; }
-        .lede { color: #97a0ac; font-size: 14px; margin-bottom: 32px; max-width: 640px; }
+<link rel="preload" href="/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/onest-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site.css">
+<style>
+/* ==========================================================
+   АРХИВ ОРГАНИЗАЦИИ
+   Первый экран → текущая глава → главы архива → сводки → MVP
+   ========================================================== */
 
-        /* Карточка турнира */
-        .tournament-card {
-            background: linear-gradient(180deg, #10141b 0%, #0d1118 100%);
-            border: 1px solid #242b35;
-            border-radius: 8px;
-            margin-bottom: 18px;
-            overflow: hidden;
-            transition: border-color 0.25s, box-shadow 0.25s;
-        }
-        .tournament-card:hover { border-color: #c9a35a; }
-        .tournament-card.expanded {
-            border-color: #c9a35a;
-            box-shadow: 0 0 0 1px rgba(201,163,90,0.15), 0 12px 40px rgba(0,0,0,0.4);
-        }
+/* ---------- Первый экран ---------- */
+.h-hero { position: relative; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; min-height: clamp(560px, 92svh, 900px); }
+.h-hero-media { position: absolute; inset: 0; }
+.h-hero-media img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 32%; transform: scale(1.06); transition: transform 5.5s var(--ease-out); }
+.h-hero.in .h-hero-media img { transform: scale(1); }
+.h-hero-shade { position: absolute; inset: 0; pointer-events: none; background:
+    linear-gradient(180deg, rgba(8,9,12,.72) 0%, rgba(8,9,12,.16) 30%, rgba(8,9,12,.55) 72%, var(--bg) 100%),
+    linear-gradient(100deg, rgba(8,9,12,.78) 0%, rgba(8,9,12,.24) 52%, rgba(8,9,12,0) 100%); }
+.h-hero-body { position: relative; z-index: 1; padding-top: calc(var(--head-h) + 60px); padding-bottom: 54px; }
+.h-hero-kicker { display: inline-flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--text-2); margin-bottom: 22px; }
+.h-hero-kicker::before { content: ''; width: 34px; height: 1px; background: var(--gold); flex: none; }
+.h-hero h1 { font-family: var(--display); font-weight: 300; font-size: clamp(32px, 5.4vw, 74px); line-height: 1.02; letter-spacing: -.03em; max-width: 15em; }
+.h-hero h1 em { font-style: normal; color: var(--gold-hi); }
+.h-hero .h-sub { margin-top: 22px; color: var(--text-2); font-size: clamp(15px, 1.25vw, 17.5px); max-width: 46em; }
 
-        .tournament-head {
-            display: grid;
-            grid-template-columns: auto 1fr auto auto;
-            align-items: center;
-            gap: 18px;
-            padding: 18px 24px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .tournament-head:hover { background: rgba(201,163,90,0.04); }
+.h-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 18px 40px; margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line-2); }
+.h-figure b { display: block; font-family: var(--display); font-weight: 200; font-size: clamp(26px, 3.2vw, 42px); line-height: 1; color: var(--gold-hi); letter-spacing: -.02em; overflow-wrap: anywhere; }
+.h-figure span { display: block; font-size: 12.5px; color: var(--text-3); margin-top: 10px; }
+.h-figure.plain b { color: var(--text); font-size: clamp(18px, 2.1vw, 26px); }
+.h-hero-foot { display: flex; align-items: center; gap: 18px; margin-top: 30px; color: var(--text-3); font-size: 12.5px; }
+.h-hero-foot .ic { font-size: 14px; color: var(--gold); animation: h-bob 2.4s ease-in-out infinite; }
+@keyframes h-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
 
-        .tournament-champ-logo {
-            width: 60px; height: 60px;
-            background: #0a0d12;
-            border: 1px solid rgba(201,163,90,0.4);
-            border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-        .tournament-champ-logo img { max-width: 88%; max-height: 88%; object-fit: contain; }
-        .tournament-champ-logo .placeholder {
-            font-family: 'Unbounded', sans-serif;
-            font-size: 24px; font-weight: 600;
-            color: #c9a35a; opacity: 0.7;
-        }
+/* ---------- Навигация по главам ---------- */
+.h-nav { position: sticky; top: var(--head-h); z-index: 40; padding-top: 12px; padding-bottom: 12px; background: linear-gradient(180deg, var(--bg) 62%, rgba(8,9,12,0)); }
+.h-nav[hidden] { display: none; }
+.h-nav-inner { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.h-nav-inner::-webkit-scrollbar { display: none; }
+.h-chip { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line-2); background: rgba(8,9,12,.72); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--text-2); font-size: 13px; text-decoration: none; white-space: nowrap; transition: color .2s, background .2s, border-color .2s; }
+.h-chip:hover { color: var(--text); border-color: var(--line-3); }
+.h-chip.is-active { background: var(--text); color: #0b0c0e; border-color: var(--text); }
+.h-chip .no { font-family: var(--display); font-weight: 400; font-size: 11.5px; opacity: .8; }
 
-        .tournament-title-block { min-width: 0; }
-        .tournament-title {
-            font-family: 'Unbounded', sans-serif;
-            font-size: 18px;
-            font-weight: 600;
-            color: #eae6da;
-            margin-bottom: 6px;
-            line-height: 1.2;
-        }
-        .tournament-meta {
-            font-size: 12px;
-            color: #7a8494;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            font-weight: 500;
-        }
-        .tournament-meta .sep { color: #2f3844; margin: 0 8px; }
-        .tournament-meta .champ { color: #e3c48a; }
+/* ---------- Общая марка главы ---------- */
+.h-mark { display: flex; align-items: baseline; gap: 18px; margin-bottom: 34px; }
+.h-mark .no { font-family: var(--display); font-weight: 300; font-size: 14px; color: var(--gold); letter-spacing: .06em; white-space: nowrap; }
+.h-mark .rule { flex: 1; height: 1px; background: var(--line); }
+.h-mark .date { font-size: 13px; color: var(--text-3); white-space: nowrap; }
 
-        .tournament-score {
-            font-family: 'Unbounded', sans-serif;
-            font-size: 14px;
-            font-weight: 600;
-            color: #c9a35a;
-            padding: 6px 12px;
-            border: 1px solid rgba(201,163,90,0.25);
-            border-radius: 4px;
-            background: rgba(201,163,90,0.05);
-            white-space: nowrap;
-        }
+.h-sec { position: relative; padding: 84px 0; }
+.h-sec + .h-sec { padding-top: 0; }
+.h-sec-head { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 60px; align-items: end; margin-bottom: 46px; }
+.h-sec-head .h2 { margin-bottom: 0; }
+.h-note { color: var(--text-2); font-size: 15px; max-width: 56ch; justify-self: end; }
+.h-eyebrow { color: var(--text-3); font-size: 12.5px; letter-spacing: .02em; margin-bottom: 16px; }
+.h-eyebrow .ic { font-size: 14px; color: var(--gold); }
 
-        .tournament-toggle {
-            width: 32px; height: 32px;
-            display: flex; align-items: center; justify-content: center;
-            color: #c9a35a;
-            font-size: 12px;
-            transition: transform 0.3s;
-            flex-shrink: 0;
-        }
-        .tournament-card.expanded .tournament-toggle { transform: rotate(180deg); }
+/* ---------- Текущая глава ---------- */
+.now { position: relative; padding-top: 84px; padding-bottom: 84px; }
+.now-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 44px; align-items: start; }
+.now h2 { font-family: var(--display); font-weight: 300; font-size: clamp(28px, 3.8vw, 48px); line-height: 1.06; letter-spacing: -.02em; margin-bottom: 16px; overflow-wrap: anywhere; }
+.now .lead { margin-bottom: 30px; }
+.now-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 26px; }
+.now-when { color: var(--text-3); font-size: 13px; }
+.now-line { display: flex; justify-content: space-between; gap: 14px; font-size: 13.5px; color: var(--text-2); margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+.now-bar { height: 1px; background: var(--line-2); position: relative; margin-bottom: 30px; }
+.now-bar i { position: absolute; left: 0; top: -1px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi)); }
+.now-roster { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 30px; }
+.now-team { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; font-size: 13.5px; background: var(--raise); }
+.now-team.is-champ { border-color: rgba(201,163,90,.5); color: var(--gold-hi); }
+.now-team .ic { font-size: 14px; }
+.now-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.now-side { display: grid; gap: 12px; }
+.now-card { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--raise); padding: 16px 18px; }
+.now-card .k { display: block; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 8px; }
+.now-card .v { font-family: var(--display); font-weight: 400; font-size: clamp(17px, 2vw, 22px); line-height: 1.2; overflow-wrap: anywhere; }
+.now-card .v.gold { color: var(--gold-hi); }
+.now-empty { border: 1px dashed var(--line-2); border-radius: var(--r-lg); padding: 30px; color: var(--text-2); }
+.now-empty .ic { font-size: 22px; color: var(--gold); margin-bottom: 14px; }
+.now-empty p { max-width: 52ch; }
 
-        .tournament-body {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease;
-        }
-        .tournament-card.expanded .tournament-body {
-            max-height: 5000px;
-        }
-        .tournament-body-inner {
-            padding: 0 24px 28px;
-            border-top: 1px solid #1a2029;
-            margin-top: 4px;
-            padding-top: 24px;
-        }
+/* ---------- Глава архива ---------- */
+.ch { position: relative; padding: 78px 0 0; }
+.ch, .now { scroll-margin-top: calc(var(--head-h) + 76px); }
+.ch-title { margin-bottom: 30px; }
+.ch-title h2 { font-family: var(--display); font-weight: 300; font-size: clamp(28px, 4vw, 52px); line-height: 1.05; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.ch-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 
-        /* Секции внутри карточки */
-        .section-title {
-            font-family: 'Unbounded', sans-serif;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.22em;
-            text-transform: uppercase;
-            color: #c9a35a;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .section-title::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: linear-gradient(90deg, rgba(201,163,90,0.3), transparent);
-        }
+.ch-cover { position: relative; border-radius: var(--r-xl); overflow: hidden; min-height: 340px; height: min(72vh, 680px); }
+.ch-cover img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.05); transition: transform 5s var(--ease-out); }
+.ch-cover.in img { transform: scale(1); }
+.ch-cover .ch-shade { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(4,5,7,.9) 0%, rgba(4,5,7,.2) 44%, rgba(4,5,7,0) 72%); }
+.ch-cover .ch-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: clamp(20px, 3.6vw, 44px); z-index: 1; }
+.ch-tag { display: inline-flex; align-items: center; gap: 9px; font-size: 12.5px; letter-spacing: .06em; color: var(--gold-hi); margin-bottom: 14px; }
+.ch-tag i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+.ch-cap .champ { font-family: var(--display); font-weight: 400; font-size: clamp(24px, 3.8vw, 48px); line-height: 1.05; overflow-wrap: anywhere; }
+.ch-cap .runner { margin-top: 10px; font-size: 14px; color: var(--text-2); }
+.ch-cap .runner b { color: var(--text); font-weight: 500; }
 
-        .section { margin-bottom: 28px; }
-        .section:last-child { margin-bottom: 0; }
+.ch-cover.is-flat { display: flex; align-items: center; justify-content: center; text-align: center; background: linear-gradient(160deg, var(--card), var(--raise)); border: 1px solid var(--line); }
+.ch-cover.is-flat .flat-num { position: absolute; font-family: var(--display); font-weight: 200; font-size: clamp(150px, 22vw, 380px); line-height: 1; color: transparent; -webkit-text-stroke: 1px var(--line-2); user-select: none; }
+.ch-cover.is-flat .ch-cap { position: relative; }
 
-        /* MVP */
-        .mvp-block {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            padding: 18px 22px;
-            background: linear-gradient(90deg, rgba(201,163,90,0.08) 0%, rgba(201,163,90,0.02) 100%);
-            border: 1px solid rgba(201,163,90,0.3);
-            border-radius: 8px;
-        }
-        .mvp-icon {
-            width: 52px; height: 52px;
-            border-radius: 50%;
-            background: rgba(201,163,90,0.15);
-            border: 1px solid rgba(201,163,90,0.5);
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-        }
-        .mvp-icon svg { width: 26px; height: 26px; }
-        .mvp-info { flex: 1; min-width: 0; }
-        .mvp-label {
-            font-size: 10px;
-            color: #7a8494;
-            letter-spacing: 0.22em;
-            text-transform: uppercase;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-        .mvp-name {
-            font-family: 'Unbounded', sans-serif;
-            font-size: 20px;
-            font-weight: 600;
-            color: #e3c48a;
-            margin-bottom: 4px;
-            line-height: 1.2;
-        }
-        .mvp-team {
-            font-size: 13px;
-            color: #97a0ac;
-        }
-        .mvp-note {
-            margin-top: 8px;
-            font-size: 12.5px;
-            color: #b0b8c4;
-            line-height: 1.6;
-            font-style: italic;
-        }
+.ch-story { display: grid; grid-template-columns: 1fr 1fr; gap: 46px; align-items: start; padding-top: 46px; }
+.ch-block .h-eyebrow { margin-bottom: 18px; }
+.ch-champ-name { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 2.8vw, 32px); line-height: 1.15; margin-bottom: 18px; overflow-wrap: anywhere; }
+.ch-roster { display: flex; flex-wrap: wrap; gap: 8px; }
+.ch-player { display: inline-flex; align-items: baseline; gap: 9px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; font-size: 13.5px; background: var(--raise); }
+.ch-player b { font-weight: 500; }
+.ch-player span { color: var(--text-3); font-size: 11.5px; }
+.ch-quiet { color: var(--text-3); font-size: 14px; }
 
-        /* Фотогалерея */
-        .photo-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 10px;
-        }
-        .photo-item {
-            position: relative;
-            aspect-ratio: 16 / 10;
-            background: #0a0d12;
-            border: 1px solid #242b35;
-            border-radius: 6px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: border-color 0.2s, transform 0.2s;
-        }
-        .photo-item:hover { border-color: #c9a35a; transform: translateY(-2px); }
-        .photo-item img {
-            width: 100%; height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-        .photo-caption {
-            position: absolute;
-            left: 0; right: 0; bottom: 0;
-            padding: 8px 12px;
-            background: linear-gradient(180deg, transparent, rgba(0,0,0,0.85));
-            font-size: 12px;
-            color: #eae6da;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        .photo-item:hover .photo-caption { opacity: 1; }
+.ch-mvp { border-left: 2px solid var(--gold); padding-left: 22px; }
+.ch-mvp .mvp-name { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 2.8vw, 32px); color: var(--gold-hi); overflow-wrap: anywhere; }
+.ch-mvp .mvp-team { font-size: 13px; color: var(--text-3); margin-top: 6px; }
+.ch-mvp .mvp-note { margin-top: 16px; color: var(--text); font-size: 15.5px; line-height: 1.6; max-width: 46ch; }
+.ch-mvp .mvp-note::before { content: '“'; }
+.ch-mvp .mvp-note::after { content: '”'; }
 
-        /* Мини-сетка */
-        .mini-bracket {
-            display: flex;
-            gap: 0;
-            overflow-x: auto;
-            padding: 4px 0;
-            min-width: max-content;
-        }
-        .mini-bracket::-webkit-scrollbar { height: 6px; }
-        .mini-bracket::-webkit-scrollbar-thumb { background: #2f3844; border-radius: 3px; }
+.ch-ladder { padding-top: 46px; }
+.ch-rows { border-top: 1px solid var(--line); }
+.ch-row { display: grid; grid-template-columns: 150px 1fr auto; gap: 6px 24px; align-items: center; padding: 15px 2px; border-bottom: 1px solid var(--line); }
+.ch-row .stage { font-size: 12.5px; color: var(--text-3); }
+.ch-row .stage.is-grand { color: var(--gold); }
+.ch-row .vs { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 15px; }
+.ch-row .win { color: var(--text); font-weight: 500; }
+.ch-row .lose { color: var(--text-3); }
+.ch-row .score { font-family: var(--display); font-weight: 400; font-size: 15px; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.ch-row .sides { font-size: 12px; color: var(--text-3); }
 
-        .mini-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            padding: 0 20px;
-            flex-shrink: 0;
-        }
-        .mini-group:first-child { padding-left: 0; }
-        .mini-group:last-child { padding-right: 0; }
-        .mini-group + .mini-group { border-left: 1px solid rgba(201,163,90,0.12); }
+.ch-gallery { padding-top: 46px; }
+.ch-end { padding: 52px 0; }
+.ch-end .rule { height: 1px; background: var(--line); }
 
-        .mini-group-title {
-            font-family: 'Unbounded', sans-serif;
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-            color: #c9a35a;
-            text-align: center;
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(201,163,90,0.25);
-            margin-bottom: 4px;
-        }
-        .mini-group-title.grand { color: #e3c48a; }
+/* ---------- Сводные таблицы ---------- */
+.h-tables { padding-top: 20px; }
+.h-table-block + .h-table-block { margin-top: 64px; }
+.h-table-block .h3 { margin-bottom: 6px; }
+.h-table-hint { color: var(--text-3); font-size: 13px; margin-bottom: 20px; }
+.tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+.tbl .name { font-weight: 500; overflow-wrap: anywhere; }
+.tbl .dim { color: var(--text-3); }
+.tbl tbody tr:last-child td { border-bottom: 0; }
 
-        .mini-round { display: flex; flex-direction: column; gap: 8px; min-width: 180px; }
-        .mini-match {
-            background: #151a22;
-            border: 1px solid #2f3844;
-            border-radius: 5px;
-            padding: 8px 12px;
-            font-size: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-        .mini-match.is-grand {
-            border-color: rgba(201,163,90,0.4);
-            background: linear-gradient(180deg, #1a1f28, #151a22);
-        }
-        .mini-match .row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-        }
-        .mini-match .row .name {
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            color: #eae6da;
-        }
-        .mini-match .row.loser .name { color: #7a8494; opacity: 0.7; }
-        .mini-match .row.winner .name { color: #e3c48a; font-weight: 600; }
-        .mini-match .row .score {
-            font-family: 'Unbounded', sans-serif;
-            font-size: 12px;
-            font-weight: 600;
-            color: #c9a35a;
-        }
-        .mini-match .row .badge {
-            font-size: 8px;
-            padding: 1px 6px;
-            border-radius: 8px;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-        }
-        .mini-match .row .badge.win { background: #4caf50; color: #fff; }
-        .mini-match .row .badge.loss { background: #e74c3c; color: #fff; }
+/* ---------- Витрина MVP ---------- */
+.h-mvp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.h-mvp-card { border: 1px solid var(--line); border-left: 2px solid var(--gold); border-radius: var(--r-md); background: linear-gradient(180deg, var(--card), var(--raise)); padding: 20px 22px; text-decoration: none; transition: border-color .25s, transform .3s var(--ease); }
+.h-mvp-card:hover { border-color: var(--gold); transform: translateY(-3px); }
+.h-mvp-card .nick { font-family: var(--display); font-weight: 400; font-size: 20px; color: var(--gold-hi); overflow-wrap: anywhere; }
+.h-mvp-card .team { font-size: 13px; color: var(--text-3); margin-top: 6px; }
+.h-mvp-card .note { color: var(--text-2); font-size: 14px; margin-top: 14px; }
+.h-mvp-card .src { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--text-3); }
+.h-mvp-card .src .ic { font-size: 14px; color: var(--gold); }
 
-        /* Пустое состояние */
-        .empty-state {
-            text-align: center;
-            padding: 80px 20px;
-            color: #5f6773;
-            font-size: 14px;
-        }
-        .empty-state .icon {
-            font-size: 40px;
-            margin-bottom: 16px;
-            opacity: 0.4;
-        }
+/* ---------- Пустое состояние ---------- */
+.h-blank { border: 1px dashed var(--line-2); border-radius: var(--r-lg); padding: 34px; }
+.h-blank .ic { font-size: 24px; color: var(--gold); margin-bottom: 16px; }
+.h-blank h3 { font-family: var(--display); font-weight: 300; font-size: clamp(20px, 2.4vw, 26px); margin-bottom: 10px; }
+.h-blank p { color: var(--text-2); max-width: 56ch; }
 
-        /* Лайтбокс */
-        .lightbox {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.95);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .lightbox.active { display: flex; }
-        .lightbox.visible { opacity: 1; }
-        .lightbox img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            border-radius: 4px;
-            box-shadow: 0 0 60px rgba(0,0,0,0.8);
-        }
-        .lightbox-close {
-            position: absolute;
-            top: 20px; right: 24px;
-            width: 44px; height: 44px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.15);
-            color: #eae6da;
-            border-radius: 50%;
-            font-size: 22px;
-            cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            transition: 0.2s;
-        }
-        .lightbox-close:hover { background: rgba(201,163,90,0.3); border-color: #c9a35a; }
-        .lightbox-nav {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 50px; height: 50px;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.12);
-            color: #eae6da;
-            border-radius: 50%;
-            font-size: 22px;
-            cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            transition: 0.2s;
-        }
-        .lightbox-nav:hover { background: rgba(201,163,90,0.3); border-color: #c9a35a; }
-        .lightbox-nav.prev { left: 20px; }
-        .lightbox-nav.next { right: 20px; }
-        .lightbox-caption {
-            position: absolute;
-            bottom: 24px; left: 50%;
-            transform: translateX(-50%);
-            padding: 8px 20px;
-            background: rgba(0,0,0,0.75);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 4px;
-            font-size: 13px;
-            color: #eae6da;
-            max-width: 80%;
-            text-align: center;
-        }
+/* ---------- Чипы-факты ---------- */
+.h-fact { display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--line-2); background: rgba(255,255,255,.03); color: var(--text-2); font-size: 12px; white-space: nowrap; }
+.h-fact.gold { color: var(--gold-hi); border-color: rgba(201,163,90,.45); background: rgba(201,163,90,.1); }
+.h-fact.live { color: var(--blood-hi); border-color: rgba(201,79,67,.5); background: rgba(201,79,67,.12); }
 
-        /* Footer */
-        footer { border-top: 1px solid #242b35; padding: 20px 0; font-size: 11px; color: #5f6773; }
-        footer .container { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: center; }
-        footer .f-links { display: flex; gap: 14px; flex-wrap: wrap; }
-        footer a { color: #97a0ac; text-decoration: none; transition: 0.2s; }
-        footer a:hover { color: #c9a35a; }
-
-        @media (max-width: 860px) {
-            .tournament-head { grid-template-columns: auto 1fr auto; gap: 14px; padding: 16px 18px; }
-            .tournament-score { grid-column: 1 / -1; justify-self: start; font-size: 12px; }
-            .tournament-toggle { position: absolute; top: 20px; right: 18px; }
-            .tournament-head { position: relative; }
-            .tournament-title { font-size: 16px; }
-            .tournament-body-inner { padding: 0 18px 22px; padding-top: 20px; }
-            .mvp-block { padding: 14px 16px; gap: 14px; }
-            .mvp-name { font-size: 17px; }
-        }
-        @media (max-width: 640px) {
-            h1 { font-size: 22px; }
-            .container { padding: 0 12px; }
-            .tournament-champ-logo { width: 48px; height: 48px; }
-            .tournament-champ-logo .placeholder { font-size: 20px; }
-            .tournament-title { font-size: 15px; }
-            .tournament-meta { font-size: 10.5px; letter-spacing: 0.06em; }
-            .photo-grid { grid-template-columns: 1fr 1fr; }
-            .lightbox { padding: 12px; }
-            .lightbox-nav { width: 40px; height: 40px; font-size: 18px; }
-            .lightbox-nav.prev { left: 8px; }
-            .lightbox-nav.next { right: 8px; }
-            .lightbox-close { top: 10px; right: 10px; width: 38px; height: 38px; }
-            .btn { padding: 6px 12px; font-size: 10px; }
-            .mini-round { min-width: 150px; }
-        }
-    </style>
+/* ---------- Адаптив ---------- */
+@media (max-width: 1020px) {
+  .now-grid { grid-template-columns: 1fr; gap: 30px; }
+  .ch-story { grid-template-columns: 1fr; gap: 34px; }
+  .h-sec-head { grid-template-columns: 1fr; }
+  .h-note { justify-self: start; }
+}
+@media (max-width: 820px) {
+  .h-hero { min-height: 88svh; }
+  .h-hero-media img { object-position: 52% 24%; }
+  .h-hero-body { padding-bottom: 40px; }
+  .h-figures { grid-template-columns: 1fr 1fr; gap: 16px 20px; margin-top: 34px; }
+  .h-sec { padding: 62px 0; }
+  .ch { padding-top: 56px; }
+  .ch-cover { height: 48vh; border-radius: var(--r-lg); }
+  .ch-row { grid-template-columns: 1fr; gap: 6px; padding: 14px 2px; }
+  .h-mvp-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .h-figures { grid-template-columns: 1fr; }
+  .h-mark { gap: 12px; }
+  .h-mark .date { display: none; }
+}
+</style>
 </head>
 <body>
 
-<header>
-    <div class="container header-row">
-        <a href="/" class="wordmark">COMPASS <em>ARENA</em></a>
-        <div class="header-actions">
-            <a href="/" class="btn">← На главную</a>
-            <a href="/schedule.html" class="btn">Расписание</a>
-            <a href="/rules.html" class="btn">Правила</a>
-        </div>
-    </div>
+<a class="skip" href="#chapters">Перейти к архиву турниров</a>
+
+<header class="site-head" id="head">
+  <div class="wrap head-row">
+    <a class="brand" href="/" aria-label="Compass Arena — на главную">
+      <img src="/img/mark.webp" width="30" height="30" alt="">
+      <span>Compass <i>Arena</i></span>
+    </a>
+    <nav class="head-nav" aria-label="Основная навигация">
+      <a href="/#bracket">Сетка</a>
+      <a href="/schedule.html">Расписание</a>
+      <a href="/history.html" aria-current="page">История</a>
+      <a href="/rules.html">Правила</a>
+      <a class="btn btn-gold" href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Смотреть</a>
+    </nav>
+    <button class="burger" id="burgerBtn" aria-label="Открыть меню" aria-expanded="false" aria-controls="menuPanel"><span></span><span></span><span></span></button>
+  </div>
+  <div class="head-progress" role="progressbar" aria-label="Прогресс текущего турнира" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="headProgress"></i></div>
 </header>
 
-<main>
-    <div class="container">
-        <h1>История турниров</h1>
-        <p class="lede">Все турниры Compass Arena. Разворачивай карточку — внутри фотографии, сетка и MVP.</p>
-        <div id="historyList"><div class="empty-state"><div class="icon">⏳</div>Загрузка...</div></div>
+<nav class="menu" id="menuPanel" aria-label="Меню" aria-hidden="true">
+  <a href="/"><i>01</i>Главная</a>
+  <a href="/#bracket"><i>02</i>Сетка</a>
+  <a href="/#teams"><i>03</i>Участники</a>
+  <a href="/schedule.html"><i>04</i>Расписание</a>
+  <a href="/history.html"><i>05</i>История</a>
+  <a href="/rules.html"><i>06</i>Правила</a>
+  <div class="menu-foot">
+    <a class="btn btn-ghost" href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Twitch</a>
+    <a class="btn btn-ghost" href="https://t.me/compassarenaa" target="_blank" rel="noopener">Telegram</a>
+  </div>
+</nav>
+
+<main id="main">
+
+  <!-- ============ ПЕРВЫЙ ЭКРАН ============ -->
+  <section class="h-hero arena" id="hero">
+    <div class="h-hero-media">
+      <img id="heroImg" src="/img/hero.webp" alt="Тёмная арена турнира Compass Arena" decoding="async">
     </div>
+    <div class="h-hero-shade"></div>
+    <div class="wrap h-hero-body">
+      <p class="h-hero-kicker" id="heroKicker">Архив организации · Dota 2</p>
+      <h1 id="heroTitle">История Compass Arena</h1>
+      <p class="h-sub" id="heroSub">Все главы организации: чемпионы, финалисты, ключевые серии и кадры с трансляций.</p>
+      <div class="h-figures" id="heroFigures"></div>
+      <div class="h-hero-foot"><span>Листайте — хроника идёт по главам</span><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"></use></svg></div>
+    </div>
+  </section>
+
+  <!-- ============ НАВИГАЦИЯ ПО ГЛАВАМ ============ -->
+  <nav class="h-nav wrap" id="chapterNav" aria-label="Навигация по главам архива" hidden>
+    <div class="h-nav-inner" id="chapterNavInner"></div>
+  </nav>
+
+  <div id="chapters"></div>
+  <div id="books"></div>
+
 </main>
 
-<footer>
-    <div class="container">
-        <span>Compass Arena — организатор турниров по Dota 2</span>
-        <div class="f-links">
-            <a href="/">Главная</a>
-            <a href="/history.html">История</a>
-            <a href="/schedule.html">Расписание</a>
-            <a href="/rules.html">Правила</a>
-            <a href="https://www.twitch.tv/compassarena" target="_blank">Twitch</a>
-            <a href="https://t.me/compassarenaa" target="_blank">Telegram</a>
+<footer class="site-foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-brand">
+          <img src="/img/mark.webp" width="34" height="34" alt="" loading="lazy">
+          <b>Compass <i>Arena</i></b>
         </div>
+        <p class="foot-about">Организация турниров по Dota 2. История сезонов, чемпионы и хроники матчей — здесь.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Турнир</h4>
+        <a href="/#bracket">Сетка</a>
+        <a href="/#teams">Участники</a>
+        <a href="/schedule.html">Расписание</a>
+        <a href="/rules.html">Правила</a>
+      </div>
+      <div class="foot-col">
+        <h4>Организация</h4>
+        <a href="/history.html">История</a>
+        <a href="https://t.me/compassarenaa" target="_blank" rel="noopener">Telegram</a>
+        <a href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Twitch</a>
+      </div>
+      <div class="foot-col">
+        <h4>Связь</h4>
+        <a href="https://t.me/G0gg1a" target="_blank" rel="noopener">@G0gg1a</a>
+        <a href="https://t.me/uuutt7" target="_blank" rel="noopener">@uuutt7</a>
+        <a href="https://t.me/maushury" target="_blank" rel="noopener">@maushury</a>
+      </div>
     </div>
+    <div class="foot-bottom">
+      <span>© <span id="year">2026</span> Compass Arena · Dota 2 — товарные знаки принадлежат Valve Corporation</span>
+      <span><a href="/rules.html">Регламент</a> · <a href="/schedule.html">Расписание</a></span>
+    </div>
+  </div>
 </footer>
 
-<div class="lightbox" id="lightbox">
-    <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
-    <button class="lightbox-nav prev" onclick="lightboxPrev()">‹</button>
-    <button class="lightbox-nav next" onclick="lightboxNext()">›</button>
-    <img id="lightboxImg" src="" alt="">
-    <div class="lightbox-caption" id="lightboxCaption"></div>
+<!-- ============ ЛАЙТБОКС ГАЛЕРЕИ ============ -->
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Просмотр фотографии">
+  <button class="lb-close" id="lbClose" aria-label="Закрыть просмотр"><svg class="ic" aria-hidden="true"><use href="#i-close"></use></svg></button>
+  <button class="lb-arrow lb-prev" id="lbPrev" aria-label="Предыдущее фото"><svg class="ic" aria-hidden="true"><use href="#i-chevron-left"></use></svg></button>
+  <button class="lb-arrow lb-next" id="lbNext" aria-label="Следующее фото"><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"></use></svg></button>
+  <span class="lb-count" id="lbCount"></span>
+  <div class="lb-frame">
+    <img id="lbImg" src="" alt="" decoding="async">
+    <div class="lb-cap" id="lbCap"></div>
+  </div>
 </div>
 
-<script>
-// ============================================================
-// ДАННЫЕ
-// ============================================================
-var HISTORY = [];
-var LIGHTBOX_PHOTOS = [];
-var LIGHTBOX_INDEX = 0;
+<button class="to-top" id="toTop" aria-label="Наверх"><svg class="ic" aria-hidden="true"><use href="#i-arrow-up"></use></svg></button>
 
-function loadHistory() {
-    return fetch('/api/data', { cache: 'no-store' })
-        .then(function(res) {
-            if (!res.ok) throw new Error('bad response');
-            return res.json();
-        })
-        .then(function(parsed) {
-            HISTORY = Array.isArray(parsed.history) ? parsed.history : [];
-        })
-        .catch(function(err) {
-            console.warn('Не удалось загрузить историю', err);
-            HISTORY = [];
-        });
-}
-
-// ============================================================
-// РЕНДЕР
-// ============================================================
-function escapeHtml(s) {
-    if (s == null) return '';
-    return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-function getTeamFromSnapshot(tournament, id) {
-    if (!tournament.teams || !id) return null;
-    for (var i = 0; i < tournament.teams.length; i++) {
-        if (tournament.teams[i].id === id) return tournament.teams[i];
-    }
-    return null;
-}
-
-function getMatchFromSnapshot(tournament, id) {
-    if (!tournament.matches) return null;
-    for (var i = 0; i < tournament.matches.length; i++) {
-        if (tournament.matches[i].id === id) return tournament.matches[i];
-    }
-    return null;
-}
-
-function getLoserFromMatch(m) {
-    if (!m || !m.winner) return null;
-    if (m.team1 === m.winner) return m.team2;
-    if (m.team2 === m.winner) return m.team1;
-    return null;
-}
-
-function renderMiniMatch(tournament, m) {
-    if (!m) return '<div class="mini-match"><div class="row"><span class="name">—</span></div></div>';
-    var t1 = getTeamFromSnapshot(tournament, m.team1);
-    var t2 = getTeamFromSnapshot(tournament, m.team2);
-    var name1 = t1 ? t1.name : '—';
-    var name2 = t2 ? t2.name : '—';
-    var isGrand = m.bracket === 'grand';
-
-    var cls1 = m.winner === m.team1 ? 'winner' : (m.winner ? 'loser' : '');
-    var cls2 = m.winner === m.team2 ? 'winner' : (m.winner ? 'loser' : '');
-
-    var html = '<div class="mini-match' + (isGrand ? ' is-grand' : '') + '">';
-    html += '<div class="row ' + cls1 + '"><span class="name">' + escapeHtml(name1) + '</span>';
-    if (m.winner && m.score1 != null && m.winner === m.team1) html += '<span class="score">' + m.score1 + '</span>';
-    html += '</div>';
-    html += '<div class="row ' + cls2 + '"><span class="name">' + escapeHtml(name2) + '</span>';
-    if (m.winner && m.score2 != null && m.winner === m.team2) html += '<span class="score">' + m.score2 + '</span>';
-    html += '</div>';
-    if (m.winner && m.score1 != null && m.score2 != null) {
-        html += '<div class="row" style="justify-content:flex-end;padding-top:4px;border-top:1px solid #1a2029;margin-top:3px;">';
-        html += '<span class="score">' + m.score1 + ' : ' + m.score2 + '</span>';
-        html += '</div>';
-    }
-    html += '</div>';
-    return html;
-}
-
-function renderMiniBracket(tournament) {
-    var m1 = getMatchFromSnapshot(tournament, 1);
-    var m2 = getMatchFromSnapshot(tournament, 2);
-    var m3 = getMatchFromSnapshot(tournament, 3);
-    var m4 = getMatchFromSnapshot(tournament, 4);
-    var m5 = getMatchFromSnapshot(tournament, 5);
-
-    var html = '<div class="mini-bracket">';
-
-    html += '<div class="mini-group">';
-    html += '<div class="mini-group-title">Раунд 1</div>';
-    html += '<div class="mini-round">';
-    html += renderMiniMatch(tournament, m1);
-    html += renderMiniMatch(tournament, m2);
-    html += renderMiniMatch(tournament, m3);
-    html += '</div></div>';
-
-    html += '<div class="mini-group">';
-    html += '<div class="mini-group-title">Раунд 2</div>';
-    html += '<div class="mini-round">';
-    html += renderMiniMatch(tournament, m4);
-    html += '</div></div>';
-
-    html += '<div class="mini-group">';
-    html += '<div class="mini-group-title grand">Финал</div>';
-    html += '<div class="mini-round">';
-    html += renderMiniMatch(tournament, m5);
-    html += '</div></div>';
-
-    html += '</div>';
-    return html;
-}
-
-function renderMVPSection(tournament) {
-    if (!tournament.mvp || !tournament.mvp.playerNick) {
-        return '<div class="section">' +
-            '<div class="section-title">MVP турнира</div>' +
-            '<div style="color:#5f6773;font-size:13px;font-style:italic;">MVP не указан</div>' +
-            '</div>';
-    }
-
-    var mvpTeam = getTeamFromSnapshot(tournament, tournament.mvp.teamId);
-    var teamName = mvpTeam ? mvpTeam.name : '';
-
-    var html = '<div class="section">';
-    html += '<div class="section-title">MVP турнира</div>';
-    html += '<div class="mvp-block">';
-    html += '<div class="mvp-icon">';
-    html += '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">';
-    html += '<path d="M5 4h14l-1 9-6 7-6-7-1-9z" stroke="#c9a35a" stroke-width="1.5" stroke-linejoin="round" fill="rgba(201,163,90,0.1)"/>';
-    html += '<path d="M9 8l3-2 3 2" stroke="#e3c48a" stroke-width="1.5" stroke-linecap="round"/>';
-    html += '</svg>';
-    html += '</div>';
-    html += '<div class="mvp-info">';
-    html += '<div class="mvp-label">Лучший игрок турнира</div>';
-    html += '<div class="mvp-name">' + escapeHtml(tournament.mvp.playerNick) + '</div>';
-    if (teamName) html += '<div class="mvp-team">' + escapeHtml(teamName) + '</div>';
-    if (tournament.mvp.note) html += '<div class="mvp-note">' + escapeHtml(tournament.mvp.note) + '</div>';
-    html += '</div></div></div>';
-    return html;
-}
-
-function renderPhotoSection(tournament) {
-    if (!tournament.photos || tournament.photos.length === 0) {
-        return '<div class="section">' +
-            '<div class="section-title">Фотографии</div>' +
-            '<div style="color:#5f6773;font-size:13px;font-style:italic;">Фотографий пока нет</div>' +
-            '</div>';
-    }
-
-    var html = '<div class="section">';
-    html += '<div class="section-title">Фотографии · ' + tournament.photos.length + '</div>';
-    html += '<div class="photo-grid">';
-    for (var i = 0; i < tournament.photos.length; i++) {
-        var p = tournament.photos[i];
-        html += '<div class="photo-item" onclick="openLightbox(\'' + tournament.id + '\',' + i + ')">';
-        html += '<img src="' + p.url + '" alt="' + escapeHtml(p.caption || '') + '" loading="lazy">';
-        if (p.caption) html += '<div class="photo-caption">' + escapeHtml(p.caption) + '</div>';
-        html += '</div>';
-    }
-    html += '</div></div>';
-    return html;
-}
-
-function renderTournamentCard(t, idx) {
-    var champion = getTeamFromSnapshot(t, t.championId);
-    var runnerUp = getTeamFromSnapshot(t, t.runnerUpId);
-    var grand = getMatchFromSnapshot(t, 5);
-    var scoreText = '';
-    if (grand && grand.score1 != null && grand.score2 != null) {
-        scoreText = grand.score1 + ' : ' + grand.score2;
-    }
-
-    var champLogoHtml = '';
-    if (champion && champion.logo) {
-        champLogoHtml = '<img src="' + champion.logo + '" alt="">';
-    } else {
-        var ch = champion && champion.name ? champion.name.charAt(0).toUpperCase() : '?';
-        champLogoHtml = '<span class="placeholder">' + ch + '</span>';
-    }
-
-    var html = '<div class="tournament-card" id="tourn-' + escapeHtml(t.id) + '" data-idx="' + idx + '">';
-    html += '<div class="tournament-head" onclick="toggleCard(' + idx + ')">';
-    html += '<div class="tournament-champ-logo">' + champLogoHtml + '</div>';
-    html += '<div class="tournament-title-block">';
-    html += '<div class="tournament-title">' + escapeHtml(t.name) + '</div>';
-    html += '<div class="tournament-meta">';
-    html += escapeHtml(t.date || '');
-    if (t.format) { html += '<span class="sep">·</span>' + escapeHtml(t.format); }
-    if (champion) {
-        html += '<span class="sep">·</span>Победитель: <span class="champ">' + escapeHtml(champion.name) + '</span>';
-    }
-    html += '</div></div>';
-    if (scoreText) html += '<div class="tournament-score">' + scoreText + '</div>';
-    else html += '<div></div>';
-    html += '<div class="tournament-toggle">▼</div>';
-    html += '</div>';
-
-    html += '<div class="tournament-body">';
-    html += '<div class="tournament-body-inner">';
-    html += renderMVPSection(t);
-    html += renderPhotoSection(t);
-
-    html += '<div class="section">';
-    html += '<div class="section-title">Сетка турнира</div>';
-    html += renderMiniBracket(t);
-    html += '</div>';
-
-    html += '<div class="section">';
-    html += '<div class="section-title">Итоги</div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
-    if (champion) {
-        html += '<div class="mini-match" style="padding:12px 16px;"><div class="row" style="margin-bottom:6px;"><span class="badge win">1 МЕСТО</span></div><div class="row"><span class="name" style="color:#e3c48a;font-family:Unbounded,sans-serif;font-size:14px;font-weight:600;">' + escapeHtml(champion.name) + '</span></div></div>';
-    }
-    if (runnerUp) {
-        html += '<div class="mini-match" style="padding:12px 16px;"><div class="row" style="margin-bottom:6px;"><span class="badge loss">2 МЕСТО</span></div><div class="row"><span class="name" style="font-family:Unbounded,sans-serif;font-size:14px;">' + escapeHtml(runnerUp.name) + '</span></div></div>';
-    }
-    html += '</div></div>';
-
-    html += '</div></div></div>';
-    return html;
-}
-
-function render() {
-    var container = document.getElementById('historyList');
-    if (!container) return;
-
-    if (!HISTORY || HISTORY.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">📜</div>Пока ни одного турнира в истории.<br><span style="font-size:12px;color:#5f6773;">Первый турнир появится здесь после завершения.</span></div>';
-        return;
-    }
-
-    // Сортируем: свежие сверху
-    var sorted = HISTORY.slice().sort(function(a, b) {
-        var ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        var tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return tb - ta;
-    });
-
-    var html = '';
-    for (var i = 0; i < sorted.length; i++) {
-        html += renderTournamentCard(sorted[i], i);
-    }
-    container.innerHTML = html;
-
-    // Автооткрытие первого (свежего) турнира
-    if (sorted.length > 0) {
-        setTimeout(function() { toggleCard(0, true); }, 200);
-    }
-}
-
-function toggleCard(idx, forceOpen) {
-    var cards = document.querySelectorAll('.tournament-card');
-    if (!cards[idx]) return;
-    var card = cards[idx];
-    var isOpen = card.classList.contains('expanded');
-    if (forceOpen) {
-        card.classList.add('expanded');
-    } else {
-        if (isOpen) card.classList.remove('expanded');
-        else card.classList.add('expanded');
-    }
-}
-
-// ============================================================
-// ЛАЙТБОКС
-// ============================================================
-function openLightbox(tournamentId, photoIdx) {
-    var t = null;
-    for (var i = 0; i < HISTORY.length; i++) {
-        if (HISTORY[i].id === tournamentId) { t = HISTORY[i]; break; }
-    }
-    if (!t || !t.photos || !t.photos[photoIdx]) return;
-    LIGHTBOX_PHOTOS = t.photos;
-    LIGHTBOX_INDEX = photoIdx;
-    updateLightbox();
-    var lb = document.getElementById('lightbox');
-    lb.classList.add('active');
-    setTimeout(function() { lb.classList.add('visible'); }, 20);
-    document.body.style.overflow = 'hidden';
-}
-
-function updateLightbox() {
-    var p = LIGHTBOX_PHOTOS[LIGHTBOX_INDEX];
-    if (!p) return;
-    document.getElementById('lightboxImg').src = p.url;
-    document.getElementById('lightboxCaption').textContent = p.caption || '';
-    var showNav = LIGHTBOX_PHOTOS.length > 1;
-    document.querySelector('.lightbox-nav.prev').style.display = showNav ? 'flex' : 'none';
-    document.querySelector('.lightbox-nav.next').style.display = showNav ? 'flex' : 'none';
-}
-
-function lightboxPrev() {
-    if (LIGHTBOX_PHOTOS.length === 0) return;
-    LIGHTBOX_INDEX = (LIGHTBOX_INDEX - 1 + LIGHTBOX_PHOTOS.length) % LIGHTBOX_PHOTOS.length;
-    updateLightbox();
-}
-function lightboxNext() {
-    if (LIGHTBOX_PHOTOS.length === 0) return;
-    LIGHTBOX_INDEX = (LIGHTBOX_INDEX + 1) % LIGHTBOX_PHOTOS.length;
-    updateLightbox();
-}
-function closeLightbox() {
-    var lb = document.getElementById('lightbox');
-    lb.classList.remove('visible');
-    setTimeout(function() {
-        lb.classList.remove('active');
-        document.getElementById('lightboxImg').src = '';
-        document.body.style.overflow = '';
-    }, 300);
-}
-
-document.addEventListener('keydown', function(e) {
-    var lb = document.getElementById('lightbox');
-    if (!lb.classList.contains('active')) return;
-    if (e.key === 'Escape') closeLightbox();
-    if (e.key === 'ArrowLeft') lightboxPrev();
-    if (e.key === 'ArrowRight') lightboxNext();
-});
-document.getElementById('lightbox').addEventListener('click', function(e) {
-    if (e.target === this) closeLightbox();
-});
-
-// ============================================================
-// ИНИЦИАЛИЗАЦИЯ
-// ============================================================
-window.toggleCard = toggleCard;
-window.openLightbox = openLightbox;
-window.closeLightbox = closeLightbox;
-window.lightboxPrev = lightboxPrev;
-window.lightboxNext = lightboxNext;
-
-document.addEventListener('DOMContentLoaded', function() {
-    loadHistory().then(render);
-});
-</script>
-
+<script src="/assets/ca-data.js" defer></script>
+<script src="/assets/ca-ui.js" defer></script>
+<script src="/assets/ca-views.js" defer></script>
+<script src="/assets/ca-history.js" defer></script>
 </body>
 </html>

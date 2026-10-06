@@ -110,6 +110,10 @@
         .match-item .meta .tag.upper { background: rgba(201,163,90,0.2); color: #c9a35a; }
         .match-item .meta .tag.grand { background: rgba(201,163,90,0.3); color: #e3c48a; }
         .match-item .meta select { background: #0a0d12; border: 1px solid #242b35; color: #eae6da; padding: 3px 6px; border-radius: 4px; font-size: 11px; }
+        .vod-row { display: flex; align-items: center; gap: 6px; width: 100%; }
+        .vod-row label { color: #5f6773; font-size: 11px; white-space: nowrap; }
+        .vod-row input { flex: 1; min-width: 160px; background: #0a0d12; border: 1px solid #242b35; color: #eae6da; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-family: 'Manrope', sans-serif; }
+        .vod-row input:focus { border-color: #c9a35a; outline: none; }
         .manual-selects { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .manual-selects select { background: #0a0d12; border: 1px solid #c9a35a; color: #eae6da; padding: 5px 8px; border-radius: 4px; font-size: 12px; font-family: 'Manrope', sans-serif; min-width: 130px; }
         .score-input-group { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding-left: 10px; border-left: 1px solid #242b35; }
@@ -332,6 +336,19 @@
             <button class="btn btn-primary" style="margin-top:14px;" onclick="saveSettings()">💾 Сохранить</button>
         </div>
         <div class="card">
+            <div class="card-header"><h3>🚀 Следующий сезон</h3></div>
+            <p class="hint" style="margin-bottom:10px;">Показывается на главной после завершения турнира (когда выбран победитель M5). Если поля пустые — на сайте используется текст по умолчанию.</p>
+            <div class="form-row">
+                <div class="form-group"><label>Название</label><input type="text" id="settingsNsName" placeholder="Compass Arena · второй сезон"></div>
+                <div class="form-group"><label>Ориентировочная дата</label><input type="datetime-local" id="settingsNsDate"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Ссылка на заявку</label><input type="url" id="settingsNsUrl" placeholder="https://t.me/compassarenaa"></div>
+                <div class="form-group"><label>Короткое описание</label><input type="text" id="settingsNsNote" placeholder="Восемь команд, сетка с нижней частью"></div>
+            </div>
+            <button class="btn btn-primary" style="margin-top:14px;" onclick="saveSettings()">💾 Сохранить</button>
+        </div>
+        <div class="card">
             <div class="card-header"><h3>💾 Управление данными</h3></div>
             <div class="btn-group">
                 <button class="btn" onclick="exportData()">📤 Экспорт JSON</button>
@@ -450,16 +467,17 @@ function getDefaultData() {
             { id: 6, name: "Слот 6", players: [], logo: "" }
         ],
         matches: [
-            { id: 1, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null },
-            { id: 2, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null },
-            { id: 3, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null },
-            { id: 4, round: 2, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null },
-            { id: 5, round: 3, team1: null, team2: null, winner: null, bracket: 'grand', score1: null, score2: null }
+            { id: 1, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null, vod: '' },
+            { id: 2, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null, vod: '' },
+            { id: 3, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null, vod: '' },
+            { id: 4, round: 2, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null, vod: '' },
+            { id: 5, round: 3, team1: null, team2: null, winner: null, bracket: 'grand', score1: null, score2: null, vod: '' }
         ],
         schedule: {},
         liveMatchId: null,
         tournamentStart: null,
         projectStart: null,
+        nextSeason: null,
         alwaysShowBracketBanner: true
     };
 }
@@ -690,6 +708,7 @@ function loadData() {
             if (DATA.alwaysShowBracketBanner === undefined) DATA.alwaysShowBracketBanner = true;
             if (DATA.tournamentStart === undefined) DATA.tournamentStart = null;
             if (DATA.projectStart === undefined) DATA.projectStart = null;
+            if (DATA.nextSeason === undefined) DATA.nextSeason = null;
             if (!DATA.teams) DATA.teams = [];
             if (!DATA.matches) DATA.matches = getDefaultData().matches;
             for (var j = 0; j < DATA.teams.length; j++) {
@@ -698,6 +717,7 @@ function loadData() {
             for (var k = 0; k < DATA.matches.length; k++) {
                 if (DATA.matches[k].score1 === undefined) DATA.matches[k].score1 = null;
                 if (DATA.matches[k].score2 === undefined) DATA.matches[k].score2 = null;
+                if (DATA.matches[k].vod === undefined) DATA.matches[k].vod = '';
             }
         })
         .catch(function(err) {
@@ -742,6 +762,22 @@ function renderEverything() {
 
     var bannerEl = document.getElementById('settingsAlwaysBanner');
     if (bannerEl) bannerEl.checked = DATA.alwaysShowBracketBanner !== false;
+
+    var ns = DATA.nextSeason || {};
+    var nsNameEl = document.getElementById('settingsNsName');
+    if (nsNameEl) nsNameEl.value = ns.name || '';
+    var nsUrlEl = document.getElementById('settingsNsUrl');
+    if (nsUrlEl) nsUrlEl.value = ns.url || '';
+    var nsNoteEl = document.getElementById('settingsNsNote');
+    if (nsNoteEl) nsNoteEl.value = ns.note || '';
+    var nsDateEl = document.getElementById('settingsNsDate');
+    if (nsDateEl && ns.date) {
+        try {
+            var nd = new Date(ns.date);
+            var pad3 = function(n){ return String(n).padStart(2, '0'); };
+            nsDateEl.value = nd.getFullYear() + '-' + pad3(nd.getMonth()+1) + '-' + pad3(nd.getDate()) + 'T' + pad3(nd.getHours()) + ':' + pad3(nd.getMinutes());
+        } catch(e) {}
+    }
 
     renderTeams();
     renderMatches();
@@ -1329,10 +1365,23 @@ function renderMatches() {
                        '<div class="meta" style="margin-top:6px;"><span class="tag ' + m.bracket + '">' + label + '</span>' + winnerHtml + '</div>';
         }
 
+        bodyHtml += '<div class="meta vod-row" style="margin-top:6px;">' +
+            '<label>🎬 VOD:</label>' +
+            '<input type="url" placeholder="https://www.twitch.tv/videos/…" value="' + escapeHtml(m.vod || '') + '" onchange="setVod(' + m.id + ', this.value)" />' +
+            '</div>';
+
         div.innerHTML = bodyHtml;
         container.appendChild(div);
     }
     renderPreview();
+}
+
+function setVod(matchId, url) {
+    var match = getMatch(matchId);
+    if (!match) return;
+    match.vod = (url || '').trim();
+    saveData();
+    showToast(match.vod ? '🎬 Ссылка на запись сохранена' : '🎬 Ссылка на запись убрана');
 }
 
 function setWinner(matchId, teamId) {
@@ -1734,6 +1783,25 @@ function saveSettings() {
     DATA.tournamentStart = startVal ? new Date(startVal).toISOString() : null;
     DATA.projectStart = projVal ? new Date(projVal).toISOString() : null;
     DATA.alwaysShowBracketBanner = banner;
+
+    // Следующий сезон: пустая карточка превращается в null, чтобы сайт показал текст по умолчанию
+    var nsName = (document.getElementById('settingsNsName') || {}).value;
+    var nsDate = (document.getElementById('settingsNsDate') || {}).value;
+    var nsUrl = (document.getElementById('settingsNsUrl') || {}).value;
+    var nsNote = (document.getElementById('settingsNsNote') || {}).value;
+    nsName = (nsName || '').trim();
+    nsUrl = (nsUrl || '').trim();
+    nsNote = (nsNote || '').trim();
+    if (nsName || nsDate || nsUrl || nsNote) {
+        DATA.nextSeason = {
+            name: nsName || null,
+            date: nsDate ? new Date(nsDate).toISOString() : null,
+            url: nsUrl || null,
+            note: nsNote || null
+        };
+    } else {
+        DATA.nextSeason = null;
+    }
 
     saveData();
     showToast('💾 Настройки сохранены');

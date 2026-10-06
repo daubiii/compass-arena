@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Compass Arena — турнир по Dota 2</title>
+<meta name="description" content="Compass Arena — организация турниров по Dota 2. Сетка, расписание матчей, прямая трансляция и история турниров.">
+<meta name="theme-color" content="#08090c">
+<link rel="canonical" href="https://compassarena.ru/">
+
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Compass Arena">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:title" content="Compass Arena — турнир по Dota 2">
+<meta property="og:description" content="Сетка, расписание и прямая трансляция. Организация турниров по Dota 2.">
+<meta property="og:image" content="https://compassarena.ru/img/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://compassarena.ru/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Compass Arena — турнир по Dota 2">
+<meta name="twitter:description" content="Сетка, расписание и прямая трансляция.">
+<meta name="twitter:image" content="https://compassarena.ru/img/og-image.jpg">
+
+<link rel="preload" href="/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/onest-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" as="image" href="/img/hero.webp" media="(min-width: 821px)" fetchpriority="high">
+<link rel="preload" as="image" href="/img/hero-m.webp" media="(max-width: 820px)" fetchpriority="high">
+<link rel="stylesheet" href="/site.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Compass Arena",
+  "url": "https://compassarena.ru/",
+  "logo": "https://compassarena.ru/favicon.png",
+  "description": "Организация турниров по Dota 2.",
+  "sameAs": [
+    "https://www.twitch.tv/compassarena",
+    "https://t.me/compassarenaa"
+  ]
+}
+</script>
+
+<style>
+/* ==========================================================
+   ГЛАВНАЯ: первый экран и блоки, которых нет на других страницах
+   ========================================================== */
+.hero {
+  position: relative; overflow: hidden; display: flex; flex-direction: column;
+  justify-content: flex-end; min-height: clamp(620px, 100svh, 900px);
+}
+body[data-phase="live"] .hero, body[data-phase="post"] .hero { min-height: clamp(560px, 84svh, 800px); }
+.hero > .wrap { width: 100%; }
+.hero-img { position: absolute; inset: 0; }
+.hero-img img { width: 100%; height: 100%; object-fit: cover; object-position: 76% 42%; }
+.hero-shade {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(8,9,12,.66) 0%, rgba(8,9,12,0) 22%),
+    linear-gradient(90deg, rgba(8,9,12,.9) 0%, rgba(8,9,12,.62) 32%, rgba(8,9,12,.12) 62%, rgba(8,9,12,0) 100%),
+    linear-gradient(0deg, var(--bg) 0%, rgba(8,9,12,0) 36%);
+}
+#dust { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .9; }
+.hero-body { position: relative; z-index: 2; padding-top: calc(var(--head-h) + 30px); padding-bottom: 40px; }
+.hero-kicker {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-size: 13.5px; color: var(--text-2); margin-bottom: 22px;
+}
+.hero-kicker::before { content: ''; width: 34px; height: 1px; background: var(--gold); flex: none; }
+.hero h1 { font-family: var(--display); font-weight: 300; font-size: clamp(29px, 4.1vw, 60px); line-height: 1.07; letter-spacing: -.025em; max-width: 15em; }
+.hero h1 em { font-style: normal; color: var(--gold-hi); }
+.hero .lede { margin-top: 24px; color: var(--text-2); font-size: clamp(15px, 1.25vw, 17.5px); max-width: 34em; }
+.hero-cta { margin-top: 34px; display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* ---------- Статус под первым экраном ---------- */
+#heroStatus { position: relative; z-index: 2; padding-bottom: 30px; }
+.cd-inner {
+  border-top: 1px solid var(--line-2); padding-top: 22px;
+  display: grid; grid-template-columns: auto 1fr; gap: 18px 56px; align-items: end;
+}
+.cd-label { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+.cd-label b { display: block; font-weight: 400; color: var(--text); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.cd-nums { display: flex; gap: clamp(18px, 4vw, 54px); }
+.cd-num { display: flex; flex-direction: column; }
+.cd-num b {
+  font-family: var(--display); font-weight: 200; letter-spacing: -.03em;
+  font-size: clamp(32px, 4.6vw, 64px); line-height: 1; font-variant-numeric: tabular-nums;
+}
+.cd-num small { font-size: 12px; color: var(--text-3); margin-top: 8px; }
+.cd-announce { grid-column: 1 / -1; color: var(--gold-hi); font-size: 14px; opacity: 0; height: 0; transition: opacity .5s; }
+.cd-announce.visible { opacity: 1; height: auto; }
+.cd-next { grid-column: 1 / -1; font-size: 14px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.cd-next .k { color: var(--text-3); margin-right: 4px; }
+.cd-next b { color: var(--text); font-weight: 500; }
+.cd-next .t { color: var(--gold-hi); white-space: nowrap; }
+.cd-track { grid-column: 1 / -1; height: 1px; background: var(--line); position: relative; margin-top: 6px; }
+.cd-track i { position: absolute; left: 0; top: -1px; height: 3px; background: var(--gold); border-radius: 2px; transition: width 1s linear; }
+.cd-caption { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+/* Следующий матч / итог финала */
+.nm-inner, .nm {
+  border-top: 1px solid var(--line-2); padding-top: 20px;
+  display: grid; grid-template-columns: 1fr auto; gap: 6px 40px; align-items: end;
+}
+.nm-label { grid-column: 1; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); }
+.nm-label .ic { font-size: 15px; color: var(--gold); }
+.nm-teams {
+  grid-column: 1; font-family: var(--display); font-weight: 300; letter-spacing: -.02em;
+  font-size: clamp(19px, 2.6vw, 34px); line-height: 1.2; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px;
+}
+.nm-teams .vs { font-family: var(--ui); font-size: 13px; letter-spacing: 0; color: var(--text-3); }
+.nm-teams .win { color: var(--gold-hi); }
+.nm-meta { grid-column: 1; font-size: 14px; color: var(--text-2); }
+.nm-count { grid-column: 2; grid-row: 1 / span 3; align-self: end; text-align: right; }
+.nm-count b {
+  display: block; font-family: var(--display); font-weight: 200; color: var(--gold-hi);
+  font-size: clamp(26px, 3.6vw, 52px); line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.nm-count small { display: block; margin-top: 8px; font-size: 12px; color: var(--text-3); }
+
+/* ---------- Ожидание эфира ---------- */
+.note { border: 1px solid var(--line); border-radius: var(--r-lg); background: linear-gradient(180deg, var(--card), var(--raise)); overflow: hidden; }
+.note-toggle { width: 100%; display: flex; align-items: center; gap: 16px; padding: 18px 22px; text-align: left; }
+.note-toggle .t { font-family: var(--display); font-weight: 400; font-size: 15px; flex: 1; display: flex; align-items: center; gap: 12px; }
+.note-time { font-size: 13.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.note-time b { color: var(--text); font-weight: 500; }
+.note-toggle .ic { color: var(--text-2); transition: transform .35s var(--ease); }
+.note.open .note-toggle .ic { transform: rotate(180deg); }
+.note-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .45s var(--ease); }
+.note.open .note-body { grid-template-rows: 1fr; }
+.note-body > div { overflow: hidden; }
+.note-inner {
+  padding: 20px 22px 22px; border-top: 1px solid var(--line);
+  display: flex; gap: 18px 40px; justify-content: space-between; align-items: flex-end; flex-wrap: wrap;
+}
+.note-inner p { color: var(--text-2); max-width: 46ch; }
+.note-inner .sign { color: var(--text-3); font-size: 14px; margin-top: 10px; }
+
+/* ---------- Участники ---------- */
+.team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); gap: 14px; }
+.team-card {
+  display: flex; flex-direction: column; gap: 10px; text-align: left;
+  padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md);
+  background: linear-gradient(180deg, var(--card), var(--raise));
+  transition: border-color .25s, transform .3s var(--ease), box-shadow .3s;
+}
+.team-card:hover { border-color: rgba(201,163,90,.42); transform: translateY(-3px); box-shadow: 0 20px 40px -26px rgba(0,0,0,.9); }
+.tc-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tc-logo {
+  width: 52px; height: 52px; border-radius: var(--r-md); flex: none;
+  border: 1px solid var(--line-2); background: var(--card);
+  display: grid; place-items: center; overflow: hidden;
+}
+.tc-logo img { width: 100%; height: 100%; object-fit: cover; }
+.tc-logo .ph { font-family: var(--display); font-weight: 300; font-size: 22px; color: var(--gold-hi); }
+.tc-name { font-family: var(--display); font-weight: 400; font-size: 17px; overflow-wrap: anywhere; }
+.tc-players { color: var(--text-3); font-size: 13px; line-height: 1.5; }
+.tc-rec { color: var(--text-2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+/* ---------- Следующий сезон ---------- */
+.ns-grid { display: grid; grid-template-columns: 1.25fr .85fr; gap: 44px; align-items: start; }
+.ns-when { display: inline-flex; align-items: center; gap: 10px; margin-top: 22px; color: var(--text-2); font-size: 14px; }
+.ns-when .ic { color: var(--gold); font-size: 17px; }
+.ns-when b { color: var(--text); }
+.ns-side { display: grid; gap: 10px; }
+.ns-row {
+  display: flex; gap: 14px; align-items: center;
+  padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--raise);
+}
+.ns-row .ic-holder {
+  width: 38px; height: 38px; border-radius: 12px; flex: none;
+  display: grid; place-items: center; font-size: 18px;
+  background: rgba(201,163,90,.12); color: var(--gold-hi);
+}
+.ns-row b { display: block; font-weight: 500; font-size: 14.5px; }
+.ns-row small { display: block; color: var(--text-3); font-size: 12.5px; }
+
+/* ---------- Архив на главной ---------- */
+.archive-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 28px; }
+
+@media (max-width: 900px) {
+  .ns-grid { grid-template-columns: 1fr; gap: 28px; }
+}
+@media (max-width: 820px) {
+  .hero { min-height: 100svh; }
+  body[data-phase="live"] .hero, body[data-phase="post"] .hero { min-height: 78svh; }
+  .hero-img img { object-position: 52% 22%; }
+  .hero-shade {
+    background:
+      linear-gradient(180deg, rgba(8,9,12,.55) 0%, rgba(8,9,12,0) 20%),
+      linear-gradient(0deg, var(--bg) 0%, rgba(8,9,12,.94) 32%, rgba(8,9,12,.22) 62%, rgba(8,9,12,0) 100%);
+  }
+  .hero-cta .btn { flex: 1; justify-content: center; }
+  .cd-inner { grid-template-columns: 1fr; gap: 16px; }
+  .cd-nums { justify-content: space-between; gap: 12px; }
+  .nm-inner, .nm { grid-template-columns: 1fr; }
+  .nm-count { grid-column: 1; grid-row: auto; text-align: left; margin-top: 12px; }
+  .note-time { display: none; }
+}
+</style>
+</head>
+<body data-phase="pre">
+
+<a class="skip" href="#bracket">Перейти к турнирной сетке</a>
+
+<header class="site-head" id="head">
+  <div class="wrap head-row">
+    <a class="brand" href="/" aria-label="Compass Arena — на главную">
+      <img src="/img/mark.webp" width="30" height="30" alt="">
+      <span>Compass <i>Arena</i></span>
+    </a>
+    <nav class="head-nav" aria-label="Основная навигация">
+      <span class="head-live"><span class="dot-live"></span>Идёт эфир</span>
+      <a href="#bracket">Сетка</a>
+      <a href="#teams">Участники</a>
+      <a href="/schedule.html">Расписание</a>
+      <a href="/history.html">История</a>
+      <a href="/rules.html">Правила</a>
+      <a class="btn btn-gold" href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Смотреть</a>
+    </nav>
+    <button class="burger" id="burgerBtn" aria-label="Открыть меню" aria-expanded="false" aria-controls="menuPanel"><span></span><span></span><span></span></button>
+  </div>
+  <div class="head-progress" role="progressbar" aria-label="Прогресс турнира" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="headProgress"></i></div>
+</header>
+
+<nav class="menu" id="menuPanel" aria-label="Меню" aria-hidden="true">
+  <a href="/"><i>01</i>Главная</a>
+  <a href="#bracket"><i>02</i>Сетка</a>
+  <a href="#teams"><i>03</i>Участники</a>
+  <a href="/schedule.html"><i>04</i>Расписание</a>
+  <a href="/history.html"><i>05</i>История</a>
+  <a href="/rules.html"><i>06</i>Правила</a>
+  <div class="menu-foot">
+    <a class="btn btn-ghost" href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Twitch</a>
+    <a class="btn btn-ghost" href="https://t.me/compassarenaa" target="_blank" rel="noopener">Telegram</a>
+  </div>
+</nav>
+
+<main id="main">
+
+<!-- ============ ПЕРВЫЙ ЭКРАН ============ -->
+<section class="hero" id="arena">
+  <picture class="hero-img">
+    <source media="(max-width: 820px)" srcset="/img/hero-m.webp">
+    <img src="/img/hero.webp" alt="Тёмная арена турнира Compass Arena" fetchpriority="high" decoding="async">
+  </picture>
+  <div class="hero-shade"></div>
+  <canvas id="dust" aria-hidden="true"></canvas>
+
+  <div class="wrap hero-body">
+    <p class="hero-kicker" id="heroKicker">Турнир по Dota 2 · первый сезон</p>
+    <h1 id="heroTitle">Здесь сражаются<br>не ради участия —<br><em>здесь доказывают</em></h1>
+    <p class="lede" id="heroLede">Один шанс, полная концентрация и один трофей на всех. Первый турнир организации Compass Arena.</p>
+    <div class="hero-cta" id="heroCta">
+      <a class="btn btn-gold btn-lg" href="#bracket">Турнирная сетка</a>
+      <a class="btn btn-ghost btn-lg" href="#teams">Участники</a>
+    </div>
+  </div>
+
+  <div class="wrap" id="heroStatus"></div>
+</section>
+
+<!-- ============ ЧЕМПИОН ============ -->
+<section class="sec-tight" id="championSection" hidden>
+  <div class="wrap" id="championBanner"></div>
+</section>
+
+<!-- ============ ЭФИР ============ -->
+<section class="wrap stream" id="streamSection" style="padding-top:8px">
+  <div class="note" id="streamWaiting">
+    <button class="note-toggle" id="streamToggle" aria-expanded="false" aria-controls="streamWaitingBody">
+      <span class="t"><svg class="ic" aria-hidden="true"><use href="#i-tv"></use></svg>Прямая трансляция</span>
+      <span class="note-time" id="streamMiniTimer">До эфира — <b>—</b></span>
+      <svg class="ic" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+    </button>
+    <div class="note-body" id="streamWaitingBody"><div>
+      <div class="note-inner">
+        <div>
+          <p>Друг, я понимаю, что ты ждёшь турнир больше всего на свете, но не мог бы ты ещё немного подождать.</p>
+          <p class="sign">С уважением, организация Compass Arena</p>
+        </div>
+        <a class="btn btn-ghost" href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Напомнить в Twitch</a>
+      </div>
+    </div></div>
+  </div>
+
+  <div id="streamLive" hidden>
+    <div class="stream-bar" id="streamBar">
+      <span class="dot-live"></span>
+      <span id="streamBarText">Трансляция</span>
+      <a class="text-link" href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Открыть в Twitch</a>
+    </div>
+    <div class="stream-frame" id="streamFrame">
+      <div class="stream-poster" id="streamPoster">
+        <div class="stream-inner">
+          <img class="mark" src="/img/mark.webp" width="50" height="50" alt="">
+          <h3 id="streamPosterTitle">Эфир сейчас не идёт</h3>
+          <p id="streamPosterText">Трансляция появится здесь, как только стартует следующий матч.</p>
+          <a class="stream-play" id="streamPlay" data-play-stream href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">
+            <span class="ring"><svg class="ic" aria-hidden="true"><use href="#i-play"></use></svg></span>
+            <span><b>Смотреть на Twitch</b><small>compassarena</small></span>
+          </a>
+          <div class="stream-next" id="streamNext"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ СЕТКА ============ -->
+<section class="sec arena" id="bracket">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <p class="kicker">Bo3 · шесть команд · без нижней сетки</p>
+        <h2 class="h2">Турнирная сетка</h2>
+      </div>
+      <p class="sec-copy">
+        В <em>Раунде 1</em> играют все шесть команд: три матча, каждый до двух побед. Победители <em>M1</em> и <em>M2</em>
+        встречаются в полуфинале, победитель <em>M3</em> проходит напрямую в гранд-финал. <b>Один матч — один трофей.</b>
+      </p>
+    </div>
+
+    <div class="bracket-scroll reveal" id="bracketScroll">
+      <div class="bracket" id="bracketWrap"></div>
+    </div>
+
+    <div class="bracket-foot">
+      <div class="b-legend" id="bLegend"></div>
+      <span class="bracket-hint">Сетку можно листать вбок</span>
+    </div>
+
+    <p class="footnote reveal" id="phaseNote">Даты и время матчей — по Москве (МСК).</p>
+  </div>
+  <div class="arena-compass ic-spin" aria-hidden="true">
+    <svg class="ic" aria-hidden="true"><use href="#i-compass"></use></svg>
+  </div>
+</section>
+
+<!-- ============ ВЫБЫВШИЕ ============ -->
+<section class="sec-tight" id="eliminatedSection">
+  <div class="wrap">
+    <div class="spread" style="margin-bottom:16px">
+      <h3 class="h3">Выбывшие <span class="dim" id="eliminatedCount" style="font-family:var(--ui);font-size:13px"></span></h3>
+    </div>
+    <div class="out-list" id="eliminatedList"><div class="out-empty">Пока никого — турнир только начинается</div></div>
+  </div>
+</section>
+
+<!-- ============ УЧАСТНИКИ ============ -->
+<section class="sec" id="teams">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <p class="kicker">Составы и статистика</p>
+        <h2 class="h2">Участники</h2>
+      </div>
+      <p class="sec-copy">Нажмите на команду, чтобы увидеть состав и её путь по сетке.</p>
+    </div>
+    <div class="team-grid" id="teamsGrid"></div>
+  </div>
+</section>
+
+<!-- ============ РАСПИСАНИЕ ============ -->
+<section class="sec" id="schedule">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <p class="kicker">Ближайшие и недавние матчи, время МСК</p>
+        <h2 class="h2">Расписание</h2>
+      </div>
+      <div class="sec-aside">
+        <a class="btn btn-ghost" href="/schedule.html">Все матчи и фильтры</a>
+      </div>
+    </div>
+    <div id="schedulePreviewList" class="reveal"><div class="s-empty">Загрузка…</div></div>
+  </div>
+</section>
+
+<!-- ============ АРХИВ ============ -->
+<section class="sec" id="archiveSection" hidden>
+  <div class="wrap">
+    <div class="archive-head">
+      <div>
+        <p class="kicker">Прошлые турниры организации</p>
+        <h2 class="h2">Архив</h2>
+      </div>
+      <a class="text-link" href="/history.html">Вся история</a>
+    </div>
+    <div class="season-list" id="archiveList"></div>
+  </div>
+</section>
+
+<!-- ============ СЛЕДУЮЩИЙ СЕЗОН ============ -->
+<section class="sec arena" id="next-season" hidden>
+  <div class="wrap" id="nextSeasonBody"></div>
+</section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-brand">
+          <img src="/img/mark.webp" width="34" height="34" alt="" loading="lazy">
+          <b>Compass <i>Arena</i></b>
+        </div>
+        <p class="foot-about">Организация турниров по Dota 2. Первый сезон — шесть команд и один трофей.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Турнир</h4>
+        <a href="#bracket">Сетка</a>
+        <a href="#teams">Участники</a>
+        <a href="/schedule.html">Расписание</a>
+        <a href="/rules.html">Правила</a>
+      </div>
+      <div class="foot-col">
+        <h4>Организация</h4>
+        <a href="/history.html">История</a>
+        <a href="https://t.me/compassarenaa" target="_blank" rel="noopener">Telegram</a>
+        <a href="https://www.twitch.tv/compassarena" target="_blank" rel="noopener">Twitch</a>
+      </div>
+      <div class="foot-col">
+        <h4>Связь</h4>
+        <a href="https://t.me/G0gg1a" target="_blank" rel="noopener">@G0gg1a</a>
+        <a href="https://t.me/uuutt7" target="_blank" rel="noopener">@uuutt7</a>
+        <a href="https://t.me/maushury" target="_blank" rel="noopener">@maushury</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span id="year">2026</span> Compass Arena · Dota 2 — товарные знаки принадлежат Valve Corporation</span>
+      <span><a href="/rules.html">Регламент</a> · <a href="/schedule.html">Расписание</a></span>
+    </div>
+  </div>
+</footer>
+
+<!-- ============ ДИАЛОГ КОМАНДЫ ============ -->
+<div class="dlg" id="teamDialog" role="dialog" aria-modal="true" aria-labelledby="teamDialogName" aria-hidden="true">
+  <div class="dlg-panel">
+    <button class="dlg-close" data-dialog-close aria-label="Закрыть">
+      <svg class="ic" aria-hidden="true"><use href="#i-close"></use></svg>
+    </button>
+    <div class="dlg-head">
+      <div class="dlg-logo" id="teamDialogLogo"><span class="ph">?</span></div>
+      <div>
+        <h2 id="teamDialogName">Команда</h2>
+        <div class="sub" id="teamDialogSub">Состав команды</div>
+      </div>
+    </div>
+    <div class="dlg-body" id="teamDialogBody"></div>
+    <div id="teamDialogStats"></div>
+  </div>
+</div>
+
+<!-- Плашка чемпиона (появляется только после финала) -->
+<div class="champ-chip" id="champChip" role="group" aria-label="Победитель турнира">
+  <button type="button" class="row" style="gap:10px" data-chip-main>
+    <svg class="ic" aria-hidden="true"><use href="#i-trophy"></use></svg>
+    <span>Победитель — <span class="name" id="champChipName">—</span></span>
+  </button>
+  <button type="button" class="x" data-dismiss-chip aria-label="Скрыть плашку">
+    <svg class="ic ic-14" aria-hidden="true"><use href="#i-close"></use></svg>
+  </button>
+</div>
+
+<button class="to-top" id="toTop" aria-label="Наверх">
+  <svg class="ic" aria-hidden="true"><use href="#i-arrow-up"></use></svg>
+</button>
+
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+<script src="/assets/ca-data.js" defer></script>
+<script src="/assets/ca-ui.js" defer></script>
+<script src="/assets/ca-views.js" defer></script>
+<script src="/assets/ca-bracket.js" defer></script>
+<script src="/assets/ca-home.js" defer></script>
+</body>
+</html>
