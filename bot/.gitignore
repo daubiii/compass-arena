@@ -1,0 +1,11 @@
+# Локальные секреты для `wrangler dev` — в репозиторий не попадают
+.dev.vars
+
+# Служебные файлы wrangler
+.wrangler/
+node_modules/
+dist/
+
+# Локальная база D1
+*.sqlite
+*.sqlite3

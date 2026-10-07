@@ -214,6 +214,31 @@
         .photo-thumb .p-caption-input:focus { background: rgba(201,163,90,0.2); }
         .photos-empty { color: #5f6773; font-size: 12px; font-style: italic; padding: 8px 0; }
 
+        /* --- Импорт из бота и свободные агенты --- */
+        .bot-details { font-size: 12px; color: #7a8494; line-height: 1.6; }
+        .bot-details .bd-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+        .bot-details .bd-key { color: #5f6773; min-width: 120px; }
+        .bot-details .bd-val { color: #eae6da; }
+        .bot-details .bd-ok { color: #a9d6ab; }
+        .bot-details .bd-err { color: #f0a79e; }
+        .bot-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+        .bot-item { background: #151a22; border: 1px solid #242b35; border-radius: 4px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; }
+        .bot-item .bi-logo { width: 34px; height: 34px; flex-shrink: 0; background: #0a0d12; border: 1px solid #242b35; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .bot-item .bi-logo img { max-width: 88%; max-height: 88%; object-fit: contain; }
+        .bot-item .bi-logo .placeholder { font-family: 'Unbounded', sans-serif; font-size: 13px; color: #c9a35a; opacity: 0.6; }
+        .bot-item .bi-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .bot-item .bi-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bot-item .bi-meta { font-size: 11px; color: #5f6773; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bot-item .bi-actions { display: flex; gap: 4px; flex-shrink: 0; }
+        .bot-item .bi-actions a { color: #e3c48a; font-size: 11px; text-decoration: none; border: 1px solid #242b35; border-radius: 4px; padding: 3px 8px; }
+        .bot-item .bi-actions a:hover { border-color: #c9a35a; }
+        .bot-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10px; background: rgba(201,163,90,0.16); color: #e3c48a; border: 1px solid rgba(201,163,90,0.35); }
+        .bot-badge.warn { background: rgba(231,76,60,0.14); color: #f0a79e; border-color: rgba(231,76,60,0.45); }
+        .bot-mistakes { margin: 10px 0; padding: 10px 14px; border: 1px solid rgba(231,76,60,0.5); background: rgba(231,76,60,0.07); border-radius: 6px; font-size: 12px; color: #f0b3ab; line-height: 1.7; }
+        .bot-modal-body { margin: 12px 0 16px; font-size: 13px; color: #c8cdd6; line-height: 1.65; }
+        .bot-modal-body .bd-warn { color: #e3c48a; font-weight: 500; }
+        .bot-modal-body .bot-list { margin-top: 12px; }
+
         @media (max-width: 640px) {
             .form-row { grid-template-columns: 1fr; }
             .form-row.three { grid-template-columns: 1fr; }
@@ -241,6 +266,8 @@
 
     <div class="tabs">
         <button class="tab active" data-tab="teams">Команды</button>
+        <button class="tab" data-tab="import">📥 Импорт из бота</button>
+        <button class="tab" data-tab="agents">🎯 Свободные агенты</button>
         <button class="tab" data-tab="matches">Матчи</button>
         <button class="tab" data-tab="schedule">Расписание</button>
         <button class="tab" data-tab="history">История</button>
@@ -289,6 +316,47 @@
                 <span style="color:#5f6773;font-size:12px;">Обновляется автоматически</span>
             </div>
             <div class="preview-wrap" id="previewWrap"></div>
+        </div>
+    </div>
+
+    <div class="tab-content" id="tab-import">
+        <div class="card">
+            <div class="card-header">
+                <h3>📥 Импорт из бота</h3>
+                <span style="color:#5f6773;font-size:12px;">Файлы, которые прислал бот в Telegram</span>
+            </div>
+            <p class="hint">
+                Выбери JSON-файл из сообщения бота — <code>teams_ГГГГ-ММ-ДД_dota2.json</code> или
+                <code>settings_ГГГГ-ММ-ДД_dota2.json</code>. Тип файла определяется по полю <code>type</code> внутри,
+                имя файла ни на что не влияет.
+            </p>
+            <div class="btn-group" style="margin:10px 0;">
+                <button class="btn btn-primary" onclick="document.getElementById('botFileInput').click()">📁 Выбрать файл</button>
+                <input type="file" id="botFileInput" accept="application/json,.json" style="display:none" onchange="onBotFileChosen(event)">
+                <button class="btn" onclick="botShowCurrentState()">🔄 Что сейчас в админке</button>
+            </div>
+            <div id="botImportStatus" class="archive-status neutral"></div>
+            <div id="botImportDetails" class="bot-details"></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>ℹ️ Как это работает</h3></div>
+            <p class="hint">
+                Файл команд <b>полностью заменяет</b> список команд и <b>сбрасывает сетку</b> (матчи и расписание) —
+                пары после этого расставляются заново. Свободные агенты из файла попадают на вкладку
+                «🎯 Свободные агенты». Файл настроек меняет только данные турнира (название, игру, формат, даты)
+                и не трогает ни команды, ни матчи.
+            </p>
+        </div>
+    </div>
+
+    <div class="tab-content" id="tab-agents">
+        <div class="card">
+            <div class="card-header">
+                <h3>🎯 Свободные агенты</h3>
+                <span id="agentsCount" style="color:#5f6773;font-size:12px;">0 агентов</span>
+            </div>
+            <p class="hint">Заявки из бота: игроки, которые ищут команду, и заявки отдельных игроков. Обновляются при импорте файла команд.</p>
+            <div class="agent-list" id="agentList"></div>
         </div>
     </div>
 
@@ -476,6 +544,16 @@
     </div>
 </div>
 
+<!-- Модалка импорта из бота -->
+<div class="modal-overlay" id="botModal">
+    <div class="modal" style="max-width:720px;">
+        <button class="modal-close" onclick="botImportCancel()">&times;</button>
+        <h2 id="botModalTitle">Импорт из бота</h2>
+        <div class="bot-modal-body" id="botModalBody"></div>
+        <div class="modal-actions" id="botModalActions"></div>
+    </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -507,6 +585,7 @@ function getDefaultData() {
         ],
         schedule: {},
         liveMatchId: null,
+        freeAgents: [],
         tournamentStart: null,
         projectStart: null,
         nextSeason: null,
@@ -749,6 +828,7 @@ function loadData() {
             if (DATA.projectStart === undefined) DATA.projectStart = null;
             if (DATA.nextSeason === undefined) DATA.nextSeason = null;
             if (!DATA.teams) DATA.teams = [];
+            if (!Array.isArray(DATA.freeAgents)) DATA.freeAgents = [];
             if (!DATA.matches) DATA.matches = getDefaultData().matches;
             for (var j = 0; j < DATA.teams.length; j++) {
                 if (DATA.teams[j].logo === undefined) DATA.teams[j].logo = '';
@@ -865,6 +945,7 @@ function renderEverything() {
     renderSchedule();
     renderPreview();
     renderHistory();
+    renderAgents();
     renderTeamsArchiveStatus();
 }
 
@@ -2445,6 +2526,8 @@ for (var i = 0; i < tabs.length; i++) {
         if (this.dataset.tab === 'matches') renderMatches();
         if (this.dataset.tab === 'schedule') renderSchedule();
         if (this.dataset.tab === 'history') renderHistory();
+        if (this.dataset.tab === 'agents') renderAgents();
+        if (this.dataset.tab === 'import') botShowCurrentState();
     });
 }
 
@@ -2454,9 +2537,549 @@ document.getElementById('editModal').addEventListener('click', function(e) {
 document.getElementById('historyModal').addEventListener('click', function(e) {
     if (e.target === this) closeHistoryModal();
 });
+var botModalEl = document.getElementById('botModal');
+if (botModalEl) botModalEl.addEventListener('click', function(e) {
+    if (e.target === this) botImportCancel();
+});
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') { closeEditModal(); closeHistoryModal(); }
 });
+
+// ============================================================
+// ИМПОРТ ИЗ БОТА
+// ============================================================
+/* Бот присылает JSON-файлы двух типов (различаются полем type):
+     teams    — команды и свободные агенты. Полностью заменяет список команд,
+                сбрасывает сетку (матчи) и расписание;
+     settings — данные турнира. Команды и матчи не трогает.
+   Разбор, проверка и нормализация — чистые функции: их вызывает и интерфейс,
+   и автотесты (tests/admin-import.mjs). */
+
+var BOT_ROLES = {
+    dota2: { label: 'Dota 2', roles: { 1: 'Керри', 2: 'Мидер', 3: 'Офлейн', 4: 'Саппорт 4', 5: 'Саппорт 5' } },
+    csgo: { label: 'CS:GO', roles: { 1: 'IGL', 2: 'AWPer', 3: 'Entry', 4: 'Support', 5: 'Lurker' } }
+};
+
+var BOT_PENDING = null;   /* разобранный файл, ожидающий подтверждения */
+var BOT_STEP = null;      /* текущий шаг подтверждения */
+
+function botDisciplineInfo(code) {
+    if (BOT_ROLES[code]) return BOT_ROLES[code];
+    return { label: code ? String(code) : 'неизвестная дисциплина', roles: null };
+}
+function pluralPlayers(n) {
+    var m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return 'игрок';
+    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'игрока';
+    return 'игроков';
+}
+function pluralAgents(n) {
+    var m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return 'агент';
+    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'агента';
+    return 'агентов';
+}
+function botGameKey(value) {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+/* Какая дисциплина сейчас в админке — нужна для подписи ролей у агентов */
+function botCurrentDiscipline() {
+    var key = botGameKey(DATA.tournament && DATA.tournament.game);
+    if (key === 'csgo' || key === 'counterstrike' || key === 'cs2') return 'csgo';
+    return 'dota2';
+}
+
+/* ---------- 1. Разбор файла ---------- */
+function botParseFile(text) {
+    var doc;
+    try {
+        doc = JSON.parse(text);
+    } catch (err) {
+        return { ok: false, error: '❌ Файл повреждён: не удалось прочитать JSON. Проверь, что выбран файл, который прислал бот.' };
+    }
+    if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
+        return { ok: false, error: '❌ Это не файл от бота.' };
+    }
+    if (!doc.type) {
+        return { ok: false, error: '❌ Это не файл от бота: внутри нет поля "type".' };
+    }
+    if (doc.type !== 'teams' && doc.type !== 'settings') {
+        return { ok: false, error: '❌ Это не файл от бота: неизвестный type "' + String(doc.type) + '" (ожидается "teams" или "settings").' };
+    }
+    if (Number(doc.version) !== 1) {
+        return { ok: false, error: '❌ Файл из будущей версии. Обнови админку.' };
+    }
+    return { ok: true, doc: doc };
+}
+
+/* ---------- 2. Проверка содержимого ---------- */
+function botValidateTeams(doc) {
+    var errors = [];
+    var info = botDisciplineInfo(doc.discipline);
+    if (!info.roles) errors.push('Неизвестная дисциплина: ' + info.label + '.');
+
+    if (!Array.isArray(doc.teams)) {
+        return { ok: false, errors: ['Нет списка команд (поле teams).'] };
+    }
+    if (!doc.teams.length) errors.push('В файле нет ни одной команды.');
+
+    for (var i = 0; i < doc.teams.length; i++) {
+        var t = doc.teams[i] || {};
+        var name = typeof t.name === 'string' ? t.name.trim() : '';
+        var label = 'Команда ' + (i + 1) + (name ? ' «' + name + '»' : '');
+        if (!name) errors.push(label + ': не указано название.');
+        else if (name.length < 2 || name.length > 30) errors.push(label + ': название должно быть от 2 до 30 символов.');
+
+        if (!Array.isArray(t.players)) {
+            errors.push(label + ': нет состава (players).');
+            continue;
+        }
+        if (t.players.length !== 5) {
+            errors.push(label + ': ' + t.players.length + ' ' + pluralPlayers(t.players.length) + ' вместо 5.');
+            continue;
+        }
+        for (var k = 0; k < t.players.length; k++) {
+            var p = t.players[k] || {};
+            var nick = typeof p.nick === 'string' ? p.nick.trim() : '';
+            if (nick.length < 2 || nick.length > 30) {
+                errors.push(label + ', игрок ' + (k + 1) + ': ник должен быть от 2 до 30 символов' + (nick ? ' («' + nick + '»)' : '') + '.');
+            }
+            var role = parseInt(p.role, 10);
+            if (info.roles && !info.roles[role]) {
+                var raw = (p.role === undefined || p.role === null || p.role === '') ? 'не указана' : '"' + p.role + '"';
+                errors.push(label + ', игрок ' + (k + 1) + ': роль ' + raw + ' не подходит для ' + info.label + '.');
+            }
+        }
+    }
+    return { ok: errors.length === 0, errors: errors };
+}
+
+function botValidateSettings(doc) {
+    var errors = [];
+    if (!doc.tournament || typeof doc.tournament !== 'object' || Array.isArray(doc.tournament)) {
+        errors.push('Нет блока tournament с настройками турнира.');
+    } else if (!doc.tournament.name) {
+        errors.push('В настройках нет названия турнира (tournament.name).');
+    }
+    if (!doc.discipline) errors.push('Нет поля discipline (для какой игры настройки).');
+    return { ok: errors.length === 0, errors: errors };
+}
+
+/* ---------- 3. Нормализация ---------- */
+function botDuplicates(teams) {
+    var seen = {};
+    var out = [];
+    for (var i = 0; i < teams.length; i++) {
+        var t = teams[i] || {};
+        var key = String(t.name || '').trim().toLowerCase();
+        if (!key) continue;
+        if (seen[key] === undefined) {
+            seen[key] = { name: String(t.name).trim(), count: 1, positions: [i + 1] };
+            out.push(seen[key]);
+        } else {
+            seen[key].count++;
+            seen[key].positions.push(i + 1);
+        }
+    }
+    return out.filter(function (d) { return d.count > 1; });
+}
+
+function botNormalizeAgents(list) {
+    var out = [];
+    if (!Array.isArray(list)) return out;
+    for (var i = 0; i < list.length; i++) {
+        var p = list[i] || {};
+        out.push({
+            nick: String(p.nick || '').trim(),
+            role: parseInt(p.role, 10) || 0,
+            roleLabel: p.roleLabel ? String(p.roleLabel) : '',
+            rank: p.rank ? String(p.rank) : '',
+            note: p.note ? String(p.note) : '',
+            telegramId: p.telegramId || null,
+            type: p.type === 'player' ? 'player' : 'looking_for_team'
+        });
+    }
+    return out;
+}
+
+/* strategy: 'replace' — при повторе названия оставить последнюю команду,
+             'skip'    — оставить первую */
+function botNormalizeTeams(doc, strategy) {
+    var source = Array.isArray(doc.teams) ? doc.teams : [];
+    var index = {};
+    var picked = [];
+    for (var i = 0; i < source.length; i++) {
+        var t = source[i] || {};
+        var key = String(t.name || '').trim().toLowerCase();
+        if (index[key] !== undefined) {
+            if (strategy === 'skip') continue;
+            picked[index[key]] = t;
+            continue;
+        }
+        index[key] = picked.length;
+        picked.push(t);
+    }
+
+    var teams = [];
+    for (var j = 0; j < picked.length; j++) {
+        var src = picked[j] || {};
+        var players = [];
+        var srcPlayers = Array.isArray(src.players) ? src.players : [];
+        for (var k = 0; k < srcPlayers.length; k++) {
+            var p = srcPlayers[k] || {};
+            players.push({
+                nick: String(p.nick || '').trim(),
+                role: parseInt(p.role, 10),
+                roleLabel: p.roleLabel ? String(p.roleLabel) : ''
+            });
+        }
+        teams.push({
+            id: j + 1,                                   /* id 1..N в порядке файла */
+            name: String(src.name || '').trim(),
+            logo: typeof src.logo === 'string' ? src.logo : '',
+            logoOversized: !!src.logoOversized,
+            players: players
+        });
+    }
+    return { teams: teams, agents: botNormalizeAgents(doc.freeAgents) };
+}
+
+/* ---------- 4. Интерфейс: приём файла ---------- */
+function botShowImportStatus(cls, html) {
+    var box = document.getElementById('botImportStatus');
+    if (!box) return;
+    box.className = 'archive-status ' + cls;
+    box.innerHTML = html;
+}
+function botShowImportError(message) {
+    botShowImportStatus('warn', '<div class="as-text">' + message + '</div>' +
+        '<div class="as-actions"><button class="btn btn-sm" onclick="botShowCurrentState()">🔄 Что сейчас в админке</button></div>');
+    showToast('❌ Импорт не выполнен');
+}
+function botShowImportErrors(fileName, errors) {
+    var shown = errors.slice(0, 8);
+    var html = '<div class="as-text"><b>Файл «' + escapeHtml(fileName) + '» не импортирован.</b>' +
+        ' Найдено проблем: ' + errors.length + '.</div>' +
+        '<div class="bot-mistakes">' + shown.map(function (e) { return escapeHtml(e); }).join('<br>') +
+        (errors.length > shown.length ? '<br>…и ещё ' + (errors.length - shown.length) : '') + '</div>';
+    botShowImportStatus('warn', html);
+    showToast('❌ В файле ошибки — импорт отменён');
+}
+
+function onBotFileChosen(event) {
+    var input = event && event.target ? event.target : null;
+    var file = input && input.files ? input.files[0] : null;
+    if (!file) return;
+    var fileName = file.name || 'файл';
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+        var text = String(e && e.target ? e.target.result : '');
+        botHandleText(text, fileName);
+    };
+    reader.onerror = function () {
+        botShowImportError('❌ Не удалось прочитать файл «' + escapeHtml(fileName) + '». Попробуй ещё раз.');
+    };
+    reader.readAsText(file);
+    if (input) input.value = '';
+}
+
+/* Главная точка входа: текст файла + его имя */
+function botHandleText(text, fileName) {
+    var name = fileName || 'файл';
+    var parsed = botParseFile(text);
+    if (!parsed.ok) { botShowImportError(parsed.error); return false; }
+
+    var doc = parsed.doc;
+
+    if (doc.type === 'teams') {
+        var check = botValidateTeams(doc);
+        if (!check.ok) { botShowImportErrors(name, check.errors); return false; }
+
+        var duplicates = botDuplicates(doc.teams);
+        BOT_PENDING = {
+            doc: doc, kind: 'teams', fileName: name,
+            duplicates: duplicates, teams: null, agents: null, strategy: null
+        };
+        if (duplicates.length) botOpenStep('duplicates');
+        else botConfirmDuplicates('replace');
+        return true;
+    }
+
+    var checkS = botValidateSettings(doc);
+    if (!checkS.ok) { botShowImportErrors(name, checkS.errors); return false; }
+
+    BOT_PENDING = { doc: doc, kind: 'settings', fileName: name, duplicates: [], teams: null, agents: null, strategy: null };
+    botOpenStep('settings');
+    return true;
+}
+
+function botPlan() {
+    if (!BOT_PENDING) return null;
+    var strategy = BOT_PENDING.strategy || 'replace';
+    /* Пересобираем, если стратегия дубликатов ещё не выбрана или изменилась */
+    if (!BOT_PENDING.teams || BOT_PENDING.plannedWith !== strategy) {
+        var plan = botNormalizeTeams(BOT_PENDING.doc, strategy);
+        BOT_PENDING.teams = plan.teams;
+        BOT_PENDING.agents = plan.agents;
+        BOT_PENDING.plannedWith = strategy;
+    }
+    return BOT_PENDING;
+}
+
+/* ---------- 5. Шаги подтверждения ---------- */
+function botCloseModal() {
+    var el = document.getElementById('botModal');
+    if (el) el.classList.remove('active');
+}
+function botImportCancel() {
+    botCloseModal();
+    BOT_PENDING = null;
+    BOT_STEP = null;
+    botShowImportStatus('neutral', '<div class="as-text">Импорт отменён — данные не изменились.</div>');
+    showToast('Импорт отменён');
+}
+function botSetActions(list) {
+    var box = document.getElementById('botModalActions');
+    if (!box) return;
+    var html = '';
+    for (var i = 0; i < list.length; i++) {
+        html += '<button class="btn ' + (list[i].cls || '') + '" onclick="' + list[i].action + '">' + list[i].label + '</button>';
+    }
+    box.innerHTML = html;
+}
+function botFileSummary() {
+    var plan = botPlan();
+    if (!plan) return '';
+    var doc = plan.doc;
+    var info = botDisciplineInfo(doc.discipline);
+    var oversized = 0;
+    for (var i = 0; i < plan.teams.length; i++) if (plan.teams[i].logoOversized) oversized++;
+
+    return '<div class="bd-row"><span class="bd-key">Файл</span><span class="bd-val">' + escapeHtml(plan.fileName) + '</span></div>' +
+        '<div class="bd-row"><span class="bd-key">Тип</span><span class="bd-val">' + (plan.kind === 'teams' ? 'команды (teams)' : 'настройки (settings)') + '</span></div>' +
+        '<div class="bd-row"><span class="bd-key">Дисциплина</span><span class="bd-val">' + escapeHtml(info.label) + '</span></div>' +
+        (plan.kind === 'teams'
+            ? '<div class="bd-row"><span class="bd-key">Команд в файле</span><span class="bd-val">' + plan.teams.length + '</span></div>' +
+              '<div class="bd-row"><span class="bd-key">Свободных агентов</span><span class="bd-val">' + plan.agents.length + '</span></div>' +
+              (oversized ? '<div class="bd-row"><span class="bd-key">Логотипы</span><span class="bd-val">⚠️ у ' + oversized + ' команд логотип больше 200 КБ</span></div>' : '')
+            : '');
+}
+
+function botOpenStep(step) {
+    BOT_STEP = step;
+    var title = document.getElementById('botModalTitle');
+    var body = document.getElementById('botModalBody');
+    if (!title || !body) return;
+
+    if (step === 'duplicates') {
+        /* План ещё не собираем: сначала пусть выберут «заменить» или «пропустить» */
+        var dupes = (BOT_PENDING && BOT_PENDING.duplicates) || [];
+        var rows = '';
+        for (var i = 0; i < dupes.length; i++) {
+            var d = dupes[i];
+            rows += '<div class="bot-item"><div class="bi-info"><span class="bi-name">' + escapeHtml(d.name) + '</span>' +
+                '<span class="bi-meta">повторяется ' + d.count + ' раза · команды №' + d.positions.join(', ') + '</span></div></div>';
+        }
+        title.textContent = '🔁 Повторяющиеся названия';
+        body.innerHTML = '<div class="bd-warn">⚠️ В файле есть команды с одинаковыми названиями.</div>' +
+            '<div>Оставить последнюю версию (заменить) или первую (пропустить повторы)?</div>' +
+            '<div class="bot-list">' + rows + '</div>';
+        botSetActions([
+            { label: '🔁 Заменить', action: "botConfirmDuplicates('replace')", cls: 'btn-primary' },
+            { label: '⏭ Пропустить', action: "botConfirmDuplicates('skip')" },
+            { label: '◀ Отмена', action: 'botImportCancel()' }
+        ]);
+    } else if (step === 'teams-replace') {
+        title.textContent = '📥 Импорт команд';
+        body.innerHTML = '<div class="bd-warn">⚠️ Импорт заменит список команд полностью.</div>' +
+            '<div>Сейчас в админке команд: ' + (Array.isArray(DATA.teams) ? DATA.teams.length : 0) + '.</div>' +
+            '<div class="bot-details">' + botFileSummary() + '</div>';
+        botSetActions([
+            { label: '✅ Продолжить', action: 'botStepToMatches()', cls: 'btn-primary' },
+            { label: '◀ Отмена', action: 'botImportCancel()' }
+        ]);
+    } else if (step === 'matches-reset') {
+        var played = 0;
+        for (var k = 0; k < DATA.matches.length; k++) if (DATA.matches[k] && DATA.matches[k].winner) played++;
+        title.textContent = '⚠️ Сброс сетки';
+        body.innerHTML = '<div class="bd-warn">⚠️ Импорт команд сбросит текущую сетку (матчи и расписание).' +
+            ' Все пары нужно будет расставить заново.</div>' +
+            '<div>Сейчас в сетке матчей с результатом: ' + played + '.</div>' +
+            '<div class="bot-details">' + botFileSummary() + '</div>';
+        botSetActions([
+            { label: '✅ Продолжить', action: 'botApplyTeams()', cls: 'btn-primary' },
+            { label: '◀ Отмена', action: 'botImportCancel()' }
+        ]);
+    } else if (step === 'settings') {
+        var t = (BOT_PENDING && BOT_PENDING.doc ? BOT_PENDING.doc.tournament : {}) || {};
+        var rows2 = '';
+        var pairs = [
+            ['Название', DATA.tournament.name, t.name],
+            ['Игра', DATA.tournament.game, t.game],
+            ['Формат', DATA.tournament.format, t.format],
+            ['Матчи', DATA.tournament.matches, t.matches],
+            ['Даты', DATA.tournament.dates, t.dates]
+        ];
+        for (var m = 0; m < pairs.length; m++) {
+            rows2 += '<div class="bd-row"><span class="bd-key">' + pairs[m][0] + '</span><span class="bd-val">' +
+                escapeHtml(pairs[m][1] || '—') + ' → <b>' + escapeHtml(pairs[m][2] || '—') + '</b></span></div>';
+        }
+        title.textContent = '⚙️ Настройки турнира';
+        body.innerHTML = 'Из файла <b>' + escapeHtml(BOT_PENDING.fileName) + '</b> будут применены настройки турнира.' +
+            '<div>Команды и сетка матчей не изменятся.</div>' +
+            '<div class="bot-details" style="margin-top:10px;">' + rows2 + '</div>';
+        botSetActions([
+            { label: '✅ Применить', action: 'botApplySettings()', cls: 'btn-primary' },
+            { label: '◀ Отмена', action: 'botImportCancel()' }
+        ]);
+    }
+
+    document.getElementById('botModal').classList.add('active');
+}
+
+function botConfirmDuplicates(strategy) {
+    if (!BOT_PENDING) return;
+    BOT_PENDING.strategy = strategy;
+    botPlan();
+    botOpenStep('teams-replace');
+}
+function botStepToMatches() {
+    if (!BOT_PENDING) return;
+    botOpenStep('matches-reset');
+}
+
+/* ---------- 6. Применение ---------- */
+function botApplyTeams() {
+    var plan = botPlan();
+    if (!plan || plan.kind !== 'teams') return;
+
+    offerArchiveBefore('импортировать команды из бота');
+
+    var oversized = 0;
+    for (var i = 0; i < plan.teams.length; i++) if (plan.teams[i].logoOversized) oversized++;
+
+    var gameKey = botGameKey(DATA.tournament.game);
+    var fileKey = botGameKey(plan.doc.discipline);
+    var mismatch = fileKey && gameKey && fileKey !== gameKey;
+
+    DATA.teams = plan.teams;
+    DATA.freeAgents = plan.agents;
+    /* Матчи под старые команды не подходят — сетку и расписание сбрасываем */
+    DATA.matches = getDefaultData().matches;
+    DATA.schedule = {};
+    DATA.liveMatchId = null;
+    DATA.archivedSnapshotId = null;
+
+    var fileName = plan.fileName;
+    var teamsN = plan.teams.length;
+    var agentsN = plan.agents.length;
+
+    botCloseModal();
+    BOT_PENDING = null;
+    BOT_STEP = null;
+    showToast('📥 Импортировано команд: ' + teamsN);
+    saveData().then(function () {
+        renderEverything();
+        botShowImportResult('teams', fileName, teamsN, agentsN, oversized, mismatch ? plan.doc.discipline : null);
+    });
+}
+
+function botApplySettings() {
+    if (!BOT_PENDING || BOT_PENDING.kind !== 'settings') return;
+    var t = BOT_PENDING.doc.tournament || {};
+    if (t.name) DATA.tournament.name = String(t.name);
+    if (t.game) DATA.tournament.game = String(t.game);
+    if (t.format) DATA.tournament.format = String(t.format);
+    if (t.matches) DATA.tournament.matches = String(t.matches);
+    if (t.dates) DATA.tournament.dates = String(t.dates);
+
+    var fileName = BOT_PENDING.fileName;
+    botCloseModal();
+    BOT_PENDING = null;
+    BOT_STEP = null;
+    showToast('⚙️ Настройки турнира обновлены');
+    saveData().then(function () {
+        renderEverything();
+        botShowImportResult('settings', fileName, 0, 0, 0, null);
+    });
+}
+
+function botShowImportResult(kind, fileName, teamsN, agentsN, oversized, mismatchedDiscipline) {
+    var html = '<div class="as-text">' + (kind === 'teams'
+        ? '✅ Импортировано команд: <b>' + teamsN + '</b> (файл «' + escapeHtml(fileName) + '»). ' +
+          'Сетка сброшена — расставь пары в разделе «Матчи».'
+        : '✅ Настройки турнира обновлены (файл «' + escapeHtml(fileName) + '»).') + '</div>';
+
+    if (agentsN > 0) {
+        html += '<div class="as-text">🎯 Найдено свободных агентов: <b>' + agentsN + '</b>.</div>';
+    }
+    if (oversized > 0) {
+        html += '<div class="as-text">⚠️ У ' + oversized + ' команд логотип больше 200 КБ — на сайте они могут грузиться дольше.</div>';
+    }
+    if (mismatchedDiscipline) {
+        html += '<div class="as-text">ℹ️ В файле дисциплина ' + escapeHtml(botDisciplineInfo(mismatchedDiscipline).label) +
+            ', а в настройках сайта — ' + escapeHtml(DATA.tournament.game || '—') + '. Импортируй ещё файл настроек, если нужно поменять игру.</div>';
+    }
+
+    var actions = '';
+    if (agentsN > 0) actions += '<button class="btn btn-sm" onclick="switchTab(\'agents\')">Посмотреть</button>';
+    actions += '<button class="btn btn-sm" onclick="switchTab(\'teams\')">К командам</button>';
+    html += '<div class="as-actions">' + actions + '</div>';
+
+    botShowImportStatus('ok', html);
+}
+
+/* Что сейчас лежит в админке (перед импортом полезно посмотреть) */
+function botShowCurrentState() {
+    var teams = Array.isArray(DATA.teams) ? DATA.teams.length : 0;
+    var agents = Array.isArray(DATA.freeAgents) ? DATA.freeAgents.length : 0;
+    var played = 0;
+    for (var i = 0; i < DATA.matches.length; i++) if (DATA.matches[i] && DATA.matches[i].winner) played++;
+    var logoBytes = 0;
+    for (var j = 0; j < DATA.teams.length; j++) logoBytes += base64Size(DATA.teams[j].logo);
+
+    botShowImportStatus('neutral', '<div class="as-text">Сейчас: команд <b>' + teams + '</b>, свободных агентов <b>' + agents +
+        '</b>, матчей с результатом <b>' + played + '</b>, логотипы занимают <b>' + formatBytes(logoBytes) + '</b>.</div>');
+}
+
+/* ---------- 7. Вкладка «Свободные агенты» ---------- */
+function renderAgents() {
+    var list = document.getElementById('agentList');
+    var counter = document.getElementById('agentsCount');
+    if (!list) return;
+    var agents = Array.isArray(DATA.freeAgents) ? DATA.freeAgents : [];
+    if (counter) counter.textContent = agents.length + ' ' + pluralAgents(agents.length);
+
+    list.innerHTML = '';
+    if (!agents.length) {
+        list.innerHTML = '<div class="photos-empty">Свободных агентов пока нет. Загрузи файл команд из бота на вкладке «📥 Импорт из бота».</div>';
+        return;
+    }
+    for (var i = 0; i < agents.length; i++) {
+        var a = agents[i] || {};
+        var info = botDisciplineInfo(botCurrentDiscipline());
+        var roleText = a.roleLabel || (info.roles && info.roles[a.role]) || '';
+        var meta = [];
+        if (roleText) meta.push(roleText);
+        if (a.rank) meta.push('ранг: ' + a.rank);
+        if (a.note) meta.push(a.note);
+
+        var div = document.createElement('div');
+        div.className = 'bot-item';
+        div.innerHTML =
+            '<div class="bi-info">' +
+                '<span class="bi-name">' + escapeHtml(a.nick || '—') + ' ' +
+                    '<span class="bot-badge' + (a.type === 'player' ? ' warn' : '') + '">' +
+                    (a.type === 'player' ? 'заявка игрока' : 'ищет команду') + '</span></span>' +
+                '<span class="bi-meta">' + escapeHtml(meta.join(' · ')) + '</span>' +
+            '</div>' +
+            '<div class="bi-actions">' +
+                (a.telegramId ? '<a href="tg://user?id=' + encodeURIComponent(String(a.telegramId)) + '">написать</a>' : '') +
+            '</div>';
+        list.appendChild(div);
+    }
+}
 
 // ============================================================
 // ЭКСПОРТ В WINDOW
@@ -2498,6 +3121,23 @@ window.saveHistoryItem = saveHistoryItem;
 window.onHistoryPhotos = onHistoryPhotos;
 window.removeHistoryPhoto = removeHistoryPhoto;
 window.setHistoryPhotoCaption = setHistoryPhotoCaption;
+
+/* Импорт из бота */
+window.onBotFileChosen = onBotFileChosen;
+window.botHandleText = botHandleText;
+window.botParseFile = botParseFile;
+window.botValidateTeams = botValidateTeams;
+window.botValidateSettings = botValidateSettings;
+window.botDuplicates = botDuplicates;
+window.botNormalizeTeams = botNormalizeTeams;
+window.botNormalizeAgents = botNormalizeAgents;
+window.botConfirmDuplicates = botConfirmDuplicates;
+window.botStepToMatches = botStepToMatches;
+window.botApplyTeams = botApplyTeams;
+window.botApplySettings = botApplySettings;
+window.botImportCancel = botImportCancel;
+window.botShowCurrentState = botShowCurrentState;
+window.renderAgents = renderAgents;
 
 // ============================================================
 // ИНИЦИАЛИЗАЦИЯ

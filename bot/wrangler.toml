@@ -1,0 +1,41 @@
+# ============================================================
+# Compass Arena Bot — Cloudflare Worker + D1
+# ------------------------------------------------------------
+# Здесь только публичные значения: имя воркера, точка входа,
+# версия совместимости, привязка базы D1 и ENVIRONMENT.
+#
+# СЕКРЕТОВ В ЭТОМ ФАЙЛЕ БЫТЬ НЕ ДОЛЖНО.
+# BOT_TOKEN, ADMIN_ID и WEBHOOK_SECRET задаются командами:
+#   npx wrangler secret put BOT_TOKEN
+#   npx wrangler secret put ADMIN_ID
+#   npx wrangler secret put WEBHOOK_SECRET
+# ============================================================
+
+name = "compass-arena-bot"
+main = "src/index.js"
+compatibility_date = "2025-09-23"
+# Нужен для работы с бинарными данными логотипов (base64/буферы)
+compatibility_flags = ["nodejs_compat"]
+
+# Логи и трейсы в панели Cloudflare (публичная настройка, не секрет)
+[observability]
+enabled = true
+
+# ------------------------------------------------------------
+# База D1. binding = DB (в коде — env.DB)
+# database_id подставляется после `wrangler d1 create compass-arena-bot`
+# ------------------------------------------------------------
+[[d1_databases]]
+binding = "DB"
+database_name = "compass-arena-bot"
+database_id = "ПОДСТАВЬ_DATABASE_ID_ИЗ_wrangler_d1_create"
+
+# ------------------------------------------------------------
+# Публичные переменные окружения
+# ------------------------------------------------------------
+[vars]
+# В проде воркер без WEBHOOK_SECRET отказывается работать (500).
+# Для локальной разработки переопределяется в bot/.dev.vars: ENVIRONMENT=development
+ENVIRONMENT = "production"
+# Остальные параметры (лимит заявок, размер логотипа) имеют значения
+# по умолчанию в коде: 300 секунд и 200 КБ.

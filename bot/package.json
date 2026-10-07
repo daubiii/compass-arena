@@ -1,0 +1,22 @@
+{
+  "name": "compass-arena-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Telegram-бот регистрации команд и игроков на турниры Compass Arena (Cloudflare Workers + D1)",
+  "scripts": {
+    "check": "node scripts/self-check.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "db:init": "wrangler d1 execute compass-arena-bot --remote --file=./schema.sql",
+    "db:init:local": "wrangler d1 execute compass-arena-bot --local --file=./schema.sql",
+    "db:stats": "wrangler d1 execute compass-arena-bot --remote --command \"SELECT type, status, COUNT(*) AS n FROM leads GROUP BY type, status\"",
+    "webhook:set": "node scripts/set-webhook.mjs set",
+    "webhook:info": "node scripts/set-webhook.mjs info",
+    "webhook:delete": "node scripts/set-webhook.mjs delete"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

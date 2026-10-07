@@ -1,0 +1,24 @@
+# Скопируйте в bot/.dev.vars (файл в .gitignore) и подставьте свои значения.
+# Нужен для локальной разработки (npx wrangler dev) и для скрипта установки webhook.
+#
+# ВАЖНО: реальные значения сюда вписываются только локально.
+# В репозиторий (и в файлы *.example) секреты не попадают.
+
+# Локально окружение НЕ production, иначе /webhook потребует WEBHOOK_SECRET
+ENVIRONMENT=development
+
+# Токен бота из @BotFather
+BOT_TOKEN=<BOT_TOKEN>
+
+# Ваш Telegram ID из @userinfobot (можно несколько через запятую)
+ADMIN_ID=<ADMIN_ID>
+
+# Секрет для заголовка X-Telegram-Bot-Api-Secret-Token
+# Сгенерировать: openssl rand -hex 32
+WEBHOOK_SECRET=<WEBHOOK_SECRET>
+
+# --- Необязательные переопределения (в коде есть значения по умолчанию) ---
+# Сколько секунд между заявками с одного Telegram ID (по умолчанию 300)
+# LEAD_RATE_LIMIT_SEC=300
+# Лимит размера логотипа в КБ (по умолчанию 200)
+# LOGO_MAX_KB=200

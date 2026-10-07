@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /poasalj1.z23.html
 Disallow: /tests/
+Disallow: /bot/
 
 Sitemap: https://compassarena.ru/sitemap.xml
