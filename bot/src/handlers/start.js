@@ -6,43 +6,30 @@
    ============================================================ */
 
 import { sendMessage, answerCallbackQuery, inlineKeyboard } from '../lib/telegram.js';
-import { resetState, getSetting, isRegistrationOpen, getState } from '../lib/db.js';
-import { esc } from '../lib/esc.js';
-import { DISCIPLINES, DISCIPLINE_KEYS, disciplinesAndLabel } from '../lib/domain.js';
-import { CONTACTS, DEFAULT_TOURNAMENT, contactsBlock } from '../lib/texts.js';
+import { resetState, isRegistrationOpen, getState } from '../lib/db.js';
+import { DISCIPLINES, DISCIPLINE_KEYS } from '../lib/domain.js';
+import { contactsBlock, registrationClosedText, welcomeText } from '../lib/texts.js';
 
 export const commands = ['start', 'help', 'cancel'];
 export const callbackPrefixes = ['act']; // обрабатываем только act:menu, остальное — registration.js
 
 /**
- * Экран выбора дисциплины.
+ * Первый экран: приветствие и кнопки дисциплин.
  * @param {object} env
  * @param {number|string} chatId
  * @param {number} userId
- * @param {string} [intro] — текст перед меню
+ * @param {string} [intro] — строка перед приветствием («Регистрация сброшена.» и т.п.)
  */
 export async function showMainMenu(env, chatId, userId, intro = '') {
   const open = await isRegistrationOpen(env);
-  const tournament = await getSetting(env, 'current_tournament', DEFAULT_TOURNAMENT);
-
-  const lines = [];
-  if (intro) lines.push(intro, '');
-  lines.push(
-    '🏆 <b>Compass Arena — регистрация</b>',
-    '',
-    `Турнир: <b>${esc(tournament)}</b>`,
-    `Дисциплины: ${esc(disciplinesAndLabel())}`
-  );
 
   if (!open) {
-    lines.push('', `⚠️ <b>Регистрация сейчас закрыта.</b>`, `Напиши организаторам: ${CONTACTS}`);
-    await sendMessage(env, chatId, lines.join('\n'), {
+    const text = [intro, registrationClosedText()].filter(Boolean).join('\n\n');
+    await sendMessage(env, chatId, text, {
       keyboard: inlineKeyboard([[{ text: 'ℹ️ Справка', data: 'act:help' }]])
     });
     return;
   }
-
-  lines.push('', 'Выбери дисциплину:');
 
   const rows = DISCIPLINE_KEYS.map((key) => ([{
     text: `${DISCIPLINES[key].emoji} ${DISCIPLINES[key].label}`,
@@ -50,7 +37,8 @@ export async function showMainMenu(env, chatId, userId, intro = '') {
   }]));
   rows.push([{ text: 'ℹ️ Справка', data: 'act:help' }]);
 
-  await sendMessage(env, chatId, lines.join('\n'), { keyboard: inlineKeyboard(rows) });
+  const text = [intro, welcomeText()].filter(Boolean).join('\n\n');
+  await sendMessage(env, chatId, text, { keyboard: inlineKeyboard(rows) });
 }
 
 /* ============================================================

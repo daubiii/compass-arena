@@ -288,9 +288,15 @@ console.log('\n5. Роутер бота (команды, права, кнопк�
   mockTelegram();
   await say(env, USER, '/start');
   const text = last();
-  ok(/Compass Arena — регистрация/.test(text), '/start присылает экран регистрации');
-  ok(/Турнир: <b>Compass Arena Season 2<\/b>/.test(text), '/start показывает название турнира из настроек');
-  ok(/Дисциплины: Dota 2 и CS:GO/.test(text), '/start перечисляет дисциплины');
+  ok(/Compass Arena — Регистрация открыта!/.test(text), '/start присылает приветствие');
+  ok(/Турнир по Dota 2 и CS:GO для любителей\./.test(text), 'в приветствии описан турнир');
+  ok(/Специально созданный бот для регистрации команд/.test(text) && /Впиши \/help/.test(text),
+    'в приветствии есть подсказка про /help');
+  ok(/⚙️ Как участвовать:/.test(text) && /Нажми \/help, чтобы открыть меню бота\./.test(text) &&
+    /Выбери свою дисциплину\./.test(text) && /Зарегистрируй состав команды\./.test(text),
+    'в приветствии перечислены шаги участия');
+  ok(/📞 Связь для сотрудничества и вопросов:\n@G0gg1a\n@uuutt7/.test(text), 'контакты в приветствии на своих строках');
+  ok(/👇 Выбери дисциплину, чтобы начать/.test(text), 'приветствие зовёт выбрать дисциплину');
   const markup = JSON.stringify(messages()[0].body.reply_markup);
   ok(markup.includes('reg:disc:dota2') && markup.includes('reg:disc:csgo'), '/start показывает кнопки дисциплин (reg:disc:*)');
 }
