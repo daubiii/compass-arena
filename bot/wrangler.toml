@@ -34,6 +34,7 @@ database_id = "84c681ea-ea0c-4a6f-8fb9-91b73cb2d481"
 # Публичные переменные окружения
 # ------------------------------------------------------------
 [vars]
+BOT_USERNAME = "CompassArenaReg_bot"
 # В проде воркер без WEBHOOK_SECRET отказывается работать (500).
 # Для локальной разработки переопределяется в bot/.dev.vars: ENVIRONMENT=development
 ENVIRONMENT = "production"
