@@ -148,16 +148,16 @@ async function summary(env, choice, target) {
 function screenDiscipline() {
   return {
     text: [
-      '📦 <b>Экспорт для сайта</b>',
+      'Экспорт для сайта',
       '',
-      'Бот соберёт JSON-файлы, а ты загрузишь их в админке сайта (раздел «Импорт из бота»).',
-      'В KV сайта бот ничего не пишет.',
+      'Файлы загружаются вручную в админке («Импорт из бота»).',
+      'Бот в KV сайта ничего не пишет.',
       '',
       'Выбери дисциплину:'
     ].join('\n'),
     keyboard: kb([
-      [{ text: '🎮 Dota 2', data: 'exp:disc:dota2' }, { text: '🔫 CS:GO', data: 'exp:disc:csgo' }],
-      [{ text: '🌐 Обе дисциплины', data: 'exp:disc:both' }],
+      [{ text: 'Dota 2', data: 'exp:disc:dota2' }, { text: 'CS:GO', data: 'exp:disc:csgo' }],
+      [{ text: 'Обе дисциплины', data: 'exp:disc:both' }],
       [menuRow]
     ])
   };
@@ -165,20 +165,20 @@ function screenDiscipline() {
 
 function screenTarget(choice) {
   const title = choice === 'both'
-    ? 'обе дисциплины'
+    ? 'Dota 2 и CS:GO'
     : disciplineLabel(choice);
   return {
     text: [
-      '📦 <b>Экспорт для сайта</b>',
+      'Экспорт для сайта',
       '',
-      `Дисциплина: <b>${esc(title)}</b>`,
+      `Дисциплина: ${esc(title)}`,
       '',
       'Что экспортировать?'
     ].join('\n'),
     keyboard: kb([
-      [{ text: '📦 Команды и агенты', data: `exp:target:${choice}:teams` }],
-      [{ text: '⚙️ Настройки турнира', data: `exp:target:${choice}:settings` }],
-      [{ text: '📦+⚙️ Оба файла', data: `exp:target:${choice}:both` }],
+      [{ text: 'Команды и агенты', data: `exp:target:${choice}:teams` }],
+      [{ text: 'Настройки турнира', data: `exp:target:${choice}:settings` }],
+      [{ text: 'Оба файла', data: `exp:target:${choice}:both` }],
       backRow('exp:menu', '⬅️ К выбору дисциплины')
     ])
   };
@@ -187,18 +187,15 @@ function screenTarget(choice) {
 function screenConfirm(choice, target, data) {
   return {
     text: [
-      '📦 <b>Экспорт для сайта</b>',
-      '',
-      `Готовлю экспорт: <b>${data.teams}</b> ${plural(data.teams, 'команда', 'команды', 'команд')}, ` +
-      `<b>${data.agents}</b> ${plural(data.agents, 'агент', 'агента', 'агентов')}, ` +
-      `<b>${data.files}</b> ${plural(data.files, 'файл', 'файла', 'файлов')}.`,
-      '',
-      `Дисциплина: <b>${esc(choice === 'both' ? 'Dota 2 и CS:GO' : disciplineLabel(choice))}</b>`,
+      `Готовлю экспорт: ${data.teams} ${plural(data.teams, 'команда', 'команды', 'команд')}, ` +
+      `${data.agents} ${plural(data.agents, 'агент', 'агента', 'агентов')}, ` +
+      `${data.files} ${plural(data.files, 'файл', 'файла', 'файлов')}.`,
+      `Дисциплина: ${esc(choice === 'both' ? 'Dota 2 и CS:GO' : disciplineLabel(choice))}`,
       `Состав: ${esc(TARGETS[target] ? TARGETS[target].label : target)}`
     ].join('\n'),
     keyboard: kb([
-      [{ text: '✅ Отправить', data: `exp:go:${choice}:${target}` }],
-      backRow(`exp:disc:${choice}`, '◀ Отмена')
+      [{ text: 'Отправить', data: `exp:go:${choice}:${target}` }],
+      backRow(`exp:disc:${choice}`, 'Отмена')
     ])
   };
 }
@@ -286,8 +283,7 @@ async function onTarget(env, query, ctx, choice, target) {
   if (target !== 'settings' && data.teams === 0) {
     await answerCallbackQuery(env, query.id, { text: 'Нет команд для экспорта', showAlert: true });
     await screen(env, ctx,
-      '⚠️ <b>Нет команд для экспорта.</b>\n\n' +
-      'Одобренных заявок команд пока нет — сначала рассмотри заявки в /leads, потом повтори экспорт.',
+      'Нет одобренных команд для экспорта.\nСначала разбери заявки в /leads.',
       kb([
         [{ text: '📋 К модерации', data: 'mod:list:new' }],
         backRow(`exp:disc:${choice}`, '⬅️ К выбору дисциплины'),
@@ -369,8 +365,8 @@ async function onGo(env, query, ctx, choice, target) {
   }
 
   await sendMessage(env, ctx.chatId,
-    `📤 <b>Экспорт готов:</b> ${sent} ${plural(sent, 'файл', 'файла', 'файлов')} отправлено.\n\n` +
-    'Загрузи их в админке сайта → раздел «Импорт из бота».',
+    `Экспорт готов: ${sent} ${plural(sent, 'файл', 'файла', 'файлов')}.\n` +
+    'Загрузи их в админке сайта → «Импорт из бота».',
     { keyboard: kb([[menuRow]]) });
   return true;
 }

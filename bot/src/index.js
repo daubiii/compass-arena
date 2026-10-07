@@ -183,15 +183,13 @@ async function onCallbackQuery(env, query) {
 
 async function sendUnknownCommand(env, chatId, cmd, admin) {
   const lines = [
-    `Команда <code>/${esc(cmd)}</code> не поддерживается.`,
+    `Команда /${esc(cmd)} не поддерживается.`,
     '',
-    'Доступные команды:',
-    '/start — меню регистрации',
-    '/help — справка',
-    '/cancel — сбросить текущий шаг'
+    'Доступные:',
+    '/start · /help · /cancel'
   ];
   if (admin) {
-    lines.push('', 'Для администратора:', '/leads — модерация заявок', '/export — экспорт JSON');
+    lines.push('', 'Для организаторов:', '/leads · /export');
   }
   await sendMessage(env, chatId, lines.join('\n'), {
     keyboard: inlineKeyboard([[{ text: '🏠 В меню', data: 'act:menu' }]])

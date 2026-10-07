@@ -8,7 +8,8 @@
 import { sendMessage, answerCallbackQuery, inlineKeyboard } from '../lib/telegram.js';
 import { resetState, getSetting, isRegistrationOpen, getState } from '../lib/db.js';
 import { esc } from '../lib/esc.js';
-import { DISCIPLINES, DISCIPLINE_KEYS } from '../lib/domain.js';
+import { DISCIPLINES, DISCIPLINE_KEYS, disciplinesAndLabel } from '../lib/domain.js';
+import { CONTACTS, DEFAULT_TOURNAMENT, contactsBlock } from '../lib/texts.js';
 
 export const commands = ['start', 'help', 'cancel'];
 export const callbackPrefixes = ['act']; // обрабатываем только act:menu, остальное — registration.js
@@ -22,13 +23,7 @@ export const callbackPrefixes = ['act']; // обрабатываем тольк�
  */
 export async function showMainMenu(env, chatId, userId, intro = '') {
   const open = await isRegistrationOpen(env);
-  const tournament = await getSetting(env, 'current_tournament', 'Compass Arena Season 2');
-
-  const rows = DISCIPLINE_KEYS.map((key) => ([{
-    text: `${DISCIPLINES[key].emoji} ${DISCIPLINES[key].label}`,
-    data: `reg:disc:${key}`
-  }]));
-  rows.push([{ text: 'ℹ️ Справка', data: 'act:help' }]);
+  const tournament = await getSetting(env, 'current_tournament', DEFAULT_TOURNAMENT);
 
   const lines = [];
   if (intro) lines.push(intro, '');
@@ -36,12 +31,24 @@ export async function showMainMenu(env, chatId, userId, intro = '') {
     '🏆 <b>Compass Arena — регистрация</b>',
     '',
     `Турнир: <b>${esc(tournament)}</b>`,
-    'Дисциплины: Dota 2 и CS:GO',
-    ''
+    `Дисциплины: ${esc(disciplinesAndLabel())}`
   );
-  lines.push(open
-    ? 'Выбери дисциплину, чтобы зарегистрировать команду или оставить заявку игрока:'
-    : '⚠️ Регистрация сейчас закрыта. Напиши организатору, если нужен доступ.');
+
+  if (!open) {
+    lines.push('', `⚠️ <b>Регистрация сейчас закрыта.</b>`, `Напиши организаторам: ${CONTACTS}`);
+    await sendMessage(env, chatId, lines.join('\n'), {
+      keyboard: inlineKeyboard([[{ text: 'ℹ️ Справка', data: 'act:help' }]])
+    });
+    return;
+  }
+
+  lines.push('', 'Выбери дисциплину:');
+
+  const rows = DISCIPLINE_KEYS.map((key) => ([{
+    text: `${DISCIPLINES[key].emoji} ${DISCIPLINES[key].label}`,
+    data: `reg:disc:${key}`
+  }]));
+  rows.push([{ text: 'ℹ️ Справка', data: 'act:help' }]);
 
   await sendMessage(env, chatId, lines.join('\n'), { keyboard: inlineKeyboard(rows) });
 }
@@ -65,10 +72,10 @@ export async function handleCommand(env, message, ctx) {
 
   if (ctx.cmd === 'cancel') {
     const state = await getState(env, ctx.userId);
-    // Шаги модерации/экспорта — не «регистрация», и текст отмены другой
+    // Шаги модерации/экспорта — не регистрация, и текст отмены другой
     const foreign = /^(mod_|export_)/.test(String(state.step || ''));
     await resetState(env, ctx.userId);
-    await showMainMenu(env, ctx.chatId, ctx.userId, foreign ? 'Ввод причины отменён.' : 'Регистрация отменена.');
+    await showMainMenu(env, ctx.chatId, ctx.userId, foreign ? 'Ввод причины сброшен.' : 'Регистрация сброшена.');
     return true;
   }
 
@@ -99,8 +106,7 @@ export async function handleText(env, message, ctx) {
   if (state.step) {
     await sendMessage(env, ctx.chatId,
       'Ты в середине регистрации — прогресс сохранён.\n' +
-      'Продолжи текущий шаг или нажми /cancel, чтобы выйти в меню.',
-      { keyboard: inlineKeyboard([[{ text: '🏠 В меню', data: 'act:menu' }]]) }
+      'Продолжи текущий шаг или нажми /cancel.'
     );
     return true;
   }
@@ -121,16 +127,16 @@ async function sendHelp(env, chatId, admin) {
   const lines = [
     'ℹ️ <b>Как проходит регистрация</b>',
     '',
-    '1. Выбираешь дисциплину: Dota 2 или CS:GO.',
-    '2. Дальше одно из трёх:',
-    '   • 🏆 <b>Зарегистрировать команду</b> — название, логотип (по желанию) и 5 игроков с ролями;',
-    '   • 🎯 <b>Найти команду</b> — заявка свободного агента (ник, роль, ранг, описание);',
-    '   • 🧍 <b>Оставить заявку игрока</b> — короткая заявка (ник, команда, роль).',
-    '3. Заявка уходит организатору на модерацию — все заявки проверяются вручную.',
-    '4. После решения придёт уведомление. Одобренные команды попадают в архив турнира на сайте compassarena.ru.',
+    '1. Выбери дисциплину: Dota 2 или CS:GO.',
+    '2. Выбери тип заявки:',
+    '   • Команда — название, логотип и 5 игроков с ролями',
+    '   • Свободный агент — ник, роль, ранг, описание',
+    '   • Заявка игрока — ник, команда, роль',
+    '3. Заявка уходит на ручную модерацию.',
+    '4. После решения придёт уведомление.',
     '',
     '<b>Команды</b>',
-    '/start — меню регистрации',
+    '/start — меню',
     '/help — эта справка',
     '/cancel — сбросить текущий шаг'
   ];
@@ -138,11 +144,13 @@ async function sendHelp(env, chatId, admin) {
   if (admin) {
     lines.push(
       '',
-      '<b>Для администратора</b>',
+      '<b>Для организаторов:</b>',
       '/leads — модерация заявок',
       '/export — выгрузка JSON для сайта'
     );
   }
+
+  lines.push('', contactsBlock());
 
   await sendMessage(env, chatId, lines.join('\n'), {
     keyboard: inlineKeyboard([[{ text: '🏠 В меню', data: 'act:menu' }]])

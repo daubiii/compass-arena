@@ -27,6 +27,7 @@ import { esc, clean, isNick, isTeamName, plural } from '../lib/esc.js';
 import {
   DISCIPLINES, disciplineLabel, roleByKey, rolesOf
 } from '../lib/domain.js';
+import { CANCEL_HINT, CONTACTS, contactsBlock, problem, stepTitle } from '../lib/texts.js';
 import { showMainMenu } from './start.js';
 
 /** /skip нужен на необязательных шагах (логотип, ранг, описание, название команды игрока) */
@@ -66,8 +67,6 @@ const TEAM_STEPS_CAPTAIN = 8; // то же плюс вопрос про ник �
 const AGENT_STEPS = 4;  // ветка B
 const PLAYER_STEPS = 3; // ветка C
 
-const CANCEL_HINT = '\n\n<i>Отмена: /cancel</i>';
-
 /** Сколько шагов в ветке команды (8, если спрашиваем ник капитана) */
 const totalOf = (temp) => Number(temp.totalSteps) || TEAM_STEPS;
 
@@ -92,6 +91,14 @@ function pluralMinutes(seconds) {
   return `${minutes} ${plural(minutes, 'минуту', 'минуты', 'минут')}`;
 }
 
+/** Текст отказа по лимиту частоты: окно берём из настроек воркера */
+function rateLimitText(env, retryAfterSec) {
+  const windowMinutes = Math.max(1, Math.round((Number(env.LEAD_RATE_LIMIT_SEC) || 300) / 60));
+  return 'Заявку можно отправлять не чаще одного раза в ' + windowMinutes + ' ' +
+    plural(windowMinutes, 'минуту', 'минуты', 'минут') + '.\n' +
+    'Следующая через ' + pluralMinutes(retryAfterSec) + '.';
+}
+
 /** Новое сообщение (для шагов с вводом текста) */
 async function send(env, ctx, screen) {
   return sendMessage(env, ctx.chatId, screen.text, { keyboard: screen.keyboard });
@@ -111,17 +118,19 @@ async function replace(env, ctx, screen) {
 }
 
 /** Ошибка на шаге: сообщение + повтор текущего экрана, прогресс не сбрасываем */
-async function fail(env, ctx, problem, screen) {
-  await sendMessage(env, ctx.chatId, `⚠️ ${problem}`);
+async function fail(env, ctx, text, screen) {
+  await sendMessage(env, ctx.chatId, problem(text));
   return send(env, ctx, screen);
 }
 
 const maxLogoBytes = (env) => (Number(env.LOGO_MAX_KB) || 200) * 1024;
+const maxLogoKb = (env) => Math.round(maxLogoBytes(env) / 1024);
 
+/** «загружен (84 КБ)» / «не загружен» — для карточки проверки */
 function logoStatus(temp) {
-  if (!temp.logo) return '— не загружен';
-  const size = temp.logoBytes ? `, ${Math.round(temp.logoBytes / 1024)} КБ` : '';
-  return temp.logoOversized ? `⚠️ принят как есть${size} (больше лимита)` : `✅ загружен${size}`;
+  if (!temp.logo) return 'не загружен';
+  const kb = temp.logoBytes ? Math.round(temp.logoBytes / 1024) : null;
+  return kb ? `загружен (${kb} КБ)` : 'загружен';
 }
 
 function playersList(temp, withRoles = true) {
@@ -131,15 +140,16 @@ function playersList(temp, withRoles = true) {
   }).join('\n');
 }
 
-function teamCard(temp, title = 'Проверка заявки') {
+/** Карточка проверки заявки команды */
+function teamCard(temp) {
   const total = totalOf(temp);
-  const captain = temp.captainNick ? `\nКапитан: <b>${esc(temp.captainNick)}</b>` : '';
   return [
     `${DISCIPLINES[temp.discipline].emoji} <b>${esc(disciplineLabel(temp.discipline))}</b> · команда`,
-    `<b>Шаг ${total} из ${total}</b> · ${esc(title)}`,
+    `${stepTitle(total, total)} · проверка заявки`,
     '',
     `Название: <b>${esc(temp.name || '—')}</b>`,
-    `Логотип: ${logoStatus(temp)}${captain}`,
+    `Логотип: ${logoStatus(temp)}`,
+    `Капитан: <b>${esc(temp.captainNick || '—')}</b>`,
     '',
     playersList(temp) || '<i>игроки ещё не заполнены</i>'
   ].join('\n');
@@ -154,17 +164,17 @@ function screenType(discipline) {
     text: [
       `${DISCIPLINES[discipline].emoji} <b>${esc(disciplineLabel(discipline))}</b>`,
       '',
-      'Что хочешь сделать?',
+      'Что делаем?',
       '',
-      '🏆 <b>Зарегистрировать команду</b> — название, логотип по желанию и 5 игроков с ролями',
-      '🎯 <b>Найти команду</b> — заявка свободного агента',
-      '🧍 <b>Оставить заявку игрока</b> — ник, команда и позиция'
+      '🏆 Команда — название, логотип и 5 игроков с ролями',
+      '🎯 Свободный агент — ник, роль, ранг, описание',
+      '🧍 Заявка игрока — ник, команда, роль'
     ].join('\n'),
     keyboard: kb([
       [{ text: '🏆 Зарегистрировать команду', data: 'reg:type:team' }],
       [{ text: '🎯 Найти команду', data: 'reg:type:looking' }],
       [{ text: '🧍 Оставить заявку игрока', data: 'reg:type:player' }],
-      backRow('reg:back', '⬅️ Выбрать другую дисциплину')
+      [{ text: '⬅️ Другая дисциплина', data: 'reg:back' }]
     ])
   };
 }
@@ -173,10 +183,24 @@ function screenTeamName(discipline, note, total = TEAM_STEPS) {
   return {
     text: [
       note ? `${note}\n` : '',
-      `${DISCIPLINES[discipline].emoji} <b>${esc(disciplineLabel(discipline))}</b> · заявка команды`,
-      `<b>Шаг 1 из ${total}</b>`,
+      `${DISCIPLINES[discipline].emoji} <b>${esc(disciplineLabel(discipline))}</b> · команда`,
+      stepTitle(1, total),
       '',
-      'Как называется команда? (2–30 символов)' + CANCEL_HINT
+      'Название команды (2–30 символов).',
+      'Только буквы, цифры, пробел, дефис, точка, подчёркивание.' + CANCEL_HINT
+    ].filter(Boolean).join('\n'),
+    keyboard: kb([backRow()])
+  };
+}
+
+function screenTeamLogo(temp, note) {
+  return {
+    text: [
+      note ? `${note}\n` : '',
+      stepTitle(2, totalOf(temp)),
+      '',
+      'Пришли логотип команды одним фото.',
+      `Лимит: ${maxLogoKb({})} КБ. Больше — не принимается.` + CANCEL_HINT
     ].filter(Boolean).join('\n'),
     keyboard: kb([backRow()])
   };
@@ -187,29 +211,13 @@ function screenTeamCaptain(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      `<b>Шаг 3 из ${total}</b> · капитан команды`,
+      `${stepTitle(3, total)} · капитан`,
       '',
-      'Твой ник как капитана команды?',
-      '<i>У тебя нет @username в Telegram, поэтому укажи ник вручную — он попадёт в заявку.</i>' + CANCEL_HINT
+      'Укажи ник капитана (2–30 символов).',
+      'В Telegram нет @username, поэтому нужен ник вручную.' + CANCEL_HINT
     ].filter(Boolean).join('\n'),
     keyboard: kb([
-      [{ text: '⏭ Взять ник игрока 1', data: 'reg:skip:captain' }],
-      backRow()
-    ])
-  };
-}
-
-function screenTeamLogo(temp, note) {
-  return {
-    text: [
-      note ? `${note}\n` : '',
-      `<b>Шаг 2 из ${totalOf(temp)}</b>`,
-      '',
-      'Пришли логотип команды фотографией или нажми «Без логотипа».',
-      `Логотип нужен необязательно, лимит — ${Math.round(maxLogoBytes({}) / 1024)} КБ.` + CANCEL_HINT
-    ].filter(Boolean).join('\n'),
-    keyboard: kb([
-      [{ text: '⏭ Без логотипа', data: 'reg:logo:skip' }],
+      [{ text: 'Взять ник игрока 1', data: 'reg:skip:captain' }],
       backRow()
     ])
   };
@@ -217,13 +225,12 @@ function screenTeamLogo(temp, note) {
 
 function screenTeamPlayerNick(temp, note) {
   const index = temp.playerIndex || 0;
-  const stepNo = playerStepNo(temp, index);
   return {
     text: [
       note ? `${note}\n` : '',
-      `<b>Шаг ${stepNo} из ${totalOf(temp)}</b>`,
+      stepTitle(playerStepNo(temp, index), totalOf(temp)),
       '',
-      `Ник игрока ${index + 1}?` + CANCEL_HINT
+      `Ник игрока ${index + 1} (2–30 символов).` + CANCEL_HINT
     ].filter(Boolean).join('\n'),
     keyboard: kb([backRow()])
   };
@@ -231,7 +238,6 @@ function screenTeamPlayerNick(temp, note) {
 
 function screenTeamPlayerRole(temp, note) {
   const index = temp.playerIndex || 0;
-  const stepNo = playerStepNo(temp, index);
   const roles = rolesOf(temp.discipline);
   const rows = [];
   for (let i = 0; i < roles.length; i += 2) {
@@ -245,10 +251,10 @@ function screenTeamPlayerRole(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      `<b>Шаг ${stepNo} из ${totalOf(temp)}</b>`,
+      stepTitle(playerStepNo(temp, index), totalOf(temp)),
       '',
       `Игрок ${index + 1}: <b>${esc(temp.pendingNick || '')}</b>`,
-      'Выбери его роль:'
+      'Выбери роль:'
     ].filter(Boolean).join('\n'),
     keyboard: kb(rows)
   };
@@ -258,7 +264,7 @@ function screenTeamConfirm(temp, note) {
   return {
     text: [note ? `${note}\n` : '', teamCard(temp)].filter(Boolean).join('\n'),
     keyboard: kb([
-      [{ text: '✅ Подтвердить', data: 'reg:confirm' }, { text: '✏️ Изменить', data: 'reg:edit' }],
+      [{ text: 'Подтвердить', data: 'reg:confirm' }, { text: 'Изменить', data: 'reg:edit' }],
       backRow()
     ])
   };
@@ -266,17 +272,17 @@ function screenTeamConfirm(temp, note) {
 
 function screenEditMenu(temp, note) {
   const rows = [
-    [{ text: '✏️ Название', data: 'reg:edit:name' }, { text: '✏️ Логотип', data: 'reg:edit:logo' }]
+    [{ text: 'Название', data: 'reg:edit:name' }, { text: 'Логотип', data: 'reg:edit:logo' }]
   ];
   (temp.players || []).forEach((player, index) => {
-    rows.push([{ text: `✏️ Игрок ${index + 1}: ${player.nick}`, data: `reg:edit:player:${index + 1}` }]);
+    rows.push([{ text: `Игрок ${index + 1}: ${player.nick}`, data: `reg:edit:player:${index + 1}` }]);
   });
-  rows.push(backRow('reg:back', '◀ Назад к проверке'));
+  rows.push(backRow('reg:back', '⬅️ Назад к проверке'));
 
   return {
     text: [
       note ? `${note}\n` : '',
-      '✏️ <b>Что изменить?</b>',
+      '<b>Что изменить?</b>',
       '',
       `Название: <b>${esc(temp.name || '—')}</b>`,
       `Логотип: ${logoStatus(temp)}`,
@@ -291,12 +297,13 @@ function screenEditName(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      '✏️ <b>Изменение названия</b>',
+      '<b>Изменение названия</b>',
       '',
-      `Текущее: <b>${esc(temp.name || '—')}</b>`,
-      'Введи новое название (2–30 символов).' + CANCEL_HINT
+      `Сейчас: <b>${esc(temp.name || '—')}</b>`,
+      'Название команды (2–30 символов).',
+      'Только буквы, цифры, пробел, дефис, точка, подчёркивание.' + CANCEL_HINT
     ].filter(Boolean).join('\n'),
-    keyboard: kb([backRow('reg:edit', '◀ Назад к списку полей')])
+    keyboard: kb([backRow('reg:edit', '⬅️ Назад к списку полей')])
   };
 }
 
@@ -304,15 +311,13 @@ function screenEditLogo(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      '✏️ <b>Изменение логотипа</b>',
+      '<b>Изменение логотипа</b>',
       '',
       `Сейчас: ${logoStatus(temp)}`,
-      'Пришли новое фото или нажми «Убрать логотип».' + CANCEL_HINT
+      'Пришли новое фото одним сообщением.',
+      `Лимит: ${maxLogoKb({})} КБ. Больше — не принимается.` + CANCEL_HINT
     ].filter(Boolean).join('\n'),
-    keyboard: kb([
-      [{ text: '🗑 Убрать логотип', data: 'reg:logo:skip' }],
-      backRow('reg:edit', '◀ Назад к списку полей')
-    ])
+    keyboard: kb([backRow('reg:edit', '⬅️ Назад к списку полей')])
   };
 }
 
@@ -320,12 +325,12 @@ function screenEditPlayer(temp, index, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      `✏️ <b>Игрок ${index + 1}</b>`,
+      `<b>Изменение игрока ${index + 1}</b>`,
       '',
-      `Текущий ник: <b>${esc((temp.players[index] || {}).nick || '—')}</b>`,
-      `Введи новый ник (2–30 символов).` + CANCEL_HINT
+      `Сейчас: <b>${esc((temp.players[index] || {}).nick || '—')}</b>`,
+      'Ник (2–30 символов).' + CANCEL_HINT
     ].filter(Boolean).join('\n'),
-    keyboard: kb([backRow('reg:edit', '◀ Назад к списку полей')])
+    keyboard: kb([backRow('reg:edit', '⬅️ Назад к списку полей')])
   };
 }
 
@@ -334,9 +339,9 @@ function screenAgentNick(temp, note) {
     text: [
       note ? `${note}\n` : '',
       `${DISCIPLINES[temp.discipline].emoji} <b>${esc(disciplineLabel(temp.discipline))}</b> · поиск команды`,
-      `<b>Шаг 1 из ${AGENT_STEPS}</b>`,
+      stepTitle(1, AGENT_STEPS),
       '',
-      'Как тебя зовут в игре? (ник)' + CANCEL_HINT
+      'Твой игровой ник (2–30 символов).' + CANCEL_HINT
     ].filter(Boolean).join('\n'),
     keyboard: kb([backRow()])
   };
@@ -352,10 +357,10 @@ function screenAgentRole(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      `<b>Шаг 2 из ${AGENT_STEPS}</b>`,
+      stepTitle(2, AGENT_STEPS),
       '',
       `Ник: <b>${esc(temp.nick || '')}</b>`,
-      'На какой позиции играешь?'
+      'Позиция:'
     ].filter(Boolean).join('\n'),
     keyboard: kb(rows)
   };
@@ -365,12 +370,13 @@ function screenAgentRank(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      `<b>Шаг 3 из ${AGENT_STEPS}</b>`,
+      stepTitle(3, AGENT_STEPS),
       '',
-      'Какой у тебя ранг? Например: «Divine 3», «Immortal», «Premier 18 000».',
-      'Если не хочешь указывать — /skip.' + CANCEL_HINT
+      'Ранг (до 40 символов).',
+      'Пример: Divine 3, Immortal, Premier 18 000.',
+      'Если не указываешь — /skip.' + CANCEL_HINT
     ].filter(Boolean).join('\n'),
-    keyboard: kb([[{ text: '⏭ Без ранга', data: 'reg:skip:rank' }], backRow()])
+    keyboard: kb([[{ text: 'Без ранга', data: 'reg:skip:rank' }], backRow()])
   };
 }
 
@@ -378,12 +384,12 @@ function screenAgentNote(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      `<b>Шаг 4 из ${AGENT_STEPS}</b>`,
+      stepTitle(4, AGENT_STEPS),
       '',
-      'Пара слов о себе: опыт, сильные герои, когда удобно играть.',
-      'Если не хочешь — /skip.' + CANCEL_HINT
+      'Кратко о себе: опыт, сильные стороны, когда играешь (до 300 символов).',
+      'Если не нужно — /skip.' + CANCEL_HINT
     ].filter(Boolean).join('\n'),
-    keyboard: kb([[{ text: '⏭ Без описания', data: 'reg:skip:note' }], backRow()])
+    keyboard: kb([[{ text: 'Без описания', data: 'reg:skip:note' }], backRow()])
   };
 }
 
@@ -392,9 +398,9 @@ function screenPlayerLeadNick(temp, note) {
     text: [
       note ? `${note}\n` : '',
       `${DISCIPLINES[temp.discipline].emoji} <b>${esc(disciplineLabel(temp.discipline))}</b> · заявка игрока`,
-      `<b>Шаг 1 из ${PLAYER_STEPS}</b>`,
+      stepTitle(1, PLAYER_STEPS),
       '',
-      'Твой ник?' + CANCEL_HINT
+      'Твой ник (2–30 символов).' + CANCEL_HINT
     ].filter(Boolean).join('\n'),
     keyboard: kb([backRow()])
   };
@@ -404,12 +410,13 @@ function screenPlayerTeam(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      `<b>Шаг 2 из ${PLAYER_STEPS}</b>`,
+      stepTitle(2, PLAYER_STEPS),
       '',
       `Ник: <b>${esc(temp.nick || '')}</b>`,
-      'В какой команде играешь? Если пока без команды — /skip.' + CANCEL_HINT
+      'Название текущей команды (2–30 символов).',
+      'Нет команды — /skip.' + CANCEL_HINT
     ].filter(Boolean).join('\n'),
-    keyboard: kb([[{ text: '⏭ Без команды', data: 'reg:skip:team' }], backRow()])
+    keyboard: kb([[{ text: 'Без команды', data: 'reg:skip:team' }], backRow()])
   };
 }
 
@@ -423,10 +430,10 @@ function screenPlayerLeadRole(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      `<b>Шаг 3 из ${PLAYER_STEPS}</b>`,
+      stepTitle(3, PLAYER_STEPS),
       '',
       `Ник: <b>${esc(temp.nick || '')}</b>`,
-      'Твоя позиция?'
+      'Позиция:'
     ].filter(Boolean).join('\n'),
     keyboard: kb(rows)
   };
@@ -455,27 +462,22 @@ async function handleSkip(env, ctx) {
   // Ник капитана: можно взять ник первого игрока
   if (state.step === STEP.TEAM_CAPTAIN) {
     const updated = { ...temp, captainNick: '' };
-    await goToFirstPlayer(env, ctx, updated, '⏭ Капитаном будет игрок 1.');
+    await goToFirstPlayer(env, ctx, updated);
     return true;
   }
 
-  // Логотип: и в основной ветке, и в правке
+  // Логотип обязателен: /skip здесь не работает
   const editingLogo = state.step === STEP.TEAM_EDIT_FIELD && temp.editField === 'logo';
   if (state.step === STEP.TEAM_LOGO || editingLogo) {
-    const updated = { ...temp, logo: '', logoOversized: false, logoBytes: 0 };
-    if (editingLogo) {
-      await setState(env, ctx.userId, STEP.TEAM_CONFIRM, { ...updated, editField: null });
-      await replace(env, ctx, screenTeamConfirm({ ...updated, editField: null }, '🗑 Логотип убран.'));
-    } else {
-      await proceedAfterLogo(env, ctx, updated, '⏭ Логотип пропущен.');
-    }
+    await sendMessage(env, ctx.chatId, problem('Логотип обязателен. Пришли фото команды.'),
+      { keyboard: kb([menuRow]) });
     return true;
   }
 
   if (state.step === STEP.AGENT_RANK) {
     const updated = { ...temp, rank: '' };
     await setState(env, ctx.userId, STEP.AGENT_NOTE, updated);
-    await replace(env, ctx, screenAgentNote(updated, '⏭ Ранг пропущен.'));
+    await replace(env, ctx, screenAgentNote(updated));
     return true;
   }
 
@@ -486,7 +488,7 @@ async function handleSkip(env, ctx) {
   if (state.step === STEP.PLAYER_TEAM) {
     const updated = { ...temp, teamName: null };
     await setState(env, ctx.userId, STEP.PLAYER_ROLE, updated);
-    await replace(env, ctx, screenPlayerLeadRole(updated, '⏭ Команда не указана.'));
+    await replace(env, ctx, screenPlayerLeadRole(updated));
     return true;
   }
 
@@ -508,7 +510,6 @@ export async function handleCallback(env, query, ctx) {
       case 'disc': return await onDiscipline(env, query, ctx, params[0]);
       case 'type': return await onType(env, query, ctx, params[0]);
       case 'role': return await onRole(env, query, ctx, params[0]);
-      case 'logo': return await onLogoAction(env, query, ctx, params[0]);
       case 'skip': return await onSkipButton(env, query, ctx, params[0]);
       case 'confirm': return await onConfirm(env, query, ctx);
       case 'edit': return await onEdit(env, query, ctx, params);
@@ -558,7 +559,7 @@ async function onType(env, query, ctx, type) {
       discipline, type: 'team',
       name: '', logo: '', logoOversized: false, logoBytes: 0,
       players: [], playerIndex: 0, pendingNick: '', editField: null,
-      captainNick: '',
+      captainNick: needsCaptainNick ? '' : '@' + ctx.username,
       totalSteps: needsCaptainNick ? TEAM_STEPS_CAPTAIN : TEAM_STEPS
     };
     await setState(env, ctx.userId, STEP.TEAM_NAME, temp);
@@ -617,26 +618,26 @@ async function onRole(env, query, ctx, roleKey) {
     if (String(temp.editField || '').startsWith('player:')) {
       const done = { ...updated, editField: null };
       await setState(env, ctx.userId, STEP.TEAM_CONFIRM, done);
-      await replace(env, ctx, screenTeamConfirm(done, `✅ Игрок ${index + 1}: ${esc(players[index].nick)} — ${esc(role.label)}.`));
+      await replace(env, ctx, screenTeamConfirm(done));
       return true;
     }
 
     if (index < 4) {
       const next = { ...updated, playerIndex: index + 1 };
       await setState(env, ctx.userId, STEP.TEAM_PLAYER_NICK, next);
-      await replace(env, ctx, screenTeamPlayerNick(next, `✅ Игрок ${index + 1}: <b>${esc(players[index].nick)}</b> — ${esc(role.label)}.`));
+      await replace(env, ctx, screenTeamPlayerNick(next));
       return true;
     }
 
     await setState(env, ctx.userId, STEP.TEAM_CONFIRM, updated);
-    await replace(env, ctx, screenTeamConfirm(updated, '✅ Состав собран. Проверь данные перед отправкой.'));
+    await replace(env, ctx, screenTeamConfirm(updated));
     return true;
   }
 
   if (isAgentRole) {
     const updated = { ...temp, role: role.num, roleLabel: role.label };
     await setState(env, ctx.userId, STEP.AGENT_RANK, updated);
-    await replace(env, ctx, screenAgentRank(updated, `✅ Позиция: ${esc(role.title)}.`));
+    await replace(env, ctx, screenAgentRank(updated));
     return true;
   }
 
@@ -646,71 +647,15 @@ async function onRole(env, query, ctx, roleKey) {
   return submitPlayer(env, ctx, updated);
 }
 
-/* ---------- Логотип: пропустить / принять oversized / прислать другое ---------- */
-async function onLogoAction(env, query, ctx, action) {
-  const state = await getState(env, ctx.userId);
-  const temp = state.temp || {};
-  const editingLogo = state.step === STEP.TEAM_EDIT_FIELD && temp.editField === 'logo';
-
-  if (state.step !== STEP.TEAM_LOGO && !editingLogo) {
-    await answerCallbackQuery(env, query.id, { text: 'Кнопка устарела — начни заново: /start', showAlert: true });
-    return true;
-  }
-
-  if (action === 'accept') {
-    if (!temp.logo) {
-      await answerCallbackQuery(env, query.id, { text: 'Логотип ещё не загружен', showAlert: true });
-      return true;
-    }
-    await answerCallbackQuery(env, query.id, { text: 'Логотип принят' });
-    if (editingLogo) {
-      const done = { ...temp, editField: null };
-      await setState(env, ctx.userId, STEP.TEAM_CONFIRM, done);
-      await replace(env, ctx, screenTeamConfirm(done, '✅ Логотип обновлён.'));
-    } else {
-      await proceedAfterLogo(env, ctx, temp, '✅ Логотип принят.');
-    }
-    return true;
-  }
-
-  if (action === 'retry') {
-    await answerCallbackQuery(env, query.id, { text: 'Жду новое фото' });
-    const updated = { ...temp, logo: '', logoOversized: false, logoBytes: 0 };
-    await setState(env, ctx.userId, state.step, updated);
-    const screen = editingLogo ? screenEditLogo(updated) : screenTeamLogo(updated);
-    await replace(env, ctx, { ...screen, text: '📷 Жду другое фото.\n\n' + screen.text });
-    return true;
-  }
-
-  if (action === 'skip') return onSkipButton(env, query, ctx, 'logo');
-
-  await answerCallbackQuery(env, query.id, { text: 'Неизвестное действие' });
-  return true;
-}
-
-/* ---------- Кнопки «пропустить» (логотип, ранг, описание, команда) ---------- */
+/* ---------- Кнопки «пропустить» (капитан, ранг, описание, команда) ---------- */
 async function onSkipButton(env, query, ctx, what) {
   const state = await getState(env, ctx.userId);
   const temp = state.temp || {};
-  const editingLogo = state.step === STEP.TEAM_EDIT_FIELD && temp.editField === 'logo';
-
-  if (what === 'logo' && (state.step === STEP.TEAM_LOGO || editingLogo)) {
-    await answerCallbackQuery(env, query.id, { text: 'Без логотипа' });
-    const updated = { ...temp, logo: '', logoOversized: false, logoBytes: 0 };
-    if (editingLogo) {
-      const done = { ...updated, editField: null };
-      await setState(env, ctx.userId, STEP.TEAM_CONFIRM, done);
-      await replace(env, ctx, screenTeamConfirm(done, '🗑 Логотип убран.'));
-    } else {
-      await proceedAfterLogo(env, ctx, updated, '⏭ Логотип пропущен.');
-    }
-    return true;
-  }
 
   if (what === 'captain' && state.step === STEP.TEAM_CAPTAIN) {
     await answerCallbackQuery(env, query.id, { text: 'Капитаном будет игрок 1' });
     const updated = { ...temp, captainNick: '' };
-    await goToFirstPlayer(env, ctx, updated, '⏭ Капитаном будет игрок 1.');
+    await goToFirstPlayer(env, ctx, updated);
     return true;
   }
 
@@ -718,7 +663,7 @@ async function onSkipButton(env, query, ctx, what) {
     await answerCallbackQuery(env, query.id, { text: 'Без ранга' });
     const updated = { ...temp, rank: '' };
     await setState(env, ctx.userId, STEP.AGENT_NOTE, updated);
-    await replace(env, ctx, screenAgentNote(updated, '⏭ Ранг пропущен.'));
+    await replace(env, ctx, screenAgentNote(updated));
     return true;
   }
 
@@ -731,7 +676,7 @@ async function onSkipButton(env, query, ctx, what) {
     await answerCallbackQuery(env, query.id, { text: 'Без команды' });
     const updated = { ...temp, teamName: null };
     await setState(env, ctx.userId, STEP.PLAYER_ROLE, updated);
-    await replace(env, ctx, screenPlayerLeadRole(updated, '⏭ Команда не указана.'));
+    await replace(env, ctx, screenPlayerLeadRole(updated));
     return true;
   }
 
@@ -755,13 +700,21 @@ async function onConfirm(env, query, ctx) {
     return true;
   }
 
+  // Логотип обязателен: без него заявку не отправляем
+  if (!temp.logo) {
+    await answerCallbackQuery(env, query.id, { text: 'Нужен логотип', showAlert: true });
+    await setState(env, ctx.userId, STEP.TEAM_LOGO, temp);
+    await sendMessage(env, ctx.chatId, problem('Нужен логотип команды. Пришли фото.'), { keyboard: kb([menuRow]) });
+    return true;
+  }
+
   // 1. Дубликат: у этого же пользователя уже есть pending-заявка с таким названием
   const duplicate = await findPendingTeamByName(env, ctx.userId, temp.name);
   if (duplicate) {
     await answerCallbackQuery(env, query.id, { text: 'Такая заявка уже есть', showAlert: true });
     await sendMessage(env, ctx.chatId,
-      `У тебя уже есть заявка на команду «<b>${esc(temp.name)}</b>». ` +
-      'Дождись решения организаторов или отмени предыдущую командой /cancel.',
+      `У тебя уже есть заявка на команду «<b>${esc(temp.name)}</b>» — она ещё на модерации.\n` +
+      'Дождись решения организаторов или напиши им: ' + CONTACTS + '.',
       { keyboard: kb([menuRow]) }
     );
     return true;
@@ -771,10 +724,8 @@ async function onConfirm(env, query, ctx) {
   const rate = await canSubmitLead(env, ctx.userId);
   if (!rate.allowed) {
     await answerCallbackQuery(env, query.id, { text: 'Слишком часто', showAlert: true });
-    await sendMessage(env, ctx.chatId,
-      `⏳ Заявки можно отправлять не чаще одной в 5 минут.\n` +
-      `Следующую — через ${pluralMinutes(rate.retryAfterSec)}.`,
-      { keyboard: kb([[{ text: '✅ Подтвердить', data: 'reg:confirm' }], menuRow]) }
+    await sendMessage(env, ctx.chatId, rateLimitText(env, rate.retryAfterSec),
+      { keyboard: kb([[{ text: 'Подтвердить', data: 'reg:confirm' }], menuRow]) }
     );
     return true;
   }
@@ -801,9 +752,9 @@ async function onConfirm(env, query, ctx) {
   await resetState(env, ctx.userId);
 
   await sendMessage(env, ctx.chatId,
-    `✅ Заявка на команду «<b>${esc(temp.name)}</b>» отправлена на модерацию.\n` +
-    `Дисциплина: ${esc(disciplineLabel(temp.discipline))} · номер заявки: <code>#${leadId}</code>\n\n` +
-    'Мы сообщим, когда её рассмотрят.',
+    `Заявка <code>#${leadId}</code> отправлена на модерацию.\n` +
+    `Дисциплина: ${esc(disciplineLabel(temp.discipline))}\n\n` +
+    'Решение придёт в этот чат.\n' + contactsBlock(),
     { keyboard: kb([menuRow]) }
   );
 
@@ -1028,11 +979,11 @@ export async function handleText(env, message, ctx) {
 async function onTeamName(env, ctx, temp, raw) {
   const name = clean(raw);
   if (!isTeamName(name)) {
-    return fail(env, ctx, 'Название от 2 до 30 символов, буквы и цифры.', screenTeamName(temp.discipline, null, totalOf(temp)));
+    return fail(env, ctx, 'Название: 2–30 символов, без спецсимволов.', screenTeamName(temp.discipline, null, totalOf(temp)));
   }
   const updated = { ...temp, name };
   await setState(env, ctx.userId, STEP.TEAM_LOGO, updated);
-  await send(env, ctx, screenTeamLogo(updated, `✅ Название: <b>${esc(name)}</b>`));
+  await send(env, ctx, screenTeamLogo(updated));
   return true;
 }
 
@@ -1040,19 +991,15 @@ async function onTeamName(env, ctx, temp, raw) {
 async function onTeamCaptain(env, ctx, temp, raw) {
   const nick = clean(raw);
   if (!isNick(nick)) {
-    return fail(env, ctx, 'Ник от 2 до 30 символов.', screenTeamCaptain(temp));
+    return fail(env, ctx, 'Ник: 2–30 символов.', screenTeamCaptain(temp));
   }
   const updated = { ...temp, captainNick: nick };
-  return goToFirstPlayer(env, ctx, updated, `✅ Капитан: <b>${esc(nick)}</b>`);
+  return goToFirstPlayer(env, ctx, updated);
 }
 
-async function onLogoText(env, ctx, temp, raw) {
-  if (canSkip(raw)) {
-    const updated = { ...temp, logo: '', logoOversized: false, logoBytes: 0 };
-    await proceedAfterLogo(env, ctx, updated, '⏭ Логотип пропущен.');
-    return true;
-  }
-  return fail(env, ctx, 'Пришли логотип фотографией или нажми «Без логотипа»/`/skip`.', screenTeamLogo(temp));
+/** На шаге логотипа принимаем только фото */
+async function onLogoText(env, ctx, temp) {
+  return fail(env, ctx, 'Нужно фото. Пришли логотип или /cancel.', screenTeamLogo(temp));
 }
 
 async function onPlayerNick(env, ctx, temp, raw) {
@@ -1060,16 +1007,16 @@ async function onPlayerNick(env, ctx, temp, raw) {
   const index = Number(temp.playerIndex) || 0;
   const screen = screenTeamPlayerNick(temp);
 
-  if (!isNick(nick)) return fail(env, ctx, 'Ник от 2 до 30 символов.', screen);
+  if (!isNick(nick)) return fail(env, ctx, 'Ник: 2–30 символов.', screen);
 
   const players = temp.players || [];
   const taken = players.some((player, i) => i !== index && player && player.nick &&
     player.nick.toLowerCase() === nick.toLowerCase());
-  if (taken) return fail(env, ctx, 'Такой ник уже есть в команде.', screen);
+  if (taken) return fail(env, ctx, 'Такой ник уже есть в составе.', screen);
 
   const updated = { ...temp, players: players.map((player) => player), pendingNick: nick };
   await setState(env, ctx.userId, STEP.TEAM_PLAYER_ROLE, updated);
-  await send(env, ctx, screenTeamPlayerRole(updated, `✅ Игрок ${index + 1}: <b>${esc(nick)}</b>`));
+  await send(env, ctx, screenTeamPlayerRole(updated));
   return true;
 }
 
@@ -1101,32 +1048,32 @@ async function onEditFieldText(env, ctx, temp, raw) {
 
   if (field === 'name') {
     const name = clean(raw);
-    if (!isTeamName(name)) return fail(env, ctx, 'Название от 2 до 30 символов, буквы и цифры.', screenEditName(temp));
+    if (!isTeamName(name)) return fail(env, ctx, 'Название: 2–30 символов, без спецсимволов.', screenEditName(temp));
     const updated = { ...temp, name, editField: null };
     await setState(env, ctx.userId, STEP.TEAM_CONFIRM, updated);
-    await send(env, ctx, screenTeamConfirm(updated, `✅ Название изменено на <b>${esc(name)}</b>.`));
+    await send(env, ctx, screenTeamConfirm(updated));
     return true;
   }
 
   if (field.startsWith('player:')) {
     const index = Number(field.split(':')[1]) - 1;
     const nick = clean(raw);
-    if (!isNick(nick)) return fail(env, ctx, 'Ник от 2 до 30 символов.', screenEditPlayer(temp, index));
+    if (!isNick(nick)) return fail(env, ctx, 'Ник: 2–30 символов.', screenEditPlayer(temp, index));
 
     const players = (temp.players || []).map((player) => player);
     const taken = players.some((player, i) => i !== index && player && player.nick &&
       player.nick.toLowerCase() === nick.toLowerCase());
-    if (taken) return fail(env, ctx, 'Такой ник уже есть в команде.', screenEditPlayer(temp, index));
+    if (taken) return fail(env, ctx, 'Такой ник уже есть в составе.', screenEditPlayer(temp, index));
 
     players[index] = { ...(players[index] || {}), nick };
     const updated = { ...temp, players, pendingNick: nick, playerIndex: index };
     await setState(env, ctx.userId, STEP.TEAM_PLAYER_ROLE, updated);
-    await send(env, ctx, screenTeamPlayerRole(updated, `✅ Игрок ${index + 1}: <b>${esc(nick)}</b> — выбери роль ещё раз.`));
+    await send(env, ctx, screenTeamPlayerRole(updated));
     return true;
   }
 
   if (field === 'logo') {
-    return fail(env, ctx, 'Пришли фото логотипа или нажми «Убрать логотип».', screenEditLogo(temp));
+    return fail(env, ctx, 'Нужно фото. Пришли логотип или /cancel.', screenEditLogo(temp));
   }
 
   await sendMessage(env, ctx.chatId, 'Не удалось определить, что меняем. Открой меню правок заново.');
@@ -1136,19 +1083,19 @@ async function onEditFieldText(env, ctx, temp, raw) {
 /* ---------- Ветка B: свободный агент ---------- */
 async function onAgentNick(env, ctx, temp, raw) {
   const nick = clean(raw);
-  if (!isNick(nick)) return fail(env, ctx, 'Ник от 2 до 30 символов.', screenAgentNick(temp));
+  if (!isNick(nick)) return fail(env, ctx, 'Ник: 2–30 символов.', screenAgentNick(temp));
   const updated = { ...temp, nick };
   await setState(env, ctx.userId, STEP.AGENT_ROLE, updated);
-  await send(env, ctx, screenAgentRole(updated, `✅ Ник: <b>${esc(nick)}</b>`));
+  await send(env, ctx, screenAgentRole(updated));
   return true;
 }
 
 async function onAgentRank(env, ctx, temp, raw) {
   const rank = canSkip(raw) ? '' : clean(raw);
-  if (rank.length > 40) return fail(env, ctx, 'Ранг слишком длинный — до 40 символов.', screenAgentRank(temp));
+  if (rank.length > 40) return fail(env, ctx, 'Ранг: до 40 символов.', screenAgentRank(temp));
   const updated = { ...temp, rank };
   await setState(env, ctx.userId, STEP.AGENT_NOTE, updated);
-  await send(env, ctx, screenAgentNote(updated, rank ? `✅ Ранг: <b>${esc(rank)}</b>` : '⏭ Ранг пропущен.'));
+  await send(env, ctx, screenAgentNote(updated));
   return true;
 }
 
@@ -1160,10 +1107,7 @@ async function onAgentNote(env, ctx, temp, raw) {
 async function submitAgent(env, ctx, temp) {
   const rate = await canSubmitLead(env, ctx.userId);
   if (!rate.allowed) {
-    await sendMessage(env, ctx.chatId,
-      `⏳ Заявки можно отправлять не чаще одной в 5 минут.\nСледующую — через ${pluralMinutes(rate.retryAfterSec)}.`,
-      { keyboard: kb([menuRow]) }
-    );
+    await sendMessage(env, ctx.chatId, rateLimitText(env, rate.retryAfterSec), { keyboard: kb([menuRow]) });
     return true;
   }
 
@@ -1185,8 +1129,9 @@ async function submitAgent(env, ctx, temp) {
 
   await resetState(env, ctx.userId);
   await sendMessage(env, ctx.chatId,
-    `✅ Заявка принята. Капитаны команд смогут тебя найти.\n` +
-    `Дисциплина: ${esc(disciplineLabel(temp.discipline))} · номер заявки: <code>#${leadId}</code>`,
+    `Заявка <code>#${leadId}</code> принята.\n` +
+    `Дисциплина: ${esc(disciplineLabel(temp.discipline))}\n\n` +
+    'Капитаны увидят её после модерации.\n' + contactsBlock(),
     { keyboard: kb([menuRow]) }
   );
 
@@ -1201,31 +1146,28 @@ async function submitAgent(env, ctx, temp) {
 /* ---------- Ветка C: заявка игрока ---------- */
 async function onPlayerNickInput(env, ctx, temp, raw) {
   const nick = clean(raw);
-  if (!isNick(nick)) return fail(env, ctx, 'Ник от 2 до 30 символов.', screenPlayerLeadNick(temp));
+  if (!isNick(nick)) return fail(env, ctx, 'Ник: 2–30 символов.', screenPlayerLeadNick(temp));
   const updated = { ...temp, nick };
   await setState(env, ctx.userId, STEP.PLAYER_TEAM, updated);
-  await send(env, ctx, screenPlayerTeam(updated, `✅ Ник: <b>${esc(nick)}</b>`));
+  await send(env, ctx, screenPlayerTeam(updated));
   return true;
 }
 
 async function onPlayerTeam(env, ctx, temp, raw) {
   const teamName = canSkip(raw) ? null : clean(raw);
   if (teamName && !isTeamName(teamName)) {
-    return fail(env, ctx, 'Название команды от 2 до 30 символов, буквы и цифры.', screenPlayerTeam(temp));
+    return fail(env, ctx, 'Команда: 2–30 символов, без спецсимволов.', screenPlayerTeam(temp));
   }
   const updated = { ...temp, teamName };
   await setState(env, ctx.userId, STEP.PLAYER_ROLE, updated);
-  await send(env, ctx, screenPlayerLeadRole(updated, teamName ? `✅ Команда: <b>${esc(teamName)}</b>` : '⏭ Команда не указана.'));
+  await send(env, ctx, screenPlayerLeadRole(updated));
   return true;
 }
 
 async function submitPlayer(env, ctx, temp) {
   const rate = await canSubmitLead(env, ctx.userId);
   if (!rate.allowed) {
-    await sendMessage(env, ctx.chatId,
-      `⏳ Заявки можно отправлять не чаще одной в 5 минут.\nСледующую — через ${pluralMinutes(rate.retryAfterSec)}.`,
-      { keyboard: kb([menuRow]) }
-    );
+    await sendMessage(env, ctx.chatId, rateLimitText(env, rate.retryAfterSec), { keyboard: kb([menuRow]) });
     return true;
   }
 
@@ -1246,8 +1188,8 @@ async function submitPlayer(env, ctx, temp) {
 
   await resetState(env, ctx.userId);
   await sendMessage(env, ctx.chatId,
-    `✅ Заявка принята.\n` +
-    `Дисциплина: ${esc(disciplineLabel(temp.discipline))} · номер заявки: <code>#${leadId}</code>`,
+    `Заявка <code>#${leadId}</code> принята.\n` +
+    `Дисциплина: ${esc(disciplineLabel(temp.discipline))}`,
     { keyboard: kb([menuRow]) }
   );
 
@@ -1262,6 +1204,9 @@ async function submitPlayer(env, ctx, temp) {
 
 /* ============================================================
    Фото (логотип)
+   ------------------------------------------------------------
+   Логотип обязателен, лимит жёсткий: если даже самый маленький
+   вариант от Telegram больше лимита — заявку не принимаем.
    ============================================================ */
 export async function handlePhoto(env, message, ctx) {
   const state = await getState(env, ctx.userId);
@@ -1273,16 +1218,28 @@ export async function handlePhoto(env, message, ctx) {
   await sendChatAction(env, ctx.chatId, 'upload_photo');
 
   let photo = null;
+  let failed = false;
   try {
     photo = await getPhotoDataUrl(env, message.photo, maxLogoBytes(env));
   } catch (err) {
+    failed = true;
     console.error('[reg] не удалось получить логотип:', err && err.message);
   }
 
-  if (!photo) {
+  if (failed || !photo) {
     await sendMessage(env, ctx.chatId,
-      '⚠️ Не удалось скачать фото. Попробуй отправить ещё раз или нажми «Без логотипа».',
-      { keyboard: kb([[{ text: '⏭ Без логотипа', data: 'reg:logo:skip' }], backRow()]) }
+      problem('Не удалось скачать фото. Пришли его ещё раз.'),
+      { keyboard: kb([menuRow]) }
+    );
+    return true;
+  }
+
+  // Больше лимита — не принимаем: просим сжать и прислать заново
+  if (photo.oversized) {
+    await sendMessage(env, ctx.chatId,
+      problem(`Файл ${Math.round((photo.bytes || 0) / 1024)} КБ — больше лимита ${maxLogoKb(env)} КБ.\n` +
+        'Сожми изображение и пришли заново.'),
+      { keyboard: kb([menuRow]) }
     );
     return true;
   }
@@ -1290,32 +1247,19 @@ export async function handlePhoto(env, message, ctx) {
   const updated = {
     ...temp,
     logo: photo.dataUrl,
-    logoOversized: Boolean(photo.oversized),
+    logoOversized: false,
     logoBytes: photo.bytes || 0
   };
   await setState(env, ctx.userId, state.step, updated);
 
-  if (photo.oversized) {
-    await sendMessage(env, ctx.chatId,
-      `⚠️ Фото весит ${Math.round((photo.bytes || 0) / 1024)} КБ — это больше лимита ` +
-      `${Math.round(maxLogoBytes(env) / 1024)} КБ.\n\n` +
-      'Можно принять как есть (на сайте у команды будет пометка) или прислать другое фото.',
-      {
-        keyboard: kb([
-          [{ text: '✅ Принять как есть', data: 'reg:logo:accept' }],
-          [{ text: '📷 Прислать другое', data: 'reg:logo:retry' }]
-        ])
-      }
-    );
-    return true;
-  }
-
+  const sizeKb = Math.round((photo.bytes || 0) / 1024);
   if (editingLogo) {
     const done = { ...updated, editField: null };
     await setState(env, ctx.userId, STEP.TEAM_CONFIRM, done);
-    await send(env, ctx, screenTeamConfirm(done, '✅ Логотип обновлён.'));
+    await send(env, ctx, screenTeamConfirm(done));
     return true;
   }
 
-  return proceedAfterLogo(env, ctx, updated, `✅ Логотип загружен (${Math.round((photo.bytes || 0) / 1024)} КБ).`);
+  await sendMessage(env, ctx.chatId, `Логотип принят (${sizeKb} КБ).`);
+  return proceedAfterLogo(env, ctx, updated);
 }

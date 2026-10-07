@@ -28,6 +28,7 @@ import {
 } from '../lib/db.js';
 import { esc, clean, truncate } from '../lib/esc.js';
 import { disciplineLabel, leadTypeLabel } from '../lib/domain.js';
+import { siteLine } from '../lib/texts.js';
 import { kb, menuRow, backRow, screen, screenWithPhoto } from '../lib/ui.js';
 
 export const commands = ['leads', 'skip'];
@@ -76,17 +77,17 @@ async function showMenu(env, ctx, note) {
 
   const lines = [
     note ? `${note}\n` : '',
-    '📋 <b>Заявки</b>',
+    'Заявки',
     '',
-    `На модерации: <b>${counts.pending}</b>`,
-    `Одобрено: <b>${counts.approved}</b>`,
-    `Отклонено: <b>${counts.rejected}</b>`
+    `На модерации: ${counts.pending}`,
+    `Одобрено: ${counts.approved}`,
+    `Отклонено: ${counts.rejected}`
   ].filter(Boolean);
 
   if (breakdown.length) {
-    lines.push('', '<b>Ожидают решения</b>');
+    lines.push('', 'Ожидают решения');
     for (const row of breakdown) {
-      lines.push(`• ${esc(disciplineLabel(row.discipline))} · ${esc(leadTypeLabel(row.type))}: <b>${row.n}</b>`);
+      lines.push(`• ${esc(disciplineLabel(row.discipline))} · ${esc(leadTypeLabel(row.type))}: ${row.n}`);
     }
   }
 
@@ -244,12 +245,12 @@ async function onApprove(env, query, ctx, rawId, flag) {
     if (twin) {
       await answerCallbackQuery(env, query.id, { text: 'Такая команда уже одобрена' });
       await screen(env, ctx,
-        `⚠️ Команда «<b>${esc((lead.payload || {}).name || '')}</b>» уже одобрена ранее ` +
-        `(заявка <code>#${twin.id}</code>, ${esc(disciplineLabel(twin.discipline))}).\n\n` +
-        'Одобрить как дубликат? Это предупреждение, а не запрет — заявка пройдёт в экспорт.',
+        `Команда «${esc((lead.payload || {}).name || '')}» уже одобрена ` +
+        `(заявка #${twin.id}, ${esc(disciplineLabel(twin.discipline))}).\n\n` +
+        'Одобрить как дубликат?',
         kb([
-          [{ text: '✅ Да, одобрить как дубликат', data: `mod:approve:${lead.id}:dup` }],
-          [{ text: '◀ Отмена', data: `mod:cancel:${lead.id}` }]
+          [{ text: 'Да, одобрить как дубликат', data: `mod:approve:${lead.id}:dup` }],
+          [{ text: 'Отмена', data: `mod:cancel:${lead.id}` }]
         ]));
       return true;
     }
@@ -259,7 +260,7 @@ async function onApprove(env, query, ctx, rawId, flag) {
   await updateLeadStatus(env, lead.id, 'approved', ctx.userId, null);
   const notified = await notifyAuthor(env, { ...lead, status: 'approved' }, 'approved', '');
   await stripButtons(env, ctx);
-  await showNextAfter(env, ctx, lead.id, `✅ Заявка <code>#${lead.id}</code> одобрена.`, notified);
+  await showNextAfter(env, ctx, lead.id, `Заявка #${lead.id} одобрена.`, notified);
   return true;
 }
 
@@ -279,19 +280,19 @@ async function onRejectStart(env, query, ctx, rawId) {
   if (lead.status !== 'pending') {
     await answerCallbackQuery(env, query.id, { text: 'Уже обработано', showAlert: true });
     await sendMessage(env, ctx.chatId,
-      `ℹ️ Уже обработано: заявка <code>#${lead.id}</code> — ${statusLabel(lead.status)}.`,
-      { keyboard: kb([[{ text: '📋 К счётчикам', data: 'mod:menu' }], [menuRow]]) });
+      `Уже обработано: заявка #${lead.id} — ${statusLabel(lead.status)}.`,
+      { keyboard: kb([[{ text: 'К счётчикам', data: 'mod:menu' }], [menuRow]]) });
     return true;
   }
 
   await answerCallbackQuery(env, query.id);
   await setState(env, ctx.userId, MOD_REASON, { leadId: lead.id });
   await screen(env, ctx,
-    `❌ <b>Отклонение заявки</b> <code>#${lead.id}</code>\n\n` +
-    'Причина отклонения? Напиши текстом или нажми /skip, чтобы отклонить без комментария.\n\n' +
-    '<i>Автор увидит причину в уведомлении. Отмена: /cancel</i>',
+    `Отклонение заявки #${lead.id}\n\n` +
+    'Причина отклонения? Напиши текстом или нажми /skip, чтобы отклонить без комментария.\n' +
+    'Автор увидит причину. Отмена: /cancel',
     kb([
-      [{ text: '🚫 Отменить', data: `mod:cancel:${lead.id}` }],
+      [{ text: 'Отменить', data: `mod:cancel:${lead.id}` }],
       [menuRow]
     ]));
   return true;
@@ -305,12 +306,12 @@ async function submitRejection(env, ctx, temp, reason) {
 
   if (!lead) {
     await sendMessage(env, ctx.chatId, 'Заявка не найдена — возможно, её уже удалили.',
-      { keyboard: kb([[{ text: '📋 К счётчикам', data: 'mod:menu' }], [menuRow]]) });
+      { keyboard: kb([[{ text: 'К счётчикам', data: 'mod:menu' }], [menuRow]]) });
     return true;
   }
   if (lead.status !== 'pending') {
-    await sendMessage(env, ctx.chatId, `ℹ️ Уже обработано: заявка <code>#${lead.id}</code> — ${statusLabel(lead.status)}.`,
-      { keyboard: kb([[{ text: '📋 К счётчикам', data: 'mod:menu' }], [menuRow]]) });
+    await sendMessage(env, ctx.chatId, `Уже обработано: заявка #${lead.id} — ${statusLabel(lead.status)}.`,
+      { keyboard: kb([[{ text: 'К счётчикам', data: 'mod:menu' }], [menuRow]]) });
     return true;
   }
 
@@ -319,7 +320,7 @@ async function submitRejection(env, ctx, temp, reason) {
   const notified = await notifyAuthor(env, { ...lead, status: 'rejected', reject_reason: cleanReason }, 'rejected', cleanReason);
   await stripButtons(env, ctx);
   await showNextAfter(env, ctx, lead.id,
-    `❌ Заявка <code>#${lead.id}</code> отклонена.` +
+    `Заявка #${lead.id} отклонена.` +
     (cleanReason ? `\nПричина: ${esc(cleanReason)}` : '\nПричина не указана.'),
     notified);
   return true;
@@ -399,30 +400,30 @@ async function stripButtons(env, ctx) {
 function leadCard(lead, author) {
   const p = lead.payload || {};
   const lines = [
-    `${esc(disciplineLabel(lead.discipline))} · <b>${esc(leadTypeLabel(lead.type))}</b>`,
+    `${esc(disciplineLabel(lead.discipline))} · ${esc(leadTypeLabel(lead.type))}`,
     '─────'
   ];
 
   if (lead.type === 'team') {
-    lines.push(`Название: <b>${esc(p.name || '—')}</b>`);
-    lines.push(`Логотип: ${p.logo ? (p.logoOversized ? '⚠️ загружен, больше лимита' : '✅ загружен') : '— нет'}`);
+    lines.push(`Название: ${esc(p.name || '—')}`);
+    lines.push(`Логотип: ${p.logo ? (p.logoOversized ? 'больше лимита' : 'загружен') : 'нет'}`);
     lines.push(`Капитан: ${esc(p.captainNick || '—')}`);
     lines.push('');
     const players = p.players || [];
     if (players.length) {
       players.forEach((player, index) => {
-        lines.push(`${index + 1}. <b>${esc(player.nick || '—')}</b> — ${esc(player.roleLabel || player.role || '')}`);
+        lines.push(`${index + 1}. ${esc(player.nick || '—')} — ${esc(player.roleLabel || player.role || '')}`);
       });
     } else {
-      lines.push('<i>состав не заполнен</i>');
+      lines.push('состав не заполнен');
     }
   } else if (lead.type === 'free_agent') {
-    lines.push(`Ник: <b>${esc(p.nick || '—')}</b>`);
+    lines.push(`Ник: ${esc(p.nick || '—')}`);
     lines.push(`Позиция: ${esc(p.roleLabel || p.role || '—')}`);
     if (p.rank) lines.push(`Ранг: ${esc(p.rank)}`);
     if (p.note) lines.push(`О себе: ${esc(truncate(p.note, 200))}`);
   } else {
-    lines.push(`Ник: <b>${esc(p.nick || '—')}</b>`);
+    lines.push(`Ник: ${esc(p.nick || '—')}`);
     if (p.teamName) lines.push(`Команда: ${esc(p.teamName)}`);
     lines.push(`Позиция: ${esc(p.roleLabel || p.role || '—')}`);
   }
@@ -430,7 +431,7 @@ function leadCard(lead, author) {
   lines.push('');
   const username = author && author.username ? '@' + esc(author.username) + ' ' : '';
   lines.push(`Telegram: ${username}(${lead.telegram_id})`);
-  lines.push(`Заявка <code>#${lead.id}</code> · ${esc(String(lead.created_at || ''))} UTC · ${statusLabel(lead.status)}`);
+  lines.push(`Заявка #${lead.id} · ${esc(String(lead.created_at || ''))} · ${statusLabel(lead.status)}`);
   if (lead.status === 'rejected') {
     lines.push(`Причина: ${esc(lead.reject_reason || 'не указана')}`);
   }
@@ -483,14 +484,16 @@ async function notifyAuthor(env, lead, status, reason) {
 
   if (status === 'approved') {
     if (lead.type === 'team') {
-      text = `✅ Твоя заявка на команду «<b>${esc(p.name || '')}</b>» одобрена!\nСкоро твоя команда появится на сайте.`;
+      text = `Заявка на команду «${esc(p.name || '')}» одобрена.\n` +
+        'Команда появится на сайте после импорта.\n' + siteLine();
     } else if (lead.type === 'free_agent') {
-      text = '✅ Твоя заявка свободного агента одобрена! Капитаны команд смогут тебя найти.';
+      text = 'Заявка свободного агента одобрена.\nКапитаны увидят тебя после импорта.\n' + siteLine();
     } else {
-      text = '✅ Твоя заявка одобрена!';
+      text = 'Заявка одобрена.\n' + siteLine();
     }
   } else {
-    text = `❌ Твоя заявка отклонена.\nПричина: ${esc(reason && String(reason).trim() ? reason : 'не указана')}`;
+    text = 'Заявка отклонена.\n' +
+      (reason && String(reason).trim() ? `Причина: ${esc(reason)}` : 'Причина не указана.');
   }
 
   try {

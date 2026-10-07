@@ -100,13 +100,36 @@ async function apiForm(env, method, formData, attempt = 0) {
  * @returns {{inline_keyboard: Array<Array<object>>}}
  */
 export function inlineKeyboard(rows) {
-  const keyboard = (rows || [])
-    .filter((row) => Array.isArray(row) && row.length)
-    .map((row) => row.map((btn) => {
+  const keyboard = [];
+  for (const row of (rows || [])) {
+    const buttons = keyboardRow(row);
+    if (!buttons.length) {
+      console.warn('[keyboard] строка клавиатуры без кнопок пропущена');
+      continue;
+    }
+    keyboard.push(buttons.map((btn) => {
       if (btn.url) return { text: btn.text, url: btn.url };
       return { text: btn.text, callback_data: String(btn.data || '').slice(0, 64) };
     }));
+  }
   return { inline_keyboard: keyboard };
+}
+
+/**
+ * Строка клавиатуры может прийти в трёх видах:
+ *   [{...}, {...}] — обычная строка кнопок;
+ *   {...}          — одна кнопка (её оборачиваем);
+ *   [[{...}]]      — лишняя вложенность (разворачиваем).
+ * Так кнопка не может «потеряться» из-за формы записи.
+ */
+function keyboardRow(row) {
+  if (!row) return [];
+  if (Array.isArray(row)) {
+    const flat = row.length && Array.isArray(row[0]) ? row.flat(1) : row;
+    return flat.filter((btn) => btn && typeof btn === 'object' && !Array.isArray(btn));
+  }
+  if (typeof row === 'object') return [row];
+  return [];
 }
 
 /** Клавиатура «назад в меню» — используется почти на каждом шаге */
@@ -311,6 +334,7 @@ export async function getPhotoDataUrl(env, sizes, maxBytes = 200 * 1024) {
   const candidates = sizes.slice().sort((a, b) => (b.width || 0) - (a.width || 0));
 
   let fallback = null; // самый маленький вариант — на случай, если всё больше лимита
+  let unknown = null;  // Telegram не сообщил размер — проверим фактический после скачивания
 
   for (const size of candidates) {
     let file = null;
@@ -333,12 +357,28 @@ export async function getPhotoDataUrl(env, sizes, maxBytes = 200 * 1024) {
         fileId: size.file_id
       };
     }
+    if (!bytes) {
+      if (!unknown) unknown = candidate;
+      continue;
+    }
     // запоминаем самый лёгкий вариант: если всё больше лимита, отдадим его
     if (!fallback) {
       fallback = candidate;
-    } else if (bytes && (!fallback.bytes || bytes <= fallback.bytes)) {
+    } else if (bytes <= fallback.bytes) {
       fallback = candidate;
     }
+  }
+
+  // Размер неизвестен — качаем и решаем по фактическим байтам
+  if (!fallback && unknown) {
+    const data = await downloadFile(env, unknown.file.file_path);
+    return {
+      dataUrl: `data:${mimeFromPath(unknown.file.file_path)};base64,${bytesToBase64(data)}`,
+      bytes: data.length,
+      width: unknown.size.width || 0,
+      oversized: data.length > maxBytes,
+      fileId: unknown.size.file_id
+    };
   }
 
   if (fallback) {
@@ -347,7 +387,7 @@ export async function getPhotoDataUrl(env, sizes, maxBytes = 200 * 1024) {
       dataUrl: `data:${mimeFromPath(fallback.file.file_path)};base64,${bytesToBase64(data)}`,
       bytes: data.length,
       width: fallback.size.width || 0,
-      oversized: true,
+      oversized: data.length > maxBytes,
       fileId: fallback.size.file_id
     };
   }

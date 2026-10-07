@@ -57,6 +57,13 @@ export function disciplinesListLabel() {
   return DISCIPLINE_KEYS.map((key) => DISCIPLINES[key].label).join(', ');
 }
 
+/** «Dota 2 и CS:GO» — в меню регистрации */
+export function disciplinesAndLabel() {
+  const labels = DISCIPLINE_KEYS.map((key) => DISCIPLINES[key].label);
+  if (labels.length < 2) return labels.join('');
+  return labels.slice(0, -1).join(', ') + ' и ' + labels[labels.length - 1];
+}
+
 /** Список ролей дисциплины */
 export function rolesOf(key) {
   return isDiscipline(key) ? DISCIPLINES[key].roles : [];

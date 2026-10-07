@@ -8,7 +8,7 @@
      • помощники D1 на in-memory замене (scripts/fake-d1.mjs);
      • маршрутизацию апдейтов, права администратора, секрет webhook,
        прод-режим без WEBHOOK_SECRET;
-     • логотипы: выбор размера Telegram и флаг oversized;
+     • логотипы: выбор размера Telegram и жёсткий отказ при превышении лимита;
      • ШАГ 3 — все три ветки регистрации, валидации, правки,
        дубликаты и rate limit.
    ============================================================ */
@@ -47,18 +47,22 @@ const originalFetch = globalThis.fetch;
 const allCallbackData = [];
 /** Все кнопки за прогон — проверяем, что каждая имеет текст и действие */
 const allButtons = [];
+/** Все отправленные клавиатуры — проверяем, что они не пустые */
+const allKeyboards = [];
 
 function mockTelegram(options = {}) {
   calls.length = 0;
+  const bytesOption = options.fileBytes;
+  const fileBytes = () => {
+    if (typeof bytesOption === 'function') return bytesOption();
+    if (typeof bytesOption === 'number') return new Uint8Array(bytesOption);
+    return new Uint8Array(bytesOption || [1, 2, 3, 4]);
+  };
   globalThis.fetch = async (url, init = {}) => {
     const urlStr = String(url);
     // скачивание файла (логотип)
     if (urlStr.includes('/file/bot')) {
-      return {
-        ok: true,
-        status: 200,
-        arrayBuffer: async () => new Uint8Array(options.fileBytes || [1, 2, 3, 4]).buffer
-      };
+      return { ok: true, status: 200, arrayBuffer: async () => fileBytes().buffer };
     }
     const method = urlStr.split('/').pop().split('?')[0];
     let body = null;
@@ -75,7 +79,9 @@ function mockTelegram(options = {}) {
       };
     }
     if (body && body.reply_markup) {
-      for (const row of (body.reply_markup.inline_keyboard || [])) {
+      const rows = body.reply_markup.inline_keyboard || [];
+      allKeyboards.push({ method, rows });
+      for (const row of rows) {
         for (const btn of row) {
           allButtons.push(btn);
           if (btn.callback_data) allCallbackData.push(btn.callback_data);
@@ -83,7 +89,10 @@ function mockTelegram(options = {}) {
       }
     }
     calls.push({ method, body, url: urlStr });
-    const custom = options[method];
+    // По умолчанию getFile отдаёт лёгкий логотип (80 КБ) — как обычное фото в Telegram
+    const custom = options[method] || (method === 'getFile'
+      ? async (b) => ({ file_id: b.file_id, file_size: 80 * 1024, file_path: `${b.file_id}.jpg` })
+      : null);
     const result = custom ? await custom(body) : { message_id: calls.length };
     return { ok: true, status: 200, json: async () => ({ ok: true, result }) };
   };
@@ -125,6 +134,12 @@ const messageUpdate = (id, text, extra = {}) => ({
 const photoUpdate = (id, photo) => ({
   update_id: 3,
   message: { message_id: 12, from: from(id), chat: { id }, photo }
+});
+
+/** Вложение фото от пользователя без @username */
+const photoUpdateNoUser = (id, photo) => ({
+  update_id: 3,
+  message: { message_id: 12, from: fromNoUser(id), chat: { id }, photo }
 });
 
 const callbackUpdate = (id, data) => ({
@@ -253,7 +268,9 @@ console.log('\n4. Логотип: выбор размера из Telegram');
     getFile: async (body) => {
       const sizes = { huge: 900 * 1024, tiny: 240 * 1024 };
       return { file_id: body.file_id, file_size: sizes[body.file_id], file_path: `${body.file_id}.png` };
-    }
+    },
+    /* Скачиваемый файл тоже 240 КБ: oversized считается по фактическим байтам */
+    fileBytes: 240 * 1024
   });
   const heavy = await getPhotoDataUrl({ BOT_TOKEN: 'test' }, [
     { file_id: 'huge', width: 1280 },
@@ -272,29 +289,54 @@ console.log('\n5. Роутер бота (команды, права, кнопк�
   await say(env, USER, '/start');
   const text = last();
   ok(/Compass Arena — регистрация/.test(text), '/start присылает экран регистрации');
+  ok(/Турнир: <b>Compass Arena Season 2<\/b>/.test(text), '/start показывает название турнира из настроек');
+  ok(/Дисциплины: Dota 2 и CS:GO/.test(text), '/start перечисляет дисциплины');
   const markup = JSON.stringify(messages()[0].body.reply_markup);
   ok(markup.includes('reg:disc:dota2') && markup.includes('reg:disc:csgo'), '/start показывает кнопки дисциплин (reg:disc:*)');
+}
+{
+  /* Регистрация закрыта: тексты с контактами, без кнопок дисциплин */
+  const env = baseEnv(createFakeD1({ settings: { registration_open: '0' } }));
+  mockTelegram();
+  await say(env, USER, '/start');
+  ok(/Регистрация сейчас закрыта/.test(last()), 'закрытая регистрация сообщает об этом');
+  ok(/@G0gg1a · @uuutt7/.test(last()), 'в закрытой регистрации есть контакты организаторов');
+  ok(!/reg:disc:/.test(markupSince(0)), 'кнопок дисциплин нет, пока регистрация закрыта');
+  ok(/act:help/.test(markupSince(0)), 'но справка остаётся доступной');
+
+  // и по кнопке дисциплины — отказ
+  mockTelegram();
+  await tap(env, USER, 'reg:disc:dota2');
+  ok(/закрыта/i.test(lastAnswer()), 'кнопка дисциплины при закрытой регистрации отклоняется', lastAnswer());
+  mockTelegram();
+  await say(env, USER, '/export');
+  ok(/только организаторам/.test(last()), 'служебные команды при закрытой регистрации тоже под правами');
 }
 {
   const env = baseEnv();
   mockTelegram();
   await say(env, ADMIN, '/help');
   ok(/Как проходит регистрация/.test(last()) && /\/leads/.test(last()) && /\/export/.test(last()), '/help для админа со всеми командами');
+  ok(/Для организаторов:/.test(last()), 'у админа отдельный блок «Для организаторов»');
+  ok(/Сайт: https:\/\/compass-arena-test\.pages\.dev/.test(last()) && /Связь: @G0gg1a · @uuutt7/.test(last()),
+    'в справке есть сайт и контакты');
   mockTelegram();
   await say(env, USER, '/help');
   ok(!/\/leads/.test(last()), '/help для игрока без админ-команд');
+  ok(/Свободный агент — ник, роль, ранг, описание/.test(last()), 'справка описывает три типа заявок');
 }
 {
   const env = baseEnv();
   mockTelegram();
   await say(env, USER, '/cancel');
-  ok(/Регистрация отменена/.test(last()), '/cancel сообщает об отмене и показывает меню');
+  ok(/Регистрация сброшена/.test(last()), '/cancel сообщает о сбросе и показывает меню');
 }
 {
   const env = baseEnv(createFakeD1());
   mockTelegram();
   await say(env, USER, '/чепуха');
   ok(/не поддерживается/.test(last()), 'неизвестная команда обрабатывается вежливо');
+  ok(/\/start · \/help · \/cancel/.test(last()), 'в ответе перечислены доступные команды');
 }
 
 /* ---------- /leads: права и счётчики ---------- */
@@ -312,9 +354,9 @@ console.log('\n5. Роутер бота (команды, права, кнопк�
   mockTelegram();
   await say(env, ADMIN, '/leads');
   const text = last();
-  ok(/На модерации: <b>1<\/b>/.test(text), '/leads читает счётчики из D1');
-  ok(/Одобрено: <b>1<\/b>/.test(text) && /Отклонено: <b>1<\/b>/.test(text), '/leads показывает одобренные и отклонённые');
-  ok(/Dota 2 · Команда: <b>1<\/b>/.test(text), '/leads показывает разбивку ожидающих');
+  ok(/На модерации: 1/.test(text), '/leads читает счётчики из D1');
+  ok(/Одобрено: 1/.test(text) && /Отклонено: 1/.test(text), '/leads показывает одобренные и отклонённые');
+  ok(/Dota 2 · Команда: 1/.test(text), '/leads показывает разбивку ожидающих');
 }
 {
   const env = baseEnv();
@@ -333,13 +375,13 @@ console.log('\n6. Регистрация команды (ветка A)');
 
 const DOTA_PLAYERS = [['Yatoro', '1'], ['Larl', '2'], ['Collapse', '3'], ['Mira', '4'], ['Miposhka', '5']];
 
-/** Полный проход ветки A (без логотипа) */
+/** Полный проход ветки A: имя → фото логотипа → 5 игроков с ролями */
 async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
   await say(env, userId, '/start');
   await tap(env, userId, 'reg:disc:dota2');
   await tap(env, userId, 'reg:type:team');
   await say(env, userId, name);
-  await say(env, userId, '/skip');
+  await handleUpdate(env, photoUpdate(userId, [{ file_id: 'logo', width: 800 }]));
   for (const [nick, role] of players) {
     await say(env, userId, nick);
     await tap(env, userId, 'reg:role:' + role);
@@ -353,12 +395,15 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
 
   await registerTeam(env, USER, 'Team Spirit');
   ok(/Team Spirit/.test(lastTo(USER)) && /reg:confirm/.test(markupSince(0)), 'финальная проверка показывает карточку');
+  ok(/проверка заявки/i.test(lastTo(USER)), 'карточка подписана «Проверка заявки»');
   ok(/Miposhka<\/b> — Саппорт 5/.test(lastTo(USER)), 'в карточке пятый игрок с ролью');
   ok(/1\. <b>Yatoro<\/b> — Керри/.test(lastTo(USER)), 'в карточке первый игрок с ролью');
-  ok(/Логотип: — не загружен/.test(lastTo(USER)), 'в карточке отмечено отсутствие логотипа');
+  ok(/Логотип: загружен/.test(lastTo(USER)), 'в карточке видно, что логотип загружен');
+  ok(/Капитан: <b>@tester<\/b>/.test(lastTo(USER)), 'в карточке указан капитан');
 
   await tap(env, USER, 'reg:confirm');
   ok(/отправлена на модерацию/.test(lastTo(USER)), 'заявка отправлена на модерацию');
+  ok(/Сайт: https:\/\/compass-arena-test\.pages\.dev/.test(lastTo(USER)), 'в финальном сообщении есть сайт');
 
   const lead = fake._db.lastLead();
   ok(lead.type === 'team' && lead.discipline === 'dota2' && lead.status === 'pending', 'заявка записана с типом, дисциплиной и статусом');
@@ -366,7 +411,7 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
   ok(lead.payload.players[0].nick === 'Yatoro' && lead.payload.players[0].role === 1 && lead.payload.players[0].roleLabel === 'Керри', 'первый игрок: ник, номер роли и подпись');
   ok(lead.payload.players[4].roleLabel === 'Саппорт 5' && lead.payload.players[4].role === 5, 'пятый игрок с ролью 5');
   ok(lead.payload.captainTelegramId === USER && lead.payload.captainNick === '@tester', 'капитан — отправитель заявки');
-  ok(lead.payload.logo === '' && lead.payload.logoOversized === false, 'без логотипа: пустая строка и флаг false');
+  ok(lead.payload.logo.startsWith('data:image/') && lead.payload.logoOversized === false, 'логотип сохранён, флаг oversized false');
   ok(fake._db.state(USER) === null, 'состояние пользователя сброшено');
   ok(calls.some((call) => call.method === 'sendMessage' && String(call.body.chat_id) === String(ADMIN) && /Новая заявка на команду/.test(call.body.text)), 'админ получил уведомление');
 }
@@ -381,18 +426,33 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
   await tap(env, USER, 'reg:disc:dota2');
   await tap(env, USER, 'reg:type:team');
   ok(/Шаг 1 из 7/.test(last()) && /Отмена: \/cancel/.test(last()), 'шаг 1: прогресс и напоминание об отмене');
+  ok(/Название команды \(2–30 символов\)/.test(last()), 'шаг 1 просит название и объясняет формат');
 
   let mark = marker();
   await say(env, USER, 'X');
-  ok(/Название от 2 до 30 символов/.test(textsSince(mark)), 'короткое название отклонено с понятной ошибкой');
+  ok(/Название: 2–30 символов, без спецсимволов/.test(textsSince(mark)), 'короткое название отклонено с понятной ошибкой');
   ok(fake._db.state(USER).step === 'team_name', 'после ошибки шаг не сброшен');
 
   await say(env, USER, 'Team Spirit');
+  ok(/Пришли логотип команды одним фото/.test(last()) && /Лимит: 200 КБ/.test(last()), 'шаг 2: логотип обязателен, лимит указан');
+  ok(!/reg:logo:skip/.test(markupSince(mark)), 'кнопки «Без логотипа» больше нет');
+
+  mark = marker();
+  await say(env, USER, 'вот мой логотип');
+  ok(/Нужно фото\. Пришли логотип или \/cancel\./.test(textsSince(mark)), 'текст вместо фото → «Нужно фото»');
+
+  mark = marker();
   await say(env, USER, '/skip');
-  ok(/Шаг 3 из 7/.test(last()) && /Ник игрока 1/.test(last()), 'шаг 3: запрос ника первого игрока');
+  ok(/Логотип обязателен/.test(textsSince(mark)), '/skip на шаге логотипа не работает');
+  ok(fake._db.state(USER).step === 'team_logo', 'шаг логотипа сохранён');
+
+  mark = marker();
+  await handleUpdate(env, photoUpdate(USER, [{ file_id: 'logo', width: 800 }]));
+  ok(/Логотип принят/.test(textsSince(mark)), 'после фото — подтверждение «Логотип принят»');
+  ok(/Шаг 3 из 7/.test(last()) && /Ник игрока 1 \(2–30 символов\)/.test(last()), 'шаг 3: запрос ника первого игрока');
 
   await say(env, USER, 'Yatoro');
-  ok(/Шаг 3 из 7/.test(last()) && /Выбери его роль/.test(last()), 'после ника — выбор роли');
+  ok(/Шаг 3 из 7/.test(last()) && /Выбери роль/.test(last()), 'после ника — выбор роли');
 
   mark = marker();
   await tap(env, USER, 'reg:role:1');
@@ -401,20 +461,21 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
 
   mark = marker();
   await say(env, USER, '  ');
-  ok(/Ник от 2 до 30 символов/.test(textsSince(mark)), 'пустой ник отклонён');
+  ok(/Ник: 2–30 символов\./.test(textsSince(mark)), 'пустой ник отклонён');
 
   mark = marker();
   await say(env, USER, 'yatoro');
-  ok(/Такой ник уже есть в команде/.test(textsSince(mark)), 'дубликат ника в команде отклонён (без учёта регистра)');
+  ok(/Такой ник уже есть в составе/.test(textsSince(mark)), 'дубликат ника в составе отклонён (без учёта регистра)');
   ok(fake._db.state(USER).temp.players.length === 1, 'прогресс команды сохранён после ошибок');
 }
 
-/* ---------- Логотип: oversized, принять, прислать другое ---------- */
+/* ---------- Логотип: жёсткий лимит, без «принять как есть» ---------- */
 {
   const fake = createFakeD1();
   const env = baseEnv(fake);
   mockTelegram({
-    getFile: async (body) => ({ file_id: body.file_id, file_size: 500 * 1024, file_path: body.file_id + '.jpg' })
+    getFile: async (body) => ({ file_id: body.file_id, file_size: 500 * 1024, file_path: body.file_id + '.jpg' }),
+    fileBytes: 500 * 1024
   });
 
   await say(env, USER, '/start');
@@ -425,21 +486,22 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
   let mark = marker();
   await handleUpdate(env, photoUpdate(USER, [{ file_id: 'big', width: 1280 }]));
   const oversizedText = textsSince(mark);
-  ok(/больше лимита/.test(oversizedText) && /reg:logo:accept/.test(markupSince(mark)), 'большое фото: предложение принять как есть');
-  ok(fake._db.state(USER).temp.logoOversized === true, 'флаг oversized записан в состояние');
+  ok(/Файл \d+ КБ — больше лимита 200 КБ/.test(oversizedText), 'большое фото: прямой отказ с размером и лимитом', oversizedText.slice(0, 80));
+  ok(/Сожми изображение и пришли заново/.test(oversizedText), 'просим сжать и прислать заново');
+  ok(!/reg:logo:accept/.test(markupSince(mark)) && !/Принять как есть/.test(markupSince(mark)), 'кнопки «принять как есть» больше нет');
+  ok(!fake._db.state(USER).temp.logo, 'логотип не сохранён');
+  ok(fake._db.state(USER).step === 'team_logo', 'остаёмся на шаге логотипа');
 
-  // «Прислать другое» — логотип очищается, остаёмся на шаге
-  await tap(env, USER, 'reg:logo:retry');
-  ok(fake._db.state(USER).temp.logo === '' && fake._db.state(USER).step === 'team_logo', '«прислать другое» очищает логотип и оставляет шаг');
-
-  // «Принять как есть» — идём дальше
-  await handleUpdate(env, photoUpdate(USER, [{ file_id: 'big', width: 1280 }]));
-  await tap(env, USER, 'reg:logo:accept');
-  ok(/Шаг 3 из 7/.test(last()), 'после принятия логотипа — шаг с игроком 1');
-  ok(fake._db.state(USER).temp.logoOversized === true && fake._db.state(USER).temp.logo.startsWith('data:image/'), 'логотип сохранён с флагом oversized');
+  // подходящее фото — идём дальше
+  mockTelegram({ getFile: async (body) => ({ file_id: body.file_id, file_size: 80 * 1024, file_path: body.file_id + '.jpg' }) });
+  mark = marker();
+  await handleUpdate(env, photoUpdate(USER, [{ file_id: 'ok', width: 800 }]));
+  ok(/Логотип принят/.test(textsSince(mark)), 'после подходящего фото — подтверждение', textsSince(mark).slice(0, 40));
+  ok(fake._db.state(USER).temp.logo.startsWith('data:image/'), 'логотип сохранён');
+  ok(/Шаг 3 из 7/.test(last()), 'после логотипа — шаг с игроком 1');
 }
 
-/* ---------- Кнопка «Без логотипа» ---------- */
+/* ---------- Логотип нельзя пропустить ---------- */
 {
   const fake = createFakeD1();
   const env = baseEnv(fake);
@@ -448,8 +510,9 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
   await tap(env, USER, 'reg:disc:dota2');
   await tap(env, USER, 'reg:type:team');
   await say(env, USER, 'Team Spirit');
+  ok(!/reg:logo:skip/.test(markupSince(0)), 'на шаге логотипа нет кнопки пропуска');
   await tap(env, USER, 'reg:logo:skip');
-  ok(/Шаг 3 из 7/.test(last()), 'кнопка «без логотипа» переводит к игрокам');
+  ok(fake._db.state(USER).step === 'team_logo', 'устаревшая кнопка пропуска не переводит дальше');
 }
 
 /* ---------- Меню правок ---------- */
@@ -465,7 +528,7 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
   ok(/3\. <b>Collapse<\/b>/.test(lastTo(USER)) && /Игрок 3: Collapse/.test(markupSince(markMenu)), 'в меню перечислены игроки');
 
   await tap(env, USER, 'reg:edit:player:3');
-  ok(/Игрок 3/.test(lastTo(USER)) && /Введи новый ник/.test(lastTo(USER)), 'правка игрока 3: запрос нового ника');
+  ok(/Изменение игрока 3/.test(lastTo(USER)) && /Ник \(2–30 символов\)/.test(lastTo(USER)), 'правка игрока 3: запрос нового ника');
 
   await say(env, USER, 'CollapseX');
   ok(/выбери роль/i.test(lastTo(USER)), 'после нового ника снова спрашиваем роль');
@@ -476,11 +539,11 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
 
   await tap(env, USER, 'reg:edit:name');
   await say(env, USER, 'Spirit Two');
-  ok(/Название изменено/.test(last()) && /Spirit Two/.test(last()), 'название изменено, карточка обновлена');
+  ok(/Spirit Two/.test(last()) && /проверка заявки/i.test(last()), 'название изменено, карточка обновлена');
 
   await tap(env, USER, 'reg:edit');
   await tap(env, USER, 'reg:back');
-  ok(/Проверка заявки|Что изменить/.test(last()), 'кнопка «назад» возвращает к проверке');
+  ok(/проверка заявки|Что изменить/i.test(last()), 'кнопка «назад» возвращает к проверке');
 
   await tap(env, USER, 'reg:confirm');
   ok(fake._db.lastLead().payload.name === 'Spirit Two', 'в заявку ушло изменённое название');
@@ -511,7 +574,7 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
   await registerTeam(env, USER2, 'Другая команда');
   mark = marker();
   await tap(env, USER2, 'reg:confirm');
-  ok(/не чаще одной в 5 минут/.test(textsSince(mark)), 'rate limit срабатывает на второй заявке');
+  ok(/не чаще одного раза в 5 минут/.test(textsSince(mark)), 'rate limit срабатывает на второй заявке');
   ok(fake._db.leads.length === 2, 'заявка сверх лимита не создана');
 }
 
@@ -532,13 +595,13 @@ console.log('\n6b. Ветка A: ник капитана, когда у отпр
 
   await handleUpdate(env, messageUpdateNoUser(NEWBIE, 'Team Spirit'));
   ok(/Шаг 2 из 8/.test(lastTo(NEWBIE)), 'шаг 2 из 8 — логотип');
-  await handleUpdate(env, messageUpdateNoUser(NEWBIE, '/skip'));
-  ok(/Твой ник как капитана команды/.test(lastTo(NEWBIE)) && /Шаг 3 из 8/.test(lastTo(NEWBIE)),
+  await handleUpdate(env, photoUpdateNoUser(NEWBIE, [{ file_id: 'logo', width: 800 }]));
+  ok(/Укажи ник капитана/.test(lastTo(NEWBIE)) && /Шаг 3 из 8/.test(lastTo(NEWBIE)),
     'после логотипа спрашиваем ник капитана', lastTo(NEWBIE).slice(0, 70));
 
   let mark = marker();
   await handleUpdate(env, messageUpdateNoUser(NEWBIE, 'X'));
-  ok(/Ник от 2 до 30 символов/.test(textsSince(mark)), 'короткий ник капитана отклонён');
+  ok(/Ник: 2–30 символов\./.test(textsSince(mark)), 'короткий ник капитана отклонён');
   ok(fake._db.state(NEWBIE).step === 'team_captain', 'после ошибки шаг капитана сохранён');
 
   await handleUpdate(env, messageUpdateNoUser(NEWBIE, 'Capitan'));
@@ -564,7 +627,7 @@ console.log('\n6b. Ветка A: ник капитана, когда у отпр
   await handleUpdate(env, callbackUpdateNoUser(NEWBIE, 'reg:disc:dota2'));
   await handleUpdate(env, callbackUpdateNoUser(NEWBIE, 'reg:type:team'));
   await handleUpdate(env, messageUpdateNoUser(NEWBIE, 'Team Spirit'));
-  await handleUpdate(env, messageUpdateNoUser(NEWBIE, '/skip'));
+  await handleUpdate(env, photoUpdateNoUser(NEWBIE, [{ file_id: 'logo', width: 800 }]));
   await handleUpdate(env, callbackUpdateNoUser(NEWBIE, 'reg:skip:captain'));
   ok(/Шаг 4 из 8/.test(lastTo(NEWBIE)), 'кнопка «взять ник игрока 1» ведёт к игрокам');
 
@@ -584,7 +647,7 @@ console.log('\n6b. Ветка A: ник капитана, когда у отпр
   await tap(env, USER, 'reg:disc:dota2');
   await tap(env, USER, 'reg:type:team');
   await say(env, USER, 'Team Spirit');
-  await say(env, USER, '/skip');
+  await handleUpdate(env, photoUpdate(USER, [{ file_id: 'logo', width: 800 }]));
   ok(/Шаг 3 из 7/.test(lastTo(USER)), 'с @username шага капитана нет (шаг 3 из 7)');
 }
 
@@ -600,19 +663,21 @@ console.log('\n7. Поиск команды (ветка B)');
   await say(env, USER, '/start');
   await tap(env, USER, 'reg:disc:csgo');
   await tap(env, USER, 'reg:type:looking');
-  ok(/Шаг 1 из 4/.test(last()) && /Как тебя зовут в игре/.test(last()), 'ветка B: шаг 1 — ник');
+  ok(/Шаг 1 из 4/.test(last()) && /Твой игровой ник \(2–30 символов\)/.test(last()), 'ветка B: шаг 1 — ник');
 
   await say(env, USER, 's1mple');
-  ok(/Шаг 2 из 4/.test(last()) && /На какой позиции/.test(last()), 'ветка B: шаг 2 — позиция');
+  ok(/Шаг 2 из 4/.test(last()) && /Позиция:/.test(last()), 'ветка B: шаг 2 — позиция');
 
   await tap(env, USER, 'reg:role:AWP');
-  ok(/Шаг 3 из 4/.test(last()) && /Какой у тебя ранг/.test(last()), 'ветка B: шаг 3 — ранг');
+  ok(/Шаг 3 из 4/.test(last()) && /Ранг \(до 40 символов\)/.test(last()), 'ветка B: шаг 3 — ранг');
 
   await say(env, USER, 'Premier 21 000');
-  ok(/Шаг 4 из 4/.test(last()) && /Пара слов о себе/.test(last()), 'ветка B: шаг 4 — описание');
+  ok(/Шаг 4 из 4/.test(last()) && /Кратко о себе/.test(last()), 'ветка B: шаг 4 — описание');
 
   await say(env, USER, 'Играю на AWP, свободен по вечерам');
-  ok(/Заявка принята/.test(lastTo(USER)), 'ветка B: заявка принята');
+  ok(/принята/.test(lastTo(USER)), 'ветка B: заявка принята');
+  ok(/Дисциплина: CS:GO/.test(lastTo(USER)), 'ветка B: в ответе указана дисциплина');
+  ok(/Сайт: https:\/\/compass-arena-test\.pages\.dev/.test(lastTo(USER)), 'ветка B: в ответе есть сайт');
 
   const lead = fake._db.lastLead();
   ok(lead.type === 'free_agent' && lead.discipline === 'csgo', 'тип free_agent и дисциплина csgo');
@@ -644,7 +709,7 @@ console.log('\n7. Поиск команды (ветка B)');
   await tap(env, USER, 'reg:disc:dota2');
   await tap(env, USER, 'reg:type:looking');
   await say(env, USER, 'x');
-  ok(/Ник от 2 до 30 символов/.test(textsSince(0)), 'ветка B: короткий ник отклонён');
+  ok(/Ник: 2–30 символов\./.test(textsSince(0)), 'ветка B: короткий ник отклонён');
 }
 
 /* ============================================================
@@ -662,13 +727,14 @@ console.log('\n8. Заявка игрока (ветка C)');
   ok(/Шаг 1 из 3/.test(last()) && /Твой ник/.test(last()), 'ветка C: шаг 1 — ник');
 
   await say(env, USER, 'Nightfall');
-  ok(/Шаг 2 из 3/.test(last()) && /В какой команде играешь/.test(last()), 'ветка C: шаг 2 — команда');
+  ok(/Шаг 2 из 3/.test(last()) && /Название текущей команды \(2–30 символов\)/.test(last()), 'ветка C: шаг 2 — команда');
 
   await say(env, USER, 'Virtus.pro');
-  ok(/Шаг 3 из 3/.test(last()) && /Твоя позиция/.test(last()), 'ветка C: шаг 3 — позиция');
+  ok(/Шаг 3 из 3/.test(last()) && /Позиция:/.test(last()), 'ветка C: шаг 3 — позиция');
 
   await tap(env, USER, 'reg:role:1');
-  ok(/Заявка принята/.test(lastTo(USER)), 'ветка C: заявка принята');
+  ok(/принята/.test(lastTo(USER)), 'ветка C: заявка принята');
+  ok(/Дисциплина: Dota 2/.test(lastTo(USER)), 'ветка C: в ответе указана дисциплина');
 
   const lead = fake._db.lastLead();
   ok(lead.type === 'player' && lead.discipline === 'dota2', 'тип player и дисциплина dota2');
@@ -703,7 +769,7 @@ console.log('\n9. Отмена, /skip и устаревшие кнопки');
   await tap(env, USER, 'reg:type:team');
   await say(env, USER, 'Team Spirit');
   await say(env, USER, '/cancel');
-  ok(/Регистрация отменена/.test(last()), '/cancel посреди ветки отменяет регистрацию');
+  ok(/Регистрация сброшена/.test(last()), '/cancel посреди ветки отменяет регистрацию');
   ok(fake._db.state(USER) === null, '/cancel очищает состояние');
 
   await say(env, USER, '/skip');
@@ -713,7 +779,7 @@ console.log('\n9. Отмена, /skip и устаревшие кнопки');
   await tap(env, USER, 'reg:disc:dota2');
   await tap(env, USER, 'reg:type:team');
   await say(env, USER, 'Team Spirit');
-  await say(env, USER, '/skip');
+  await handleUpdate(env, photoUpdate(USER, [{ file_id: 'logo', width: 800 }]));
   await say(env, USER, 'Yatoro');
   await tap(env, USER, 'reg:role:1');
   await say(env, USER, 'Larl');
@@ -795,16 +861,16 @@ const teamPayload = (name) => ({
   mockTelegram();
   await say(env, ADMIN, '/leads');
   const menu = lastTo(ADMIN);
-  ok(/На модерации: <b>2<\/b>/.test(menu) && /Одобрено: <b>0<\/b>/.test(menu), 'меню модерации показывает счётчики');
-  ok(/Dota 2 · Команда: <b>1<\/b>/.test(menu) && /CS:GO · Ищет команду: <b>1<\/b>/.test(menu), 'разбивка ожидающих по дисциплинам');
+  ok(/На модерации: 2/.test(menu) && /Одобрено: 0/.test(menu), 'меню модерации показывает счётчики');
+  ok(/Dota 2 · Команда: 1/.test(menu) && /CS:GO · Ищет команду: 1/.test(menu), 'разбивка ожидающих по дисциплинам');
   ok(/mod:list:new/.test(markupSince(0)) && /mod:list:approved/.test(markupSince(0)), 'кнопки списков на месте');
 
   /* --- карточка первой заявки --- */
   let mark = marker();
   await tap(env, ADMIN, 'mod:list:new');
   const card = lastTo(ADMIN);
-  ok(/Dota 2 · <b>Команда<\/b>/.test(card), 'карточка заявки: дисциплина и тип');
-  ok(/Team Spirit/.test(card) && /Miposhka<\/b> — Саппорт 5/.test(card), 'в карточке название и состав', card.slice(0, 90));
+  ok(/Dota 2 · Команда/.test(card), 'карточка заявки: дисциплина и тип');
+  ok(/Team Spirit/.test(card) && /Miposhka — Саппорт 5/.test(card), 'в карточке название и состав', card.slice(0, 90));
   ok(/@tester/.test(card) && /\(222\)/.test(card), 'в карточке автор: @username и id');
   ok(/mod:approve:1/.test(markupSince(mark)) && /mod:reject:1/.test(markupSince(mark)) && /mod:skip:1/.test(markupSince(mark)),
     'кнопки одобрить/отклонить/пропустить');
@@ -814,6 +880,7 @@ const teamPayload = (name) => ({
   ok(fake._db.leadById(1).status === 'approved', 'заявка одобрена');
   ok(fake._db.leadById(1).moderated_by === ADMIN && fake._db.leadById(1).moderated_at !== null, 'модератор и время записаны');
   ok(/одобрена/.test(lastTo(USER)) && /Team Spirit/.test(lastTo(USER)), 'автор получил уведомление об одобрении', lastTo(USER).slice(0, 70));
+  ok(/Сайт: https:\/\/compass-arena-test\.pages\.dev/.test(lastTo(USER)), 'в уведомлении об одобрении есть сайт');
   ok(/#2|AWPer|s1mple/.test(lastTo(ADMIN)), 'админу сразу показали следующую заявку', lastTo(ADMIN).slice(0, 70));
 
   /* --- повторное одобрение --- */
@@ -842,7 +909,7 @@ const teamPayload = (name) => ({
   await tap(env, ADMIN, 'mod:reject:3');
   await say(env, ADMIN, '/skip');
   ok(fake._db.leadById(3).status === 'rejected' && fake._db.leadById(3).reject_reason === null, '/skip: отклонено без причины');
-  ok(/не указана/.test(lastTo(USER2)), 'в уведомлении «не указана»', lastTo(USER2).replace(/\n/g, ' | '));
+  ok(/Причина не указана/.test(lastTo(USER2)), 'в уведомлении «Причина не указана»', lastTo(USER2).replace(/\n/g, ' | '));
 
   /* --- /cancel в середине ввода причины --- */
   fake._db.addLead({ telegramId: USER, type: 'team', discipline: 'dota2', payload: teamPayload('Cancel Test') });
@@ -851,7 +918,7 @@ const teamPayload = (name) => ({
   ok(fake._db.state(ADMIN).step === 'mod_reason', 'ожидание причины установлено');
   mark = marker();
   await say(env, ADMIN, '/cancel');
-  ok(/Ввод причины отменён/.test(textsSince(mark)), '/cancel посреди причины не падает', textsSince(mark).slice(0, 60));
+  ok(/Ввод причины сброшен/.test(textsSince(mark)), '/cancel посреди причины не падает', textsSince(mark).slice(0, 60));
   ok(fake._db.state(ADMIN) === null, 'состояние очищено после /cancel');
   ok(fake._db.leadById(4).status === 'pending', 'заявка осталась на модерации');
 
@@ -932,7 +999,7 @@ console.log('\n10b. Модерация: дубликат названия ком
   let mark = marker();
   await tap(env, ADMIN, 'mod:approve:2');
   ok(fake._db.leadById(2).status === 'pending', 'до подтверждения вторая заявка остаётся pending');
-  ok(/уже одобрена ранее/.test(lastTo(ADMIN)) && /#1/.test(lastTo(ADMIN)) && /Dota 2/.test(lastTo(ADMIN)),
+  ok(/уже одобрена \(заявка #1, Dota 2\)/.test(lastTo(ADMIN)) && /Одобрить как дубликат\?/.test(lastTo(ADMIN)),
     'показано предупреждение с номером предыдущей заявки', lastTo(ADMIN).replace(/\n/g, ' | ').slice(0, 110));
   ok(/mod:approve:2:dup/.test(markupSince(mark)), 'есть кнопка «Да, одобрить как дубликат»');
   ok(/mod:cancel:2/.test(markupSince(mark)), 'есть кнопка отмены');
@@ -946,7 +1013,7 @@ console.log('\n10b. Модерация: дубликат названия ком
   await tap(env, ADMIN, 'mod:approve:2:dup');
   ok(fake._db.leadById(2).status === 'approved', 'подтверждённый дубликат одобрен');
   ok(/одобрена/.test(lastTo(USER2)), 'автор дубликата получил уведомление');
-  ok(!calls.slice(mark).some((call) => call.method === 'sendMessage' && /уже одобрена ранее/.test(String(call.body.text || ''))),
+  ok(!calls.slice(mark).some((call) => call.method === 'sendMessage' && /уже одобрена \(заявка/.test(String(call.body.text || ''))),
     'повторного предупреждения нет');
 
   // другая дисциплина с тем же названием — это не дубликат
@@ -1038,7 +1105,7 @@ const agentLead = (id, telegramId, nick, discipline, type = 'looking_for_team') 
   let mark = marker();
   await tap(env, ADMIN, 'exp:target:both:both');
   const confirm = lastTo(ADMIN);
-  ok(/Готовлю экспорт: <b>3<\/b> команды, <b>2<\/b> агента, <b>4<\/b> файла/.test(confirm), 'подтверждение со счётчиками', confirm.slice(0, 90));
+  ok(/Готовлю экспорт: 3 команды, 2 агента, 4 файла/.test(confirm), 'подтверждение со счётчиками', confirm.slice(0, 90));
   ok(/exp:go:both:both/.test(markupSince(mark)) && /Отмена/.test(markupSince(mark)), 'кнопки «Отправить» и «Отмена»',
     markupSince(mark).slice(0, 200));
 
@@ -1093,7 +1160,7 @@ const agentLead = (id, telegramId, nick, discipline, type = 'looking_for_team') 
   let mark = marker();
   await tap(env, ADMIN, 'exp:target:dota2:teams');
   ok(lastAnswer() === 'Нет команд для экспорта', 'без одобренных команд — отказ', lastAnswer());
-  ok(/Нет команд для экспорта/.test(lastTo(ADMIN)), 'и понятное сообщение в чате', lastTo(ADMIN).slice(0, 60));
+  ok(/Нет одобренных команд для экспорта/.test(lastTo(ADMIN)), 'и понятное сообщение в чате', lastTo(ADMIN).slice(0, 60));
   ok(!calls.slice(mark).some((call) => call.method === 'sendDocument'), 'файлы не отправляются');
 
   // но настройки без команд экспортировать можно
@@ -1133,6 +1200,14 @@ console.log('\n12. Безопасность callback_data');
   const broken = allButtons.filter((btn) => !btn.text || (!btn.url && !btn.callback_data));
   ok(broken.length === 0, 'все кнопки имеют текст и действие', broken.slice(0, 3));
   ok(allButtons.length > 80, 'кнопки действительно проверены', allButtons.length);
+
+  // Пустая клавиатура у сообщения означает, что строка кнопок «потерялась» при сборке.
+  // Исключение — editMessageReplyMarkup: им мы осознанно снимаем кнопки у обработанной карточки.
+  const empties = allKeyboards
+    .filter((k) => k.method !== 'editMessageReplyMarkup')
+    .filter((k) => !k.rows.length || k.rows.some((row) => !row.length));
+  ok(empties.length === 0, 'во всех сообщениях есть кнопки, если клавиатура передана', empties.slice(0, 2));
+  ok(allKeyboards.length > 40, 'клавиатуры действительно проверены', allKeyboards.length);
 }
 
 /* ============================================================
