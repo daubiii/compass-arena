@@ -27,6 +27,12 @@ import * as exportHandler from './handlers/export.js';
 /** Порядок важен: /start и /cancel перехватываются первыми */
 const HANDLERS = [startHandler, registrationHandler, moderationHandler, exportHandler];
 
+/**
+ * Версия сборки. Видна в ответе GET / — по ней сразу понятно,
+ * доехал ли до Cloudflare последний деплой (меняется вручную при выкладке).
+ */
+export const BUILD_VERSION = '1.1.0';
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -44,6 +50,7 @@ export default {
       return json({
         ok: healthy,
         service: 'compass-arena-bot',
+        version: BUILD_VERSION,
         time: new Date().toISOString(),
         db,
         adminConfigured: Boolean(env.ADMIN_ID),

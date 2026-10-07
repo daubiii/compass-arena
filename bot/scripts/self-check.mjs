@@ -1276,8 +1276,9 @@ console.log('\n13. Webhook: секрет и прод-режим');
     ok(body.botTokenConfigured === true && body.adminConfigured === true && body.webhookSecretConfigured === true,
       `в ответе ${path} секреты отражены только флагами true/false`);
     ok(Object.keys(body).sort().join(',') ===
-      'adminConfigured,botTokenConfigured,db,ok,service,time,webhookSecretConfigured',
+      'adminConfigured,botTokenConfigured,db,ok,service,time,version,webhookSecretConfigured',
       `в ответе ${path} только ожидаемые поля`, Object.keys(body).sort().join(','));
+    ok(/^\d+\.\d+\.\d+$/.test(body.version), `в ответе ${path} есть версия сборки`, body.version);
     ok(body.db.ok === true && typeof body.db.leads === 'number' && Object.keys(body.db).length === 2,
       `в блоке db только ok и счётчик`, body.db);
   }
