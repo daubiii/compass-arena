@@ -28,7 +28,7 @@ enabled = true
 [[d1_databases]]
 binding = "DB"
 database_name = "compass-arena-bot"
-database_id = "ПОДСТАВЬ_DATABASE_ID_ИЗ_wrangler_d1_create"
+database_id = "84c681ea-ea0c-4a6f-8fb9-91b73cb2d481"
 
 # ------------------------------------------------------------
 # Публичные переменные окружения
