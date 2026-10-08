@@ -391,7 +391,7 @@
     } else {
       roster = '<div class="now-empty">' +
         '<p>Составы нового сезона ещё не объявлены. Как только команды подтвердят участие, они появятся здесь, а сетка — на главной.</p>' +
-        '<a class="btn btn-ghost btn-sm" href="https://t.me/compassarenaa" target="_blank" rel="noopener">' + 'Подать заявку</a></div>';
+        '<a class="btn btn-ghost btn-sm" href="https://t.me/CompassArenaReg_bot" target="_blank" rel="noopener">' + 'Подать заявку в боте</a></div>';
     }
 
     var lead;

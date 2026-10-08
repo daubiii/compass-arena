@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Правила турнира — Compass Arena</title>
-<meta name="description" content="Регламент турнира Compass Arena по Dota 2: регистрация, чек-ин, неявка, формат матчей, спорные ситуации.">
+<meta name="description" content="Регламент Compass Arena: регистрация команд через Telegram-бота, чек-ин, неявка, формат матчей, спорные ситуации.">
 <meta name="theme-color" content="#08090c">
 <link rel="canonical" href="https://compassarena.ru/rules.html">
 
@@ -17,7 +17,7 @@
 <meta property="og:site_name" content="Compass Arena">
 <meta property="og:locale" content="ru_RU">
 <meta property="og:title" content="Правила турнира — Compass Arena">
-<meta property="og:description" content="Регистрация, чек-ин, неявка, формат матчей и спорные ситуации.">
+<meta property="og:description" content="Регистрация команд через Telegram-бота, чек-ин, неявка, формат матчей и спорные ситуации.">
 <meta property="og:image" content="https://compassarena.ru/img/og-image.jpg">
 <meta property="og:url" content="https://compassarena.ru/rules.html">
 <meta name="twitter:card" content="summary_large_image">
@@ -140,14 +140,16 @@
 <main id="main">
   <section class="page-hero arena">
     <div class="wrap">
-      <p class="kicker">Регламент · Dota 2 · Bo3</p>
+      <p class="kicker">Регламент · Dota 2 и CS:GO · Bo3</p>
       <h1>Правила турнира</h1>
-      <p class="lead">Compass Arena — шесть команд, серии до двух побед, все матчи в прямом эфире. Регламент дополняется: если вопроса нет ниже — напишите организаторам, ответ попадёт и в этот документ.</p>
+      <p class="lead">Регистрация команд и игроков идёт через Telegram-бота. Compass Arena — серии до двух побед, все матчи в прямом эфире. Регламент дополняется: если вопроса нет ниже — напишите организаторам, ответ попадёт и в этот документ.</p>
       <div class="facts">
         <span class="st st-gold"><svg class="ic" aria-hidden="true"><use href="#i-users"></use></svg>6 команд</span>
         <span class="st st-done"><svg class="ic" aria-hidden="true"><use href="#i-swords"></use></svg>Bo3, до двух побед</span>
+        <span class="st"><svg class="ic" aria-hidden="true"><use href="#i-telegram"></use></svg>Регистрация в боте</span>
         <span class="st"><svg class="ic" aria-hidden="true"><use href="#i-tv"></use></svg>Все матчи в эфире</span>
       </div>
+      <p style="margin-top:18px"><a class="btn btn-gold" href="https://t.me/CompassArenaReg_bot" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-telegram"></use></svg>Регистрация в боте</a></p>
     </div>
   </section>
 
@@ -169,12 +171,17 @@
         <div class="n">01</div>
         <h2>Регистрация и чек-ин</h2>
         <div class="body">
-          <p>Регистрация проходит по форме регистрации команд в Telegram-канале турнира. Заполненную форму нужно отправить в личные сообщения организатору <a href="https://t.me/G0gg1a" target="_blank" rel="noopener">@G0gg1a</a>.</p>
+          <p>Регистрация проходит в Telegram-боте <a href="https://t.me/CompassArenaReg_bot" target="_blank" rel="noopener">@CompassArenaReg_bot</a>. Открой бота, нажми <b>/start</b>, выбери дисциплину и подходящий тип заявки — дальше бот сам поведёт по шагам. Отправлять форму организатору вручную не нужно.</p>
           <ul>
-            <li>Заявки принимаются до объявленной даты закрытия регистрации.</li>
+            <li><b>Команда</b> — название, логотип и состав из 5 игроков с ролями. На каждом шаге бот показывает, что вводить, а перед отправкой даёт карточку проверки с меню правок.</li>
+            <li><b>Ищет команду</b> — свободный агент: ник, позиция, ранг и короткое описание. Капитаны увидят заявку после модерации.</li>
+            <li><b>Заявка игрока</b> — ник, текущая команда и позиция. Так заявляются игроки, которые уже в составе.</li>
+            <li>Пошаговая справка по боту — команда <b>/help</b>. Шаг можно пройти заново: <b>/cancel</b> сбрасывает текущую регистрацию, <b>/skip</b> пропускает необязательные поля.</li>
+            <li>Заявки принимаются до объявленной даты закрытия регистрации, каждая проходит ручную модерацию организаторов. Решение приходит сообщением в тот же чат с ботом.</li>
             <li>Полный состав команды (5 игроков) нужно подтвердить организатору не позднее чем за 24 часа до первого матча.</li>
             <li>Каждая команда обязана пройти чек-ин за 15 минут до назначенного времени своего матча — любым удобным способом связи с организатором.</li>
             <li>Замена игрока в составе после начала турнира согласовывается с организатором отдельно.</li>
+            <li>Если бот не отвечает или заявка не проходит — напишите организаторам: <a href="https://t.me/G0gg1a" target="_blank" rel="noopener">@G0gg1a</a>, <a href="https://t.me/uuutt7" target="_blank" rel="noopener">@uuutt7</a>.</li>
           </ul>
         </div>
       </article>
@@ -235,9 +242,10 @@
       <div class="contacts-card reveal">
         <div>
           <h2>Контакты организаторов</h2>
-          <p>По всем вопросам, связанным с турниром, пишите в Telegram — отвечаем в течение дня.</p>
+          <p>Регистрация — в <a href="https://t.me/CompassArenaReg_bot" target="_blank" rel="noopener">боте @CompassArenaReg_bot</a>. По остальным вопросам турнира пишите в Telegram — отвечаем в течение дня.</p>
         </div>
         <div class="contact-list">
+          <a class="btn btn-gold" href="https://t.me/CompassArenaReg_bot" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-telegram"></use></svg>Бот регистрации</a>
           <a class="btn btn-ghost" href="https://t.me/G0gg1a" target="_blank" rel="noopener">@G0gg1a</a>
           <a class="btn btn-ghost" href="https://t.me/uuutt7" target="_blank" rel="noopener">@uuutt7</a>
           <a class="btn btn-ghost" href="https://t.me/maushury" target="_blank" rel="noopener">@maushury</a>

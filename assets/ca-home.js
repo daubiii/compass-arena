@@ -319,7 +319,7 @@
         '<div class="te-body"><h3 class="h3">Идёт регистрация команд</h3>' +
         '<p class="lead-sm">Составы нового сезона ещё собираются. Как только команды подтвердят участие, они появятся здесь, ' +
         'а на этой странице откроется турнирная сетка.</p></div>' +
-        '<a class="btn btn-gold" href="https://t.me/compassarenaa" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку</a>' +
+        '<a class="btn btn-gold" href="https://t.me/CompassArenaReg_bot" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку в боте</a>' +
         '</div>';
       U.observeReveals(grid);
       return;
@@ -386,7 +386,7 @@
     var ns = d.nextSeason || {};
     var title = ns.name || 'Compass Arena · второй сезон';
     var when = ns.date ? D.fmtDateTime(new Date(ns.date).getTime()) : '';
-    var note = ns.note || 'Мы готовим следующий турнир: больше команд, полноценная сетка с нижней частью и призовой фонд. Заявки — в Telegram организации.';
+    var note = ns.note || 'Мы готовим следующий турнир: больше команд, полноценная сетка с нижней частью и призовой фонд. Заявки — через Telegram-бота регистрации.';
     body.innerHTML =
       '<div class="ns-grid">' +
         '<div class="ns-main">' +
@@ -395,7 +395,7 @@
           '<p class="lead">' + esc(note) + '</p>' +
           (when ? '<div class="ns-when">' + ic('calendar') + '<span>Ориентир — <b>' + esc(when) + '</b></span></div>' : '') +
           '<div class="row" style="margin-top:26px">' +
-            '<a class="btn btn-gold" href="' + esc(ns.url || 'https://t.me/compassarenaa') + '" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку</a>' +
+            '<a class="btn btn-gold" href="' + esc(ns.url || 'https://t.me/CompassArenaReg_bot') + '" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку в боте</a>' +
             '<a class="btn btn-ghost" href="/rules.html">' + ic('shield') + 'Регламент</a>' +
           '</div>' +
         '</div>' +
