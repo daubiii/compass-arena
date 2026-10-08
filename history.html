@@ -76,7 +76,6 @@
 .h-sec-head .h2 { margin-bottom: 0; }
 .h-note { color: var(--text-2); font-size: 15px; max-width: 56ch; justify-self: end; }
 .h-eyebrow { color: var(--text-3); font-size: 12.5px; letter-spacing: .02em; margin-bottom: 16px; }
-.h-eyebrow .ic { font-size: 14px; color: var(--gold); }
 
 /* ---------- Текущая глава ---------- */
 .now { position: relative; padding-top: 84px; padding-bottom: 84px; }
@@ -105,32 +104,21 @@
 /* ---------- Глава архива ---------- */
 .ch { position: relative; padding: 78px 0 0; }
 .ch, .now { scroll-margin-top: calc(var(--head-h) + 76px); }
-.ch-title { margin-bottom: 30px; }
+.ch-title { margin-bottom: 34px; }
 .ch-title h2 { font-family: var(--display); font-weight: 300; font-size: clamp(28px, 4vw, 52px); line-height: 1.05; letter-spacing: -.02em; overflow-wrap: anywhere; }
 .ch-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 
-.ch-cover { position: relative; border-radius: var(--r-xl); overflow: hidden; min-height: 340px; height: min(72vh, 680px); }
-.ch-cover img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.05); transition: transform 5s var(--ease-out); }
-.ch-cover.in img { transform: scale(1); }
-.ch-cover .ch-shade { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(4,5,7,.9) 0%, rgba(4,5,7,.2) 44%, rgba(4,5,7,0) 72%); }
-.ch-cover .ch-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: clamp(20px, 3.6vw, 44px); z-index: 1; }
-.ch-tag { display: inline-flex; align-items: center; gap: 9px; font-size: 12.5px; letter-spacing: .06em; color: var(--gold-hi); margin-bottom: 14px; }
-.ch-tag i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
-.ch-cap .champ { font-family: var(--display); font-weight: 400; font-size: clamp(24px, 3.8vw, 48px); line-height: 1.05; overflow-wrap: anywhere; }
-.ch-cap .runner { margin-top: 10px; font-size: 14px; color: var(--text-2); }
-.ch-cap .runner b { color: var(--text); font-weight: 500; }
-
-.ch-cover.is-flat { display: flex; align-items: center; justify-content: center; text-align: center; background: linear-gradient(160deg, var(--card), var(--raise)); border: 1px solid var(--line); }
-.ch-cover.is-flat .flat-num { position: absolute; font-family: var(--display); font-weight: 200; font-size: clamp(150px, 22vw, 380px); line-height: 1; color: transparent; -webkit-text-stroke: 1px var(--line-2); user-select: none; }
-.ch-cover.is-flat .ch-cap { position: relative; }
-
-.ch-story { display: grid; grid-template-columns: 1fr 1fr; gap: 46px; align-items: start; padding-top: 46px; }
-.ch-block .h-eyebrow { margin-bottom: 18px; }
-.ch-champ-name { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 2.8vw, 32px); line-height: 1.15; margin-bottom: 18px; overflow-wrap: anywhere; }
-.ch-roster { display: flex; flex-wrap: wrap; gap: 8px; }
-.ch-player { display: inline-flex; align-items: baseline; gap: 9px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; font-size: 13.5px; background: var(--raise); }
-.ch-player b { font-weight: 500; }
-.ch-player span { color: var(--text-3); font-size: 11.5px; }
+/* Заголовки блоков внутри главы — обычный текст, без иконок */
+.ch-h { font-family: var(--ui); font-weight: 500; font-size: 15px; color: var(--text); margin-bottom: 16px; }
+.ch-k { font-size: 13px; color: var(--text-3); margin-bottom: 12px; }
+.ch-story { display: grid; grid-template-columns: 1.1fr .9fr; gap: 56px; align-items: start; padding-top: 52px; }
+.ch-champ-name { font-family: var(--display); font-weight: 300; font-size: clamp(26px, 3.4vw, 44px); line-height: 1.08; letter-spacing: -.02em; color: var(--gold-hi); overflow-wrap: anywhere; }
+.ch-champ-name.is-runner { color: var(--text); font-size: clamp(20px, 2.4vw, 28px); }
+.ch-final { margin-top: 10px; font-size: 14px; color: var(--text-2); }
+.ch-roster { list-style: none; margin-top: 24px; max-width: 420px; border-top: 1px solid var(--line); }
+.ch-roster li { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 11px 2px; border-bottom: 1px solid var(--line); }
+.ch-roster b { font-weight: 500; font-size: 15px; }
+.ch-roster span { color: var(--text-3); font-size: 13px; }
 .ch-quiet { color: var(--text-3); font-size: 14px; }
 
 .ch-mvp { border-left: 2px solid var(--gold); padding-left: 22px; }
@@ -151,8 +139,9 @@
 .ch-row .score { font-family: var(--display); font-weight: 400; font-size: 15px; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
 .ch-row .sides { font-size: 12px; color: var(--text-3); }
 
-.ch-gallery { padding-top: 46px; }
-.ch-end { padding: 52px 0; }
+.ch-gallery { padding-top: 56px; }
+.g-item .g-cap, .g-item.is-lead .g-cap { text-align: left; }
+.ch-end { padding: 64px 0 0; }
 .ch-end .rule { height: 1px; background: var(--line); }
 
 /* ---------- Разделение турниров ---------- */
@@ -227,7 +216,6 @@
   .h-figures { grid-template-columns: 1fr 1fr; gap: 16px 20px; margin-top: 34px; }
   .h-sec { padding: 62px 0; }
   .ch { padding-top: 56px; }
-  .ch-cover { height: 48vh; border-radius: var(--r-lg); }
   .ch-row { grid-template-columns: 1fr; gap: 6px; padding: 14px 2px; }
   .h-mvp-grid { grid-template-columns: 1fr; }
 }

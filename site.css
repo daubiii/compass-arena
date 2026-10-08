@@ -807,23 +807,33 @@ body[data-phase="live"] .head-live { display: inline-flex; }
 /* ==========================================================
    16. ГАЛЕРЕЯ
    ========================================================== */
-.g-grid { display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: 130px; gap: 10px; }
-.g-item { position: relative; overflow: hidden; border-radius: var(--r-md); cursor: zoom-in; grid-column: span 3; grid-row: span 2; background: var(--raise); }
-.g-grid.n1 .g-item { grid-column: span 6; grid-row: span 4; }
-.g-grid.n2 .g-item { grid-column: span 3; grid-row: span 3; }
-.g-grid.n3 .g-item:first-child { grid-column: span 6; grid-row: span 3; }
-.g-grid.n4 .g-item:nth-child(1) { grid-column: span 4; grid-row: span 3; }
-.g-grid.n4 .g-item:nth-child(2) { grid-column: span 2; grid-row: span 3; }
-.g-grid.n4 .g-item:nth-child(3), .g-grid.n4 .g-item:nth-child(4) { grid-column: span 3; grid-row: span 2; }
-.g-item img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease-out); }
-.g-item:hover img { transform: scale(1.05); }
+/* Кадры показываются целиком: ширина ячейки пропорциональна соотношению сторон (--ar задаёт JS),
+   поэтому ряды получаются одной высоты, а лица не режутся. --row — целевая высота ряда. */
+.g-flow { --row: 280px; display: flex; flex-wrap: wrap; gap: 10px; }
+.g-flow::after { content: ''; flex: 1000 1 0; }
+.g-flow.n1 { --row: 520px; }
+.g-flow.n2 { --row: 380px; }
+.g-item { position: relative; overflow: hidden; border-radius: var(--r-md); cursor: zoom-in; background: var(--raise);
+  --ar: 1.5; flex: calc(var(--ar) * 10) 1 calc(var(--ar) * var(--row)); aspect-ratio: var(--ar); max-width: 100%; }
+.g-img { display: block; width: 100%; height: 100%; object-fit: contain; transition: transform .6s var(--ease-out); }
+.g-item:hover .g-img { transform: scale(1.03); }
 .g-item .g-cap {
   position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 14px;
-  font-size: 12.5px; color: var(--text);
+  font-size: 12.5px; color: var(--text); text-align: left;
   background: linear-gradient(0deg, rgba(4, 5, 7, .88), transparent);
   opacity: 0; transition: opacity .25s;
 }
-.g-item:hover .g-cap { opacity: 1; }
+.g-item:hover .g-cap, .g-item:focus-visible .g-cap { opacity: 1; }
+
+/* Главный кадр: целиком, на размытой подложке из самого кадра */
+.g-flow.is-lead { display: block; }
+.g-flow.is-lead::after { display: none; }
+.g-item.is-lead { display: block; width: 100%; aspect-ratio: auto; border-radius: var(--r-lg); background: none; overflow: visible; }
+.g-item.is-lead .g-frame { position: relative; display: grid; place-items: center; overflow: hidden; border-radius: var(--r-lg); background: var(--raise); }
+.g-item.is-lead .g-bg { position: absolute; inset: -8%; width: 116%; height: 116%; object-fit: cover; filter: blur(34px) brightness(.55) saturate(1.1); }
+.g-item.is-lead .g-img { position: relative; width: auto; height: auto; max-width: 100%; max-height: min(78vh, 760px); }
+.g-item.is-lead:hover .g-img { transform: none; }
+.g-item.is-lead .g-cap { position: static; opacity: 1; padding: 12px 2px 0; background: none; color: var(--text-2); }
 
 /* ==========================================================
    17. АРХИВ / ТАБЛИЦЫ
@@ -920,9 +930,8 @@ body[data-phase="live"] .head-live { display: inline-flex; }
   .s-side { justify-content: space-between; width: 100%; }
   .champ-chip { left: 14px; bottom: 14px; right: auto; padding: 9px 14px; }
   .foot-grid { grid-template-columns: 1fr; gap: 26px; }
-  .g-grid, .g-grid.n1, .g-grid.n2, .g-grid.n3, .g-grid.n4 { grid-template-columns: repeat(2, 1fr); }
-  .g-grid .g-item, .g-grid.n1 .g-item, .g-grid.n2 .g-item,
-  .g-grid.n3 .g-item:first-child, .g-grid.n4 .g-item:nth-child(n) { grid-column: span 1; grid-row: span 2; }
+  .g-flow, .g-flow.n1, .g-flow.n2 { --row: 170px; gap: 8px; }
+  .g-item:not(.is-lead) .g-cap { display: none; }
   .stream-inner { padding: 16px; gap: 10px; }
   .stream-inner .mark { display: none; }
   .stream-inner p { font-size: 13px; margin-bottom: 4px; }
