@@ -1,14 +1,14 @@
 /* ============================================================
    /start, /help, /cancel — меню и общие команды
    ------------------------------------------------------------
-   Здесь же живёт showMainMenu() — экран выбора дисциплины,
-   который переиспользуют другие обработчики.
+   Первый экран собирается в texts.js (welcomeText), чтобы текст
+   правился в одном месте и не обрезался при правках здесь.
    ============================================================ */
 
 import { sendMessage, answerCallbackQuery, inlineKeyboard } from '../lib/telegram.js';
 import { resetState, isRegistrationOpen, getState } from '../lib/db.js';
 import { DISCIPLINES, DISCIPLINE_KEYS } from '../lib/domain.js';
-import { contactsBlock, registrationClosedText } from '../lib/texts.js';
+import { contactsBlock, registrationClosedText, welcomeText } from '../lib/texts.js';
 
 export const commands = ['start', 'help', 'cancel'];
 export const callbackPrefixes = ['act']; // обрабатываем только act:menu, остальное — registration.js
@@ -37,16 +37,8 @@ export async function showMainMenu(env, chatId, userId, intro = '') {
   }]));
   rows.push([{ text: 'ℹ️ Справка', data: 'act:help' }]);
 
-  const welcome = [
-    '🏆 <b>Compass Arena — Регистрация открыта!</b>',
-    '',
-    'Турнир по Dota 2 и CS:GO для любителей.',
-    'Специально созданный бот для регистрации команд. Впиши /help, и ты увидишь весь его потенциал!',
-    '',
-    '⚙️ <b>Как участвовать:</b>'
-  ].join('\n');
-
-  const text = [intro, welcome].filter(Boolean).join('\n\n');
+  // Полный текст приветствия живёт в texts.js — здесь только подстановка
+  const text = [intro, welcomeText()].filter(Boolean).join('\n\n');
   await sendMessage(env, chatId, text, { keyboard: inlineKeyboard(rows) });
 }
 

@@ -28,7 +28,7 @@
 
     if (d.phase === 'post') {
       var champ = d.champion;
-      kicker.innerHTML = ic('champion') + ' Турнир завершён';
+      kicker.innerHTML = ic('trophy') + ' Турнир завершён';
       title.innerHTML = champ ? (esc(champ.name) + ' забирает<br><em>первый трофей</em>') : 'Турнир завершён';
       lede.textContent = 'Финал сыгран. Ниже — итоги, сетка и хроника турнира. Следующий сезон Compass Arena уже готовится.';
       cta.innerHTML =
@@ -63,7 +63,7 @@
       var grand = d.grandFinal;
       var sc = grand && grand.score1 != null ? grand.score1 + ':' + grand.score2 : '';
       box.innerHTML = '<div class="nm is-post">' +
-        '<div class="nm-label">' + ic('champion') + 'Турнир завершён</div>' +
+        '<div class="nm-label">' + ic('trophy') + 'Турнир завершён</div>' +
         '<div class="nm-teams">Чемпион — <span class="win">' + esc(d.champion ? d.champion.name : '—') + '</span></div>' +
         '<div class="nm-meta">' + esc(D.stageLabel(grand)) +
           (d.runnerUp ? ' · финал против ' + esc(d.runnerUp.name) : '') +
@@ -205,7 +205,7 @@
         play.removeAttribute('data-play-stream');
         play.innerHTML = '<span class="ring">' + ic('play') + '</span><span><b>Записи на Twitch</b><small>полный архив трансляций</small></span>';
       }
-      if (next) next.innerHTML = '<a class="text-link" href="/history.html">' + ic('champion') + ' Хроника турнира</a>';
+      if (next) next.innerHTML = '<a class="text-link" href="/history.html">' + ic('trophy') + ' Хроника турнира</a>';
       return;
     }
 
@@ -319,7 +319,7 @@
         '<div class="te-body"><h3 class="h3">Идёт регистрация команд</h3>' +
         '<p class="lead-sm">Составы нового сезона ещё собираются. Как только команды подтвердят участие, они появятся здесь, ' +
         'а на этой странице откроется турнирная сетка.</p></div>' +
-        '<a class="btn btn-gold" href="https://t.me/compassarenaa" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку</a>' +
+        '<a class="btn btn-gold" href="https://t.me/CompassArenaReg_bot" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку в боте</a>' +
         '</div>';
       U.observeReveals(grid);
       return;
@@ -334,7 +334,7 @@
         ? t.players.map(function (p) { return esc(p.nick || '—'); }).join(' · ')
         : 'Состав уточняется';
       var mark = '';
-      if (d.champion && d.champion.id === t.id) mark = '<span class="st st-gold">' + ic('champion') + 'Чемпион</span>';
+      if (d.champion && d.champion.id === t.id) mark = '<span class="st st-gold">' + ic('trophy') + 'Чемпион</span>';
       else if (d.runnerUp && d.runnerUp.id === t.id) mark = '<span class="st st-done">Серебро</span>';
       else if (rec.out) mark = '<span class="st st-flag">Выбыла в M' + rec.out + '</span>';
       return '<button class="team-card reveal" data-team="' + t.id + '" type="button">' +
@@ -386,7 +386,7 @@
     var ns = d.nextSeason || {};
     var title = ns.name || 'Compass Arena · второй сезон';
     var when = ns.date ? D.fmtDateTime(new Date(ns.date).getTime()) : '';
-    var note = ns.note || 'Мы готовим следующий турнир: больше команд, полноценная сетка с нижней частью и призовой фонд. Заявки — в Telegram организации.';
+    var note = ns.note || 'Мы готовим следующий турнир: больше команд, полноценная сетка с нижней частью и призовой фонд. Заявки — через Telegram-бота регистрации.';
     body.innerHTML =
       '<div class="ns-grid">' +
         '<div class="ns-main">' +
@@ -395,7 +395,7 @@
           '<p class="lead">' + esc(note) + '</p>' +
           (when ? '<div class="ns-when">' + ic('calendar') + '<span>Ориентир — <b>' + esc(when) + '</b></span></div>' : '') +
           '<div class="row" style="margin-top:26px">' +
-            '<a class="btn btn-gold" href="' + esc(ns.url || 'https://t.me/compassarenaa') + '" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку</a>' +
+            '<a class="btn btn-gold" href="' + esc(ns.url || 'https://t.me/CompassArenaReg_bot') + '" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку в боте</a>' +
             '<a class="btn btn-ghost" href="/rules.html">' + ic('shield') + 'Регламент</a>' +
           '</div>' +
         '</div>' +

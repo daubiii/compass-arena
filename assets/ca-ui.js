@@ -69,9 +69,10 @@
     '<symbol id="i-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5 7.5 12l7.5 7.5"/></symbol>',
     '<symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5 16.5 12 9 19.5"/></symbol>',
 
+    '<symbol id="i-photo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">',
+    '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M4 17l4.5-4.5 4 4 3-2.5L20 18"/></symbol>',
 
     '<symbol id="i-star" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.8l6.1-.9z"/></symbol>',
-
 
     '<symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l8 2.9v6c0 4.9-3.4 8.1-8 9.5-4.6-1.4-8-4.6-8-9.5v-6z"/><path d="M8.6 12.2l2.4 2.4 4.4-4.6"/></symbol>',
 
@@ -86,15 +87,14 @@
     '<symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="8.5" r="3.2"/><path d="M3.8 19.5c.7-3.4 3-5.2 5.7-5.2s5 1.8 5.7 5.2"/><path d="M16.2 6.1a3 3 0 0 1 0 5.6M17 14.6c2 .5 3.4 2.2 3.8 4.9" opacity=".6"/></symbol>',
     '<symbol id="i-tv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="4.5" width="18.4" height="12.5" rx="2.4"/><path d="M8.5 20.5h7M12 17v3.5"/></symbol>',
     '<symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 20.5V4M5.5 5.5h11l-2.2 3.4 2.2 3.4h-11"/></symbol>',
+    '<symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6.5h12M8 12h12M8 17.5h12M4 6.5h.01M4 12h.01M4 17.5h.01"/></symbol>',
 
     /* ---- Авторский набор «Архив»: всё построено на стрелке компаса ---- */
     '<symbol id="i-champion" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"><path d="M12 2.5 16 12 12 21.5 8 12z"/><path d="M12 2.5 16 12H8z" fill="currentColor"/><path d="M3.5 12h4M16.5 12h4" /></symbol>',
     '<symbol id="i-finalist" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"><path d="M12 2.5 16 12 12 21.5 8 12z"/><path d="M12 21.5 8 12h8z" fill="currentColor"/><path d="M3.5 12h4M16.5 12h4" /></symbol>',
     '<symbol id="i-mvp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><path d="M12 5.5 14.4 12 12 18.5 9.6 12z" fill="currentColor"/><path d="M12 1.6v2M12 20.4v2M1.6 12h2M20.4 12h2"/></symbol>',
     '<symbol id="i-route" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"><circle cx="4.8" cy="19" r="1.9"/><path d="M6.6 18.2C11.5 16.5 8.5 10.8 13 9.8c3-.7 3.2-2.6 4-3.6" stroke-dasharray="1.2 2.6"/><path d="M19 2.4l2.6 2.6L19 7.6 16.4 5z" fill="currentColor"/></symbol>',
-    '<symbol id="i-frame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"><path d="M3.5 8.5v-5h5M15.5 3.5h5v5M20.5 15.5v5h-5M8.5 20.5h-5v-5"/><path d="M12 9.2 14.8 12 12 14.8 9.2 12z" fill="currentColor"/></symbol>',
-
-    '<symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6.5h12M8 12h12M8 17.5h12M4 6.5h.01M4 12h.01M4 17.5h.01"/></symbol>'
+    '<symbol id="i-frame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"><path d="M3.5 8.5v-5h5M15.5 3.5h5v5M20.5 15.5v5h-5M8.5 20.5h-5v-5"/><path d="M12 9.2 14.8 12 12 14.8 9.2 12z" fill="currentColor"/></symbol>'
   ].join('') + '</svg>';
 
   function injectSprite() {

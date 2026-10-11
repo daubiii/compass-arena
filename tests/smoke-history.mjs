@@ -182,19 +182,27 @@ console.log('\nhistory.html — архив из двух турниров');
   ok(rows[rows.length - 1].querySelector('.win').textContent.includes('Gaimin Gladiators'), 'победитель гранд-финала');
   ok(rows[rows.length - 1].querySelector('.lose').textContent.includes('Team Spirit'), 'проигравший гранд-финала');
 
-  // обложки: фото и типографика
-  ok(!!ch1.querySelector('.ch-cover img'), 'обложка первой главы — фото');
-  ok(ch1.querySelector('.ch-cover img').getAttribute('alt').length > 0, 'alt обложки заполнен', ch1.querySelector('.ch-cover img').getAttribute('alt'));
-  ok(ch1.querySelector('.ch-cover img').getAttribute('src').includes('s1-cover.jpg'), 'первое фото стало обложкой');
+  // главный кадр главы и галерея остальных кадров
+  const lead1 = ch1.querySelector('.g-flow.is-lead');
+  ok(!!lead1, 'главный кадр первой главы отрисован');
+  const leadImg1 = lead1 && lead1.querySelector('img.g-img');
+  ok(!!leadImg1 && leadImg1.getAttribute('alt').length > 0, 'у главного кадра осмысленный alt', leadImg1 && leadImg1.getAttribute('alt'));
+  ok(!!leadImg1 && leadImg1.getAttribute('src').includes('s1-cover.jpg'), 'первое фото стало главным кадром', leadImg1 && leadImg1.getAttribute('src'));
+  const bg1 = lead1 && lead1.querySelector('img.g-bg');
+  ok(!!bg1 && bg1.getAttribute('aria-hidden') === 'true', 'под главным кадром размытая подложка без alt');
 
-  // галереи: обложка исключается из галереи
-  const g1 = ch1.querySelector('.g-flow');
-  const g2 = ch2.querySelector('.g-flow');
-  ok(!!g1 && g1.querySelectorAll('.g-item').length === 1, 'галерея первой главы — 1 кадр', g1 && g1.querySelectorAll('.g-item').length);
-  ok(!!g2 && g2.querySelectorAll('.g-item').length === 4, 'галерея второй главы — 4 кадра', g2 && g2.querySelectorAll('.g-item').length);
-  const gimgs = Array.from(d.querySelectorAll('.g-item img'));
-  ok(gimgs.length === 5, 'всего пять кадров в галереях', gimgs.length);
-  ok(gimgs.every((i) => (i.getAttribute('alt') || '').length > 0), 'у каждого кадра осмысленный alt');
+  // галереи: главный кадр исключается из сетки
+  const gal1 = ch1.querySelector('.ch-gallery .g-flow');
+  const gal2 = ch2.querySelector('.ch-gallery .g-flow');
+  ok(!!gal1 && gal1.querySelectorAll('.g-item').length === 1, 'галерея первой главы — 1 кадр', gal1 && gal1.querySelectorAll('.g-item').length);
+  ok(!!gal2 && gal2.querySelectorAll('.g-item').length === 4, 'галерея второй главы — 4 кадра', gal2 && gal2.querySelectorAll('.g-item').length);
+  ok(!!gal2 && gal2.classList.contains('n3'), 'в галерее из четырёх кадров раскладка n3', gal2 && gal2.className);
+  const frames = Array.from(d.querySelectorAll('.g-item img.g-img, .g-item img:not(.g-bg)'));
+  ok(frames.length === 7, 'всего семь кадров: 2 главных + 5 в галереях', frames.length);
+  ok(frames.every((i) => (i.getAttribute('alt') || '').length > 0), 'у каждого кадра осмысленный alt');
+  const backdrops = Array.from(d.querySelectorAll('.g-item img.g-bg'));
+  ok(backdrops.length === 2 && backdrops.every((i) => i.getAttribute('aria-hidden') === 'true'),
+    'под главными кадрами размытые подложки', backdrops.length);
 
   // панель навигации по главам
   const nav = d.getElementById('chapterNav');
@@ -245,19 +253,21 @@ console.log('\nhistory.html — архив из двух турниров');
   ok(schema.itemListElement[0].url.includes('#ch-ca-2025-05-10'), 'URL первого элемента — якорь главы');
   ok(schema.itemListElement[1].item.winner.name === 'Gaimin Gladiators', 'победитель в JSON-LD', JSON.stringify(schema.itemListElement[1].item.winner));
 
-  // лайтбокс
-  const grid2 = ch2.querySelector('.g-flow');
+  // лайтбокс: клик по третьему кадру галереи (в главе 5 кадров с главным)
+  const grid2 = ch2.querySelector('.ch-gallery .g-flow');
   const third = grid2.querySelectorAll('.g-item')[2];
+  const thirdSrc = third.querySelector('img.g-img').getAttribute('src');
   third.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await sleep(40);
   const lbEl = d.getElementById('lb');
   ok(lbEl.classList.contains('active'), 'лайтбокс открылся по клику');
-  ok(d.getElementById('lbCount').textContent.trim() === '3 / 4', 'счётчик лайтбокса', d.getElementById('lbCount').textContent);
+  ok(d.getElementById('lbCount').textContent.trim() === '4 / 5', 'счётчик лайтбокса: главный кадр тоже в наборе', d.getElementById('lbCount').textContent);
+  ok(d.getElementById('lbImg').getAttribute('src') === thirdSrc, 'в лайтбоксе именно нажатый кадр');
   ok(d.getElementById('lbImg').getAttribute('alt').length > 0, 'alt картинки лайтбокса');
   d.getElementById('lbNext').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-  ok(d.getElementById('lbCount').textContent.trim() === '4 / 4', 'переход вперёд по стрелке', d.getElementById('lbCount').textContent);
+  ok(d.getElementById('lbCount').textContent.trim() === '5 / 5', 'переход вперёд по стрелке', d.getElementById('lbCount').textContent);
   d.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-  ok(d.getElementById('lbCount').textContent.trim() === '3 / 4', 'переход назад по клавише');
+  ok(d.getElementById('lbCount').textContent.trim() === '4 / 5', 'переход назад по клавише');
   d.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok(!lbEl.classList.contains('active'), 'лайтбокс закрылся по Esc');
 
@@ -287,9 +297,9 @@ console.log('\nhistory.html — глава без фото и MVP (пустое 
   const d = window.document;
   const ch = d.getElementById('ch-ca-lean');
   ok(!!ch, 'глава без фото отрисована');
-  ok(!!ch.querySelector('.ch-cover.is-flat'), 'типографическая обложка вместо фото');
-  ok(ch.querySelector('.ch-cover.is-flat img') === null, 'в плоской обложке нет img');
-  ok(ch.querySelectorAll('.g-flow').length === 0, 'галерея не рендерится вовсе');
+  ok(!!ch.querySelector('.h-mark .no'), 'номер главы на месте');
+  ok(ch.querySelectorAll('img').length === 0, 'в главе без фото нет ни одной картинки');
+  ok(ch.querySelector('.ch-gallery') === null, 'галерея не рендерится вовсе');
   ok(d.querySelectorAll('#books .g-item').length === 0, 'ни одного кадра на странице');
   ok(ch.querySelectorAll('.ch-row').length === 2, 'путь к титулу из двух серий', ch.querySelectorAll('.ch-row').length);
   ok(d.getElementById('mvp') === null, 'витрины MVP нет без MVP');

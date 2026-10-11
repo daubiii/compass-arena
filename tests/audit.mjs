@@ -37,6 +37,7 @@ const PAGES = {
   'schedule.html': ['assets/ca-schedule.js', 'assets/ca-ui.js', 'assets/ca-views.js'],
   'history.html': ['assets/ca-history.js', 'assets/ca-ui.js', 'assets/ca-views.js'],
   'rules.html': ['assets/ca-rules.js', 'assets/ca-ui.js'],
+  'brackets.html': ['assets/ca-brackets.js', 'assets/ca-bracket-page.js', 'assets/ca-ui.js'],
   '404.html': ['assets/ca-ui.js']
 };
 
@@ -65,6 +66,30 @@ for (const page of Object.keys(PAGES)) {
   const inline = Array.from(html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g), (m) => m[1]);
   const longest = inline.reduce((n, s) => Math.max(n, s.length), 0);
   check(longest < 600, page + ': нет больших inline-скриптов', longest + ' символов');
+}
+
+/* 5. Иконки: каждый вызов ic('имя') должен находить символ i-имя в спрайте.
+      Ловит опечатки и «иконки, которых нет» после правок визуала. */
+if (exists('assets/ca-ui.js')) {
+  const sprite = read('assets/ca-ui.js');
+  const symbols = new Set(Array.from(sprite.matchAll(/id="(i-[a-z0-9-]+)"/g), (m) => m[1]));
+  const duplicateIds = Array.from(sprite.matchAll(/id="(i-[a-z0-9-]+)"/g), (m) => m[1]);
+  const dupes = duplicateIds.filter((id, i) => duplicateIds.indexOf(id) !== i);
+  check(symbols.size > 0, 'спрайт иконок найден', symbols.size + ' символов');
+  check(dupes.length === 0, 'в спрайте нет дублей id', Array.from(new Set(dupes)).join(', '));
+
+  const jsFiles = fs.readdirSync(path.join(ROOT, 'assets')).filter((f) => f.endsWith('.js'));
+  const missing = [];
+  const usedIcons = new Set();
+  for (const f of jsFiles) {
+    const src = read('assets/' + f);
+    for (const m of src.matchAll(/ic\('([a-z0-9-]+)'\)/g)) {
+      usedIcons.add(m[1]);
+      if (!symbols.has('i-' + m[1])) missing.push(f + ': ' + m[1]);
+    }
+  }
+  check(missing.length === 0, 'все ic(...) есть в спрайте', missing.join(', '));
+  check(usedIcons.size > 15, 'иконки действительно используются', usedIcons.size + ' разных');
 }
 
 process.exit(fails ? 1 : 0);

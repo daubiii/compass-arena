@@ -17,6 +17,12 @@ function fakeKV() {
   };
 }
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+/* В браузере и в Worker crypto — глобальный объект; в Node 18+ он тоже есть,
+   но в песочнице теста может быть скрыт для страницы — берём на всякий случай явный. */
+if (typeof globalThis.crypto === 'undefined' || !globalThis.crypto.getRandomValues) {
+  const { webcrypto } = await import('node:crypto');
+  globalThis.crypto = webcrypto;
+}
 const env = { COMPASS_KV: fakeKV(), ADMIN_PASSWORD: 'pw' };
 const save = (data, password = 'pw') => onRequestPost({
   request: new Request('http://x/api/save', { method: 'POST', body: JSON.stringify({ password, data }) }), env
@@ -26,10 +32,18 @@ const ch = (id, photos) => ({ id, name: 'T' + id, photos });
 let r = await save({ teams: [], history: [ch('a', [{ url: PNG, caption: 'c1' }, { url: 'javascript:alert(1)' }, { url: 'data:image/svg+xml;base64,PHN2Zz4=' }])] });
 let out = await r.json();
 ok(r.status === 200, 'сохранение проходит');
-ok(out.history && out.history[0].photos.length === 1, 'мусор и svg отброшены, валидное фото осталось');
-const url = out.history[0].photos[0].url;
-ok(/^\/api\/photo\/[a-f0-9]{32}$/.test(url), 'url заменён на /api/photo/<id>');
-ok(out.history[0].photos[0].caption === 'c1', 'подпись сохранена');
+ok(out.bracketsSaved === null && out.metaSaved === null, 'сетки в этом сохранении нет — ключи не тронуты');
+
+/* Ответ на сохранение больше не отдаёт архив целиком (он живёт в KV),
+   поэтому проверяем результат по /api/data: именно его видит админка.
+   Лёгкий вариант (?light=1) — то, что видят публичные страницы. */
+const light = await (await getData({ env, request: new Request('http://x/api/data?light=1') })).json();
+const d1 = await (await getData({ env, request: new Request('http://x/api/data') })).json();
+ok(light.history[0].photos.length === 1, 'мусор и svg отброшены, валидное фото осталось', light.history[0].photos.length);
+const url = light.history[0].photos[0].url;
+ok(/^\/api\/photo\/[a-f0-9]{32}$/.test(url), 'в лёгком ответе ссылка на /api/photo/<id>', url);
+ok(/^data:image\/png;base64,/.test(d1.history[0].photos[0].url), 'админке фото отдаётся как data:-URL');
+ok(d1.history[0].photos[0].caption === 'c1', 'подпись сохранена');
 const stored = JSON.parse(env.COMPASS_KV.m.get('history').v);
 ok(!JSON.stringify(stored).includes('base64'), 'в ключе history нет base64');
 const id = url.split('/').pop();
@@ -38,12 +52,12 @@ ok(pr.status === 200 && pr.headers.get('Content-Type') === 'image/png', 'фот�
 ok(/immutable/.test(pr.headers.get('Cache-Control')), 'фото кэшируется навсегда');
 ok((await getPhoto({ params: { id: '../x' }, env })).status === 404, 'левый id → 404');
 ok((await getPhoto({ params: { id: 'a'.repeat(32) }, env })).status === 404, 'несуществующее фото → 404');
-const d = await (await getData({ env })).json();
-ok(d.history[0].photos[0].url === url && !JSON.stringify(d).includes('base64'), '/api/data лёгкий: только ссылки');
+const dl = await (await getData({ env, request: new Request('http://x/api/data?light=1') })).json();
+ok(dl.history[0].photos[0].url === url && !JSON.stringify(dl).includes('base64'), '?light=1 отдаёт только ссылки');
 
-r = await save({ teams: [], history: out.history });
+r = await save({ teams: [], history: stored });
 out = await r.json();
-ok(out.history === null && env.COMPASS_KV.m.size >= 3, 'повторное сохранение со ссылками ничего не пересоздаёт');
+ok(out.historyKept === true && env.COMPASS_KV.m.size >= 3, 'повторное сохранение со ссылками ничего не пересоздаёт');
 ok([...env.COMPASS_KV.m.keys()].filter(k => k.startsWith('photo:')).length === 1, 'в KV одно фото');
 
 r = await save({ teams: [], history: [ch('a', [])] });

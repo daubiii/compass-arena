@@ -3,12 +3,16 @@
   "private": true,
   "scripts": {
     "serve": "node tests/server.mjs",
-    "test": "node tests/syntax.mjs && node tests/audit.mjs && node tests/smoke.mjs && node tests/smoke-history.mjs && node tests/regression-seasons.mjs && node tests/admin-archive.mjs && node tests/admin-import.mjs"
+    "vendor": "node scripts/vendor-brackets.mjs",
+    "fixture:brackets": "node scripts/make-bracket-fixture.mjs",
+    "test": "node tests/syntax.mjs && node tests/audit.mjs && node tests/smoke.mjs && node tests/smoke-history.mjs && node tests/regression-seasons.mjs && node tests/admin-archive.mjs && node tests/admin-import.mjs && node tests/admin-brackets.mjs && node tests/save-photos.mjs && node tests/brackets.mjs && node tests/brackets-library.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "latest"
   },
   "devDependencies": {
+    "brackets-manager": "^1.11.1",
+    "brackets-viewer": "^1.9.1",
     "jsdom": "^30.1.2"
   }
 }

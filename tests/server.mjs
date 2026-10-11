@@ -1,6 +1,7 @@
 /* Локальный статический сервер для ручной проверки и скриншотов.
    Запуск: node tests/server.mjs           (состояние post по умолчанию)
            $env:CA_FIXTURE='live'; node tests/server.mjs
+           $env:CA_FIXTURE='brackets'; node tests/server.mjs   (с примером новой сетки)
    Порт: 4173 (или $env:CA_PORT). */
 import http from 'node:http';
 import fs from 'node:fs';
@@ -10,6 +11,15 @@ import { FIXTURES } from './fixtures.mjs';
 const ROOT = process.cwd();
 const PORT = Number(process.env.CA_PORT || 4173);
 const PHASE = process.env.CA_FIXTURE || 'post';
+
+/** Пример сетки, сгенерированный настоящей библиотекой (scripts/make-bracket-fixture.mjs) */
+function bracketFixture() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(ROOT, 'tests/bracket-fixture.json'), 'utf8'));
+  } catch {
+    return { brackets: null, bracketsMeta: null };
+  }
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -33,13 +43,18 @@ const server = http.createServer((req, res) => {
   let pathname = decodeURIComponent(url.pathname);
 
   if (pathname === '/api/data') {
+    const data = JSON.parse(JSON.stringify(FIXTURES[PHASE] || FIXTURES.post));
+    // Кладём пример сетки: либо всегда, либо когда попросили фикстуру 'brackets'
+    const sample = PHASE === 'brackets' ? bracketFixture() : { brackets: null, bracketsMeta: null };
+    data.brackets = data.brackets || sample.brackets;
+    data.bracketsMeta = data.bracketsMeta || sample.bracketsMeta;
     res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
-    res.end(JSON.stringify(FIXTURES[PHASE] || FIXTURES.post));
+    res.end(JSON.stringify(data));
     return;
   }
   if (pathname === '/api/save') {
     res.writeHead(200, { 'Content-Type': MIME['.json'] });
-    res.end(JSON.stringify({ ok: true }));
+    res.end(JSON.stringify({ ok: true, bracketsSaved: 'saved' }));
     return;
   }
 
