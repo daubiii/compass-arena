@@ -28,8 +28,8 @@
 
     if (d.phase === 'post') {
       var champ = d.champion;
-      kicker.innerHTML = ic('trophy') + ' Турнир завершён';
-      title.innerHTML = champ ? (esc(champ.name) + ' забирает<br><em>трофей</em>') : 'Турнир завершён';
+      kicker.innerHTML = ic('champion') + ' Турнир завершён';
+      title.innerHTML = champ ? (esc(champ.name) + ' забирает<br><em>первый трофей</em>') : 'Турнир завершён';
       lede.textContent = 'Финал сыгран. Ниже — итоги, сетка и хроника турнира. Следующий сезон Compass Arena уже готовится.';
       cta.innerHTML =
         '<a class="btn btn-gold btn-lg" href="#bracket">' + ic('bracket') + 'Сетка и итоги</a>' +
@@ -37,48 +37,19 @@
     } else if (d.phase === 'live') {
       kicker.innerHTML = '<span class="dot-live"></span> Идёт прямо сейчас';
       title.innerHTML = 'Турнир идёт —<br><em>смотрите вживую</em>';
-      lede.textContent = formatLine(d) + ' Матчи идут по расписанию, трансляция — на Twitch.';
+      lede.textContent = 'Шесть команд, серии до двух побед и один трофей. Матчи идут по расписанию, трансляция — на Twitch.';
       cta.innerHTML =
         '<a class="btn btn-live btn-lg" href="#stream">' + ic('live') + 'Смотреть эфир</a>' +
         '<a class="btn btn-ghost btn-lg" href="#bracket">' + ic('bracket') + 'Турнирная сетка</a>';
     } else {
-      kicker.innerHTML = 'Турнир по ' + esc(d.tournament.game) + ' · сезон ' + (((d.history && d.history.length) || 0) + 1);
+      kicker.innerHTML = 'Турнир по Dota 2 · первый сезон';
       title.innerHTML = 'Здесь сражаются<br>не ради участия —<br><em>здесь доказывают</em>';
-      lede.textContent = 'Один шанс, полная концентрация и один трофей на всех.';
+      lede.textContent = 'Один шанс, полная концентрация и один трофей на всех. Первый турнир организации Compass Arena.';
       cta.innerHTML =
         '<a class="btn btn-gold btn-lg" href="#bracket">' + ic('bracket') + 'Турнирная сетка</a>' +
         '<a class="btn btn-ghost btn-lg" href="#teams">' + ic('users') + 'Участники</a>';
     }
     void watch;
-  }
-
-  /* «Восемь команд, серии Bo3 и один трофей» — из данных турнира */
-  function formatLine(d) {
-    var n = d.teams.filter(function (t) { return D.isRealTeam(t); }).length;
-    var parts = [];
-    if (n) parts.push(n + ' ' + D.plural(n, 'команда', 'команды', 'команд'));
-    parts.push('серии ' + d.tournament.matches);
-    parts.push('один трофей');
-    var s = parts.join(', ');
-    return s.charAt(0).toUpperCase() + s.slice(1) + '.';
-  }
-
-  /* Подзаголовок секции сетки: описывает структуру, которая реально нарисована */
-  function renderBracketCopy(d) {
-    var kicker = document.getElementById('bracketKicker');
-    var copy = document.getElementById('bracketCopy');
-    var hasLower = d.matches.some(function (m) { return m.bracket === 'lower'; });
-    var n = d.teams.filter(function (t) { return D.isRealTeam(t); }).length;
-    var parts = [d.tournament.matches];
-    if (n) parts.push(n + ' ' + D.plural(n, 'команда', 'команды', 'команд'));
-    parts.push(hasLower ? 'двойное выбывание' : 'на выбывание');
-    if (kicker) kicker.textContent = parts.join(' · ');
-    if (copy) {
-      copy.textContent = (hasLower
-        ? 'Проигравший в верхней сетке не вылетает, а падает в нижнюю; второе поражение — конец турнира. Финалисты обеих сеток встречаются в гранд-финале.'
-        : 'Проигравший выбывает, победители проходят дальше — до финала.') +
-        ' Всего матчей: ' + d.matches.length + ', серии ' + d.tournament.matches + '.';
-    }
   }
 
   /* ---------- Статус под первым экраном ---------- */
@@ -92,7 +63,7 @@
       var grand = d.grandFinal;
       var sc = grand && grand.score1 != null ? grand.score1 + ':' + grand.score2 : '';
       box.innerHTML = '<div class="nm is-post">' +
-        '<div class="nm-label">' + ic('trophy') + 'Турнир завершён</div>' +
+        '<div class="nm-label">' + ic('champion') + 'Турнир завершён</div>' +
         '<div class="nm-teams">Чемпион — <span class="win">' + esc(d.champion ? d.champion.name : '—') + '</span></div>' +
         '<div class="nm-meta">' + esc(D.stageLabel(grand)) +
           (d.runnerUp ? ' · финал против ' + esc(d.runnerUp.name) : '') +
@@ -140,7 +111,7 @@
   }
 
   function firstMatchLine(d) {
-    var m = d.matches.slice().sort(function (a, b) { return a.num - b.num; })[0];
+    var m = d.byId[1] || d.matches[0];
     if (!m) return '';
     var a = D.slotLabel(m, 1).text, b = D.slotLabel(m, 2).text;
     return '<span class="k">Первый матч</span><b>' + esc(a) + '</b> против <b>' + esc(b) + '</b>' +
@@ -234,7 +205,7 @@
         play.removeAttribute('data-play-stream');
         play.innerHTML = '<span class="ring">' + ic('play') + '</span><span><b>Записи на Twitch</b><small>полный архив трансляций</small></span>';
       }
-      if (next) next.innerHTML = '<a class="text-link" href="/history.html">' + ic('trophy') + ' Хроника турнира</a>';
+      if (next) next.innerHTML = '<a class="text-link" href="/history.html">' + ic('champion') + ' Хроника турнира</a>';
       return;
     }
 
@@ -314,7 +285,6 @@
     var root = document.getElementById('bracketWrap');
     if (!root) return;
     CA.bracket.render(root, { data: d });
-    renderBracketCopy(d);
     var legend = document.getElementById('bLegend');
     if (legend) {
       legend.innerHTML =
@@ -364,7 +334,7 @@
         ? t.players.map(function (p) { return esc(p.nick || '—'); }).join(' · ')
         : 'Состав уточняется';
       var mark = '';
-      if (d.champion && d.champion.id === t.id) mark = '<span class="st st-gold">' + ic('trophy') + 'Чемпион</span>';
+      if (d.champion && d.champion.id === t.id) mark = '<span class="st st-gold">' + ic('champion') + 'Чемпион</span>';
       else if (d.runnerUp && d.runnerUp.id === t.id) mark = '<span class="st st-done">Серебро</span>';
       else if (rec.out) mark = '<span class="st st-flag">Выбыла в M' + rec.out + '</span>';
       return '<button class="team-card reveal" data-team="' + t.id + '" type="button">' +

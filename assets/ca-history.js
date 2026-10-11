@@ -120,43 +120,17 @@
         score2: m.score2 == null || m.score2 === '' ? null : parseInt(m.score2, 10),
         vod: m.vod || '',
         scheduled: m.scheduled || null,
-        num: parseInt(m.num, 10) || parseInt(m.id, 10) || 0,
-        label: m.label ? String(m.label) : '',
-        final: !!m.final,
         played: !!w
       });
     }
     return out;
   }
-  /* Подпись стадии для матча главы. list — все матчи этой главы (нужны, чтобы понять, где финал сетки) */
-  function stageOf(m, list) {
+  function stageOf(m) {
     if (!m) return '';
-    if (m.label) return m.label;
-    list = list || [];
-    function has(b) { return list.some(function (x) { return x.bracket === b; }); }
-    function maxRound(b) {
-      var r = 0;
-      list.forEach(function (x) { if (x.bracket === b && x.round > r) r = x.round; });
-      return r;
-    }
-    if (m.bracket === 'grand') {
-      var rounds = [];
-      list.forEach(function (x) { if (x.bracket === 'grand' && rounds.indexOf(x.round) === -1) rounds.push(x.round); });
-      rounds.sort(function (a, b) { return a - b; });
-      return rounds.indexOf(m.round) >= 1 ? 'Гранд-финал · сброс' : 'Гранд-финал';
-    }
-    if (m.bracket === 'third') return 'Матч за 3-е место';
-    if (m.bracket === 'lower') return m.round === maxRound('lower') ? 'Финал нижней сетки' : 'Нижняя сетка · раунд ' + m.round;
-    var fromEnd = maxRound('upper') - m.round;
-    if (has('lower')) {
-      if (fromEnd === 0) return 'Финал верхней сетки';
-      if (fromEnd === 1) return 'Полуфинал верхней сетки';
-      return 'Верхняя сетка · раунд ' + m.round;
-    }
-    if (has('grand')) return fromEnd === 0 ? 'Полуфинал' : 'Раунд ' + m.round;
-    if (fromEnd === 0 && maxRound('upper') > 1) return 'Финал';
-    if (fromEnd === 1) return 'Полуфинал';
-    if (fromEnd === 2) return 'Четвертьфинал';
+    if (m.bracket === 'grand' || m.id === 5) return 'Гранд-финал';
+    if (m.bracket === 'lower') return 'Нижняя сетка';
+    if (m.round === 2 || m.id === 4) return 'Полуфинал';
+    if (m.bracket === 'upper' && (m.round === 1 || m.round === undefined)) return 'Раунд 1';
     return 'Раунд ' + (m.round || 1);
   }
   function loserOf(m) {
@@ -169,18 +143,18 @@
     if (!m || m.score1 == null || m.score2 == null) return '';
     return m.score1 + ':' + m.score2;
   }
-  /* Финальная серия главы: матч с пометкой final, иначе гранд-финал (последний по порядку), иначе последний сыгранный */
-  function isFinalish(m) { return !!m && (m.final || m.bracket === 'grand'); }
+  /* Финальная серия главы: сначала явный гранд-финал, потом последний сыгранный матч */
   function grandOf(list) {
-    var played = list.filter(function (m) { return m.played; });
-    var flagged = played.filter(function (m) { return m.final; });
-    if (flagged.length) return flagged[flagged.length - 1];
-    var grands = played.filter(function (m) { return m.bracket === 'grand'; })
-      .sort(function (a, b) { return a.round - b.round || a.num - b.num; });
-    if (grands.length) return grands[grands.length - 1];
-    var rest = played.filter(function (m) { return m.bracket !== 'third'; })
-      .sort(function (a, b) { return a.num - b.num; });
-    return rest.length ? rest[rest.length - 1] : null;
+    var out = [];
+    var explicit = [];
+    for (var i = 0; i < list.length; i++) {
+      var m = list[i];
+      if (!m.played) continue;
+      out.push(m);
+      if (m.bracket === 'grand' || m.id === 5) explicit.push(m);
+    }
+    if (explicit.length) return explicit[explicit.length - 1];
+    return out.length ? out[out.length - 1] : null;
   }
 
   /* ---------- Агрегация по всем турнирам ----------
@@ -270,6 +244,29 @@
       }
     }
 
+    /* Текущий сезон попадает в сводку матчей всегда, а в титулы —
+       только когда определился чемпион */
+    var liveTeams = d.teams || [];
+    var liveMatches = (d.matches || []).map(function (m) {
+      return {
+        id: m.id, round: m.round, bracket: m.bracket,
+        team1: m.team1, team2: m.team2, winner: m.winner,
+        score1: m.score1, score2: m.score2, played: !!m.winner
+      };
+    });
+    if (d.champion) {
+      account(liveTeams, liveMatches, true);
+      var lc = club(d.champion);
+      if (lc) { lc.titles++; lc.finals++; }
+      if (d.runnerUp) {
+        var lr = club(d.runnerUp);
+        if (lr) lr.finals++;
+      }
+    } else {
+      collectTeams(liveTeams);
+      res.matches += liveMatches.length;
+    }
+
     for (var o = 0; o < res.order.length; o++) res.clubList.push(res.clubs[res.order[o]]);
     res.clubList.sort(function (a, b) {
       if (b.titles !== a.titles) return b.titles - a.titles;
@@ -299,6 +296,8 @@
     var photo = heroPhoto(sorted);
     var latest = sorted.length ? sorted[sorted.length - 1] : null;
     var latestChamp = latest ? byId(latest.teams, latest.championId) : null;
+    var liveChamp = d.champion;
+
     if (img) {
       img.src = photo ? photo.url : '/img/hero.webp';
       img.alt = photo
@@ -308,16 +307,18 @@
     if (kicker) {
       kicker.textContent = at.tournaments
         ? 'Архив организации · ' + at.tournaments + ' ' + plural(at.tournaments, 'турнир', 'турнира', 'турниров') + ' в истории'
-        : 'Архив организации';
+        : 'Архив организации · Dota 2';
     }
     if (sub) {
       var text;
-      if (latestChamp) {
-        text = 'Последний титул взяла команда «' + latestChamp.name + '». Ниже — все завершённые турниры организации, один за другим.';
+      if (liveChamp) {
+        text = 'Текущий сезон завершён — титул у команды «' + liveChamp.name + '». Ниже вся хроника организации по главам.';
+      } else if (latestChamp) {
+        text = 'Последний титул взяла команда «' + latestChamp.name + '». Ниже — все турниры организации, один за другим.';
       } else if (at.tournaments) {
-        text = 'В архиве ' + at.tournaments + ' ' + plural(at.tournaments, 'турнир', 'турнира', 'турниров') + '. Чемпионы, ключевые серии и кадры с турниров — по главам.';
+        text = 'В архиве ' + at.tournaments + ' ' + plural(at.tournaments, 'турнир', 'турнира', 'турниров') + ', а текущий сезон идёт прямо сейчас. Чемпионы, ключевые серии и кадры с трансляций — по главам.';
       } else {
-        text = 'Здесь появятся завершённые турниры: чемпион, состав, путь к титулу и фотографии. Турнир попадает в архив, когда организаторы закрепляют его итоги.';
+        text = 'Первая глава ещё пишется: текущая сетка, составы и путь к трофею. Как только турнир завершится, хроника появится здесь.';
       }
       sub.textContent = text;
     }
@@ -327,7 +328,7 @@
       html += figure(at.tournaments, 'турниров в архиве');
       html += figure(at.matches, 'матчей сыграно');
       html += figure(at.teams.length, 'команд за историю');
-      html += figure(latestChamp ? latestChamp.name : '—', 'действующий чемпион', true);
+      html += figure(liveChamp ? liveChamp.name : (latestChamp ? latestChamp.name : '—'), liveChamp ? 'чемпион текущего сезона' : 'действующий чемпион', true);
       figures.innerHTML = html;
     }
   }
@@ -337,26 +338,131 @@
   }
 
   /* ==========================================================
+     Текущий сезон (последняя глава)
+     ========================================================== */
+  function currentSeason(d) {
+    var teams = [];
+    for (var i = 0; i < (d.teams || []).length; i++) {
+      var t = d.teams[i];
+      if (t && !isSlotName(t.name)) teams.push(t);
+    }
+    return {
+      kind: 'current',
+      id: 'now',
+      name: d.tournament.name || 'Compass Arena',
+      game: d.tournament.game || 'Dota 2',
+      format: d.tournament.format
+        ? (d.tournament.format + (d.tournament.matches ? ' · ' + d.tournament.matches : ''))
+        : (d.tournament.matches || ''),
+      dates: d.tournament.dates || '',
+      phase: d.phase,
+      teams: teams,
+      matches: d.matches,
+      champion: d.champion,
+      runnerUp: d.runnerUp,
+      stats: d.stats,
+      start: d.tournamentStart,
+      fromServer: d.startFromServer
+    };
+  }
+
+  function statusFact(s) {
+    if (s.phase === 'post') return '<span class="h-fact gold">' + ic('champion') + 'Турнир завершён</span>';
+    if (s.phase === 'live') return '<span class="h-fact live"><span class="dot-live"></span>Идёт сейчас</span>';
+    if (s.phase === 'pre' && s.fromServer && s.start) return '<span class="h-fact">' + ic('clock') + 'До старта · ' + esc(D().fmtDateTime(s.start)) + '</span>';
+    return '<span class="h-fact">' + ic('flag') + 'До старта</span>';
+  }
+
+  function currentHtml(s, season, archiveCount) {
+    var played = s.stats ? s.stats.played : 0;
+    var total = (s.stats && s.stats.matchesTotal) ? s.stats.matchesTotal : (s.matches ? s.matches.length : 0);
+    var pct = total ? Math.max(0, Math.min(100, Math.round(played / total * 100))) : 0;
+    var champion = s.champion;
+    var runner = s.runnerUp;
+    var state = champion ? 'завершён' : (s.phase === 'live' ? 'идёт' : (s.teams.length ? 'скоро старт' : 'регистрация'));
+
+    var roster = '';
+    if (s.teams.length) {
+      roster = '<div class="h-eyebrow">' + ic('users') + ' Участники сезона</div><div class="now-roster">' +
+        s.teams.map(function (t) {
+          var isChamp = champion && champion.id === t.id;
+          return teamCardName(t.name, isChamp ? ic('champion') : '', isChamp ? 'is-champ' : '');
+        }).join('') + '</div>';
+    } else {
+      roster = '<div class="now-empty">' + ic('users') +
+        '<p>Составы нового сезона ещё не объявлены. Как только команды подтвердят участие, они появятся здесь, а сетка — на главной.</p>' +
+        '<a class="btn btn-ghost btn-sm" href="https://t.me/compassarenaa" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку</a></div>';
+    }
+
+    var lead;
+    if (champion) {
+      lead = 'Сезон доигран: гранд-финал позади, трофей у «' + champion.name + '». Эта глава станет архивной, как только организаторы зафиксируют итоги.';
+    } else if (s.phase === 'live') {
+      lead = 'Сезон идёт прямо сейчас: матчи по расписанию, сетка обновляется после каждой серии. Чемпион определится в гранд-финале.';
+    } else if (s.teams.length) {
+      lead = 'Сезон ещё не стартовал. Ниже — состав участников и путь к трофею: как только прозвучит первый сигнал, глава начнёт заполняться.';
+    } else {
+      lead = 'Идёт регистрация нового сезона: команды собирают составы, сетка появится после жеребьёвки. Предыдущие турниры организации — в архиве ниже.';
+    }
+
+    var side =
+      '<div class="now-side">' +
+        '<div class="now-card"><span class="k">Статус</span><span class="v">' +
+          (champion ? 'Завершён' : (s.phase === 'live' ? 'Идёт' : (s.teams.length ? 'Скоро старт' : 'Регистрация'))) + '</span></div>' +
+        (champion ? '<div class="now-card"><span class="k">Чемпион</span><span class="v gold">' + esc(champion.name) + '</span></div>' : '') +
+        (runner ? '<div class="now-card"><span class="k">Финалист</span><span class="v">' + esc(runner.name) + '</span></div>' : '') +
+        (s.format ? '<div class="now-card"><span class="k">Формат</span><span class="v">' + esc(s.format) + '</span></div>' : '') +
+        (s.dates ? '<div class="now-card"><span class="k">Даты</span><span class="v">' + esc(s.dates) + '</span></div>' : '') +
+        '<div class="now-card"><span class="k">Матчи</span><span class="v">' + played + ' / ' + total + '</span></div>' +
+        (archiveCount ? '<div class="now-card"><span class="k">В архиве</span><span class="v">' + archiveCount + ' ' + plural(archiveCount, 'турнир', 'турнира', 'турниров') + '</span></div>' : '') +
+      '</div>';
+
+    return '<section class="now arena" id="ch-now" data-chapter="00" data-season="' + season + '" data-title="' + esc(s.name) + '">' +
+        '<div class="wrap">' +
+          '<div class="h-mark"><span class="no">Сезон №' + season + ' · ' + state + '</span><span class="rule"></span><span class="date">' + esc(s.dates || 'даты уточняются') + '</span></div>' +
+          '<div class="now-grid">' +
+            '<div>' +
+              '<p class="h-eyebrow">' + ic('compass') + ' Текущий сезон · ' + esc(s.game) + '</p>' +
+              '<h2>' + esc(s.name) + '</h2>' +
+              '<div class="now-status">' + statusFact(s) + '</div>' +
+              '<p class="lead">' + esc(lead) + '</p>' +
+              '<div class="now-line"><span>Сыграно матчей</span><span class="tnum">' + played + ' из ' + total + '</span></div>' +
+              '<div class="now-bar"><i style="width:' + pct + '%"></i></div>' +
+              roster +
+              '<div class="now-cta">' +
+                '<a class="btn btn-gold" href="/#bracket">' + ic('bracket') + 'Турнирная сетка</a>' +
+                '<a class="btn btn-ghost" href="/schedule.html">' + ic('calendar') + 'Расписание</a>' +
+              '</div>' +
+            '</div>' +
+            side +
+          '</div>' +
+        '</div>' +
+      '</section>';
+  }
+
+  /* ==========================================================
      Глава архива
      ========================================================== */
   function rosterHtml(team) {
     var players = (team && team.players) || [];
-    if (!players.length) return '<p class="ch-quiet">Состав не сохранён.</p>';
-    return '<ul class="ch-roster">' + players.map(function (p, i) {
+    if (!players.length) return '<p class="ch-quiet">Состав чемпионов не сохранён.</p>';
+    return '<div class="ch-roster">' + players.map(function (p, i) {
       var nick = typeof p === 'string' ? p : (p.nick || p.name || '—');
       var role = typeof p === 'string' ? (i + 1) : (p.role || (i + 1));
-      return '<li><b>' + esc(nick) + '</b><span>' + esc(D().roleName(role)) + '</span></li>';
-    }).join('') + '</ul>';
+      return '<span class="ch-player"><b>' + esc(nick) + '</b><span>' + esc(D().roleName(role)) + '</span></span>';
+    }).join('') + '</div>';
   }
 
   function ladderRows(list, teams) {
     var played = [];
     for (var i = 0; i < list.length; i++) if (list[i].played) played.push(list[i]);
-    /* порядок игры (номер матча), а не раунд: так читается и двойная сетка */
-    played.sort(function (a, b) { return a.num - b.num; });
+    played.sort(function (a, b) {
+      if (a.round !== b.round) return a.round - b.round;
+      return (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0);
+    });
     return played.map(function (m) {
-      var stage = stageOf(m, list);
-      var grand = isFinalish(m);
+      var stage = stageOf(m);
+      var grand = m.bracket === 'grand' || m.id === 5;
       var sc = scoreOf(m);
       return '<div class="ch-row">' +
         '<div class="stage' + (grand ? ' is-grand' : '') + '">' + esc(stage) + '</div>' +
@@ -368,97 +474,38 @@
     }).join('');
   }
 
-  /* Просмотрщик фото: на виду один кадр целиком (без обрезки, на размытой подложке из него же),
-     справа заметная стрелка «Ещё N» — приглашение листать. Клик по кадру — полноэкранный режим. */
-  function photoAlt(p, chapterName, n) {
-    return p.caption || ('Фото с турнира ' + chapterName + ' — кадр ' + n);
-  }
-  function viewerHtml(photos, chapterId, chapterName) {
+  function galleryHtml(photos, chapterId, chapterName, offset) {
     if (!photos.length) return '';
     var n = photos.length;
-    var slides = photos.map(function (p, i) {
-      var alt = photoAlt(p, chapterName, i + 1);
-      var src = i === 0 ? 'src="' + esc(p.url) + '"' : 'data-src="' + esc(p.url) + '"';
-      return '<figure class="pv-slide' + (i === 0 ? ' is-on' : '') + '" data-cap="' + esc(p.caption || '') + '"' + (i === 0 ? '' : ' aria-hidden="true"') + '>' +
-        '<img class="pv-bg" ' + src + ' alt="" aria-hidden="true" decoding="async">' +
-        '<img class="pv-img" ' + src + ' alt="' + esc(alt) + '" decoding="async">' +
-      '</figure>';
-    }).join('');
-    var controls = n > 1
-      ? '<button class="pv-btn pv-prev" type="button" aria-label="Предыдущее фото" hidden>' + ic('arrow-right') + '</button>' +
-        '<button class="pv-btn pv-next" type="button" aria-label="Следующее фото"><span class="pv-more">Ещё ' + (n - 1) + '</span>' + ic('arrow-right') + '</button>'
-      : '';
-    var segs = '';
-    if (n > 1 && n <= 14) {
-      for (var k = 0; k < n; k++) segs += '<i' + (k === 0 ? ' class="is-on"' : '') + '></i>';
-      segs = '<div class="pv-segs" aria-hidden="true">' + segs + '</div>';
-    }
-    return '<div class="pv reveal" data-gallery="' + esc(chapterId) + '" data-gname="' + esc(chapterName) + '" data-n="' + n + '"' +
-        ' role="group" aria-roledescription="карусель" aria-label="Фотографии: ' + esc(chapterName) + '">' +
-      '<div class="pv-stage">' + slides + controls + '</div>' +
-      segs +
-      '<div class="pv-bar"><span class="pv-cap" aria-live="polite">' + esc(photos[0].caption || '') + '</span>' +
-        (n > 1 ? '<span class="pv-count"><b>1</b> / ' + n + '</span>' : '') + '</div>' +
-    '</div>';
+    var size = n === 1 ? 'n1' : (n === 2 ? 'n2' : (n === 3 ? 'n3' : ''));
+    return '<div class="h-eyebrow">' + ic('frame') + ' Кадры турнира</div>' +
+      '<div class="g-flow ' + size + '" data-gallery="' + esc(chapterId) + '" data-gname="' + esc(chapterName) + '">' +
+      photos.map(function (p, i) {
+        var alt = p.caption || ('Фото с турнира ' + chapterName + ' — кадр ' + (i + offset + 1));
+        return '<button class="g-item" type="button" data-photo="' + i + '" aria-label="' + esc(alt) + '">' +
+          '<img src="' + esc(p.url) + '" alt="' + esc(alt) + '" loading="lazy" decoding="async">' +
+          (p.caption ? '<span class="g-cap">' + esc(p.caption) + '</span>' : '') +
+          '</button>';
+      }).join('') + '</div>';
   }
 
-  function initViewers() {
-    var viewers = document.querySelectorAll('.pv');
-    Array.prototype.forEach.call(viewers, function (pv) {
-      var slides = pv.querySelectorAll('.pv-slide');
-      var n = slides.length;
-      var cur = 0;
-      var cap = pv.querySelector('.pv-cap');
-      var cnt = pv.querySelector('.pv-count b');
-      var segs = pv.querySelectorAll('.pv-segs i');
-      var prev = pv.querySelector('.pv-prev');
-      var next = pv.querySelector('.pv-next');
-
-      function load(i) {
-        var sl = slides[(i + n) % n];
-        Array.prototype.forEach.call(sl.querySelectorAll('img[data-src]'), function (img) {
-          img.src = img.getAttribute('data-src');
-          img.removeAttribute('data-src');
-        });
-      }
-      function go(to, user) {
-        to = (to + n) % n;
-        if (to === cur) return;
-        load(to);
-        slides[cur].classList.remove('is-on');
-        slides[cur].setAttribute('aria-hidden', 'true');
-        slides[to].classList.add('is-on');
-        slides[to].removeAttribute('aria-hidden');
-        if (segs.length) { segs[cur].classList.remove('is-on'); segs[to].classList.add('is-on'); }
-        cur = to;
-        if (cap) cap.textContent = slides[cur].getAttribute('data-cap') || '';
-        if (cnt) cnt.textContent = String(cur + 1);
-        if (user) {
-          pv.classList.add('is-touched');
-          if (prev) prev.hidden = false;
-        }
-        load(cur + 1);
-      }
-      pv._go = go;
-      pv._cur = function () { return cur; };
-      if (n < 2) return;
-      load(1);
-      next.addEventListener('click', function (e) { e.stopPropagation(); go(cur + 1, true); });
-      prev.addEventListener('click', function (e) { e.stopPropagation(); go(cur - 1, true); });
-      pv.setAttribute('tabindex', '0');
-      pv.addEventListener('keydown', function (e) {
-        if (e.key === 'ArrowRight') { go(cur + 1, true); e.preventDefault(); }
-        else if (e.key === 'ArrowLeft') { go(cur - 1, true); e.preventDefault(); }
-      });
-      var x0 = null;
-      var stage = pv.querySelector('.pv-stage');
-      stage.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
-      stage.addEventListener('touchend', function (e) {
-        if (x0 == null) return;
-        var dx = e.changedTouches[0].clientX - x0;
-        x0 = null;
-        if (Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1), true);
-      }, { passive: true });
+  /* Кадры показываются целиком: пропорции берём у самого файла,
+     поэтому ничего не обрезается, а ряды выравниваются по высоте. */
+  function fitPhotos(root) {
+    var imgs = (root || document).querySelectorAll('.g-item img, .ch-cover.has-photo > img.ch-photo');
+    Array.prototype.forEach.call(imgs, function (img) {
+      var host = img.closest('.g-item') || img.closest('.ch-cover');
+      if (!host || host.getAttribute('data-fit')) return;
+      host.setAttribute('data-fit', '1');
+      var probe = new global.Image();
+      probe.onload = function () {
+        if (!probe.naturalWidth || !probe.naturalHeight) return;
+        var r = probe.naturalWidth / probe.naturalHeight;
+        if (host.classList.contains('ch-cover')) r = Math.max(1.1, Math.min(2.2, r));
+        host.style.setProperty('--r', r.toFixed(4));
+        host.classList.add('is-fit');
+      };
+      probe.src = img.getAttribute('src');
     });
   }
 
@@ -471,49 +518,76 @@
     var champion = byId(teams, item.championId);
     var runner = byId(teams, item.runnerUpId);
     var photos = photosOf(item);
+    var cover = photos.length ? photos[0] : null;
+    var gallery = cover ? photos.slice(1) : photos;
     var no = pad2(season);
     var chapterId = 'ch-' + (item.id != null ? item.id : index);
     var title = (entry && entry.label) || item.name || 'Compass Arena';
     var grand = grandOf(list);
     var score = scoreOf(grand);
     var date = dateText(item);
-    var tag = item.game ? String(item.game) : '';
+    var tag = item.game ? String(item.game) : 'Dota 2';
 
-    /* Чемпион: имя, финал, состав списком */
+    /* Обложка: фото турнира или типографическая с номером главы */
+    var coverAlt = cover ? (cover.caption || 'Кадр с турнира ' + title) : '';
+    var coverHtml;
+    var capHtml = '<div class="ch-capbar reveal">' +
+        (champion ? '<div><div class="ch-tag"><i></i>Чемпион турнира</div><div class="champ">' + esc(champion.name) + '</div></div>' : '<div class="champ">Чемпион не определён</div>') +
+        (runner ? '<div class="runner">Гранд-финал против <b>' + esc(runner.name) + '</b>' + (score ? ' · ' + esc(score) : '') + '</div>' : '') +
+      '</div>';
+    if (cover) {
+      coverHtml = '<div class="ch-cover has-photo reveal">' +
+          '<img class="ch-photo" src="' + esc(cover.url) + '" alt="' + esc(coverAlt) + '" decoding="async">' +
+          '<img class="ch-bg" src="' + esc(cover.url) + '" alt="" aria-hidden="true" decoding="async">' +
+        '</div>' + capHtml;
+    } else {
+      coverHtml = '<div class="ch-cover is-flat reveal">' +
+          '<span class="flat-num" aria-hidden="true">' + no + '</span>' +
+          '<div class="ch-cap">' +
+            (champion ? '<div class="ch-tag"><i></i>Чемпион турнира</div><div class="champ">' + esc(champion.name) + '</div>' : '<div class="champ">Чемпион не определён</div>') +
+            (runner ? '<div class="runner">Гранд-финал против <b>' + esc(runner.name) + '</b>' + (score ? ' · ' + esc(score) : '') + '</div>' : '') +
+          '</div>' +
+        '</div>';
+    }
+
+    /* Чемпион и его состав */
     var champBlock;
     if (champion) {
-      champBlock = '<p class="ch-k">Чемпион</p>' +
-        '<div class="ch-champ-name">' + esc(champion.name) + '</div>' +
-        (runner ? '<p class="ch-final">Гранд-финал против ' + esc(runner.name) + (score ? ', ' + esc(score) : '') + '</p>' : '') +
-        rosterHtml(champion);
+      champBlock = '<div class="ch-champ-name">' + esc(champion.name) + '</div>' + rosterHtml(champion);
     } else {
-      champBlock = '<p class="ch-k">Чемпион</p><p class="ch-quiet">В этой главе чемпион не зафиксирован.</p>';
+      champBlock = '<p class="ch-quiet">В этой главе чемпион не зафиксирован.</p>';
     }
 
     /* MVP либо финалист — если MVP не сохранили */
-    var sideBlock;
+    var storyBlock;
     if (item.mvp && item.mvp.playerNick) {
       var mvpTeam = byId(teams, item.mvp.teamId);
-      sideBlock = '<p class="ch-k">MVP турнира</p>' +
+      storyBlock = '<div class="ch-block reveal"><p class="h-eyebrow">' + ic('mvp') + ' MVP турнира</p>' +
         '<div class="ch-mvp">' +
           '<div class="mvp-name">' + esc(item.mvp.playerNick) + '</div>' +
           (mvpTeam ? '<div class="mvp-team">' + esc(mvpTeam.name) + '</div>' : '') +
           (item.mvp.note ? '<p class="mvp-note">' + esc(item.mvp.note) + '</p>' : '') +
-        '</div>';
+        '</div></div>';
     } else {
-      sideBlock = '<p class="ch-k">Финалист</p>' +
+      storyBlock = '<div class="ch-block reveal"><p class="h-eyebrow">' + ic('flag') + ' Финалист</p>' +
         (runner
-          ? '<div class="ch-champ-name is-runner">' + esc(runner.name) + '</div>' + rosterHtml(runner)
-          : '<p class="ch-quiet">Данные о финалисте не сохранены.</p>');
+          ? '<div class="ch-champ-name" style="color:var(--text)">' + esc(runner.name) + '</div>' + rosterHtml(runner)
+          : '<p class="ch-quiet">Данные о финалисте не сохранены.</p>') +
+        '</div>';
     }
 
     var rows = ladderRows(list, teams);
     var ladderHtml = rows
-      ? '<div class="ch-ladder"><h3 class="ch-h">Путь к титулу</h3><div class="ch-rows">' + rows + '</div></div>'
+      ? '<div class="ch-ladder"><div class="h-eyebrow">' + ic('route') + ' Путь к титулу</div><div class="ch-rows">' + rows + '</div></div>'
       : '';
 
-    /* Дата уже стоит в марке главы — в чипах её не повторяем */
+    var galHtml = galleryHtml(gallery, chapterId, title, 1);
+    var galleryBlock = galHtml
+      ? '<div class="ch-gallery">' + galHtml + '</div>'
+      : '';
+
     var facts = [];
+    if (date) facts.push('<span class="h-fact">' + ic('calendar') + esc(date) + '</span>');
     if (item.format) facts.push('<span class="h-fact">' + esc(item.format) + '</span>');
     facts.push('<span class="h-fact">' + esc(tag) + '</span>');
     if (list.length) {
@@ -526,13 +600,15 @@
         '" data-chapter="' + no + '" data-season="' + season + '" data-title="' + esc(title) + '">' +
         '<div class="wrap">' +
           '<div class="h-mark"><span class="no">Турнир №' + season + ' из ' + pad2(dur) + '</span><span class="rule"></span><span class="date">' + esc(date) + '</span></div>' +
-          '<div class="ch-title reveal"><h2>' + esc(title) + '</h2><div class="ch-meta">' + facts.join('') + '</div></div>' +
-          viewerHtml(photos, chapterId, title) +
+          '<div class="ch-title reveal">' +
+            '<h2>' + esc(title) + '</h2><div class="ch-meta">' + facts.join('') + '</div></div>' +
+          coverHtml +
           '<div class="ch-story">' +
-            '<div class="ch-block reveal">' + champBlock + '</div>' +
-            '<div class="ch-block reveal">' + sideBlock + '</div>' +
+            '<div class="ch-block reveal"><p class="h-eyebrow">' + ic('champion') + ' Чемпион и состав</p>' + champBlock + '</div>' +
+            storyBlock +
           '</div>' +
           ladderHtml +
+          galleryBlock +
           '<div class="ch-end"><div class="rule"></div></div>' +
         '</div>' +
       '</section>';
@@ -582,7 +658,9 @@
 
     return '<div class="h-table-block reveal">' +
       '<h3 class="h3">Чемпионы турниров</h3>' +
+      '<p class="h-table-hint">Турниры по порядку: №1 — первый, дальше по возрастанию. Название в таблице совпадает с заголовком главы ниже.</p>' +
       '<div class="tbl-scroll"><table class="tbl">' +
+        '<caption>Титулы Compass Arena по турнирам</caption>' +
         '<thead><tr><th class="num">Турнир</th><th>Дата</th><th>Название</th><th>Чемпион</th><th>Финалист</th><th class="num">Финал</th></tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
       '</table></div></div>';
@@ -605,7 +683,9 @@
 
     return '<div class="h-table-block reveal">' +
       '<h3 class="h3">Клубы и титулы</h3>' +
+      '<p class="h-table-hint">Сумма по всем турнирам архива' + (at.currentPlayed ? ' и завершённому текущему сезону' : '') + '.</p>' +
       '<div class="tbl-scroll"><table class="tbl">' +
+        '<caption>Статистика команд за всю историю</caption>' +
         '<thead><tr><th>Команда</th><th class="num">Титулы</th><th class="num">Финалы</th><th class="num">Матчи</th><th class="num">Победы–поражения</th><th class="num">Карты</th></tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
       '</table></div></div>';
@@ -634,7 +714,7 @@
     return '<section class="h-sec" id="mvp">' +
       '<div class="wrap">' +
         '<div class="h-sec-head">' +
-          '<div><h2 class="h2">Витрина MVP</h2></div>' +
+          '<div><p class="h-eyebrow">' + ic('mvp') + ' Признание</p><h2 class="h2">Витрина MVP</h2></div>' +
           '<p class="h-note">Игроки, которых организаторы отметили в каждом турнире организации.</p>' +
         '</div>' +
         '<div class="h-mvp-grid">' + items.map(function (m) {
@@ -642,7 +722,7 @@
             '<div class="nick">' + esc(m.nick) + '</div>' +
             (m.team ? '<div class="team">' + esc(m.team) + '</div>' : '') +
             (m.note ? '<div class="note">' + esc(m.note) + '</div>' : '') +
-            '<div class="src">Турнир №' + m.season + ' · ' + esc(m.title) + '</div>' +
+            '<div class="src">' + ic('champion') + 'Турнир №' + m.season + ' · ' + esc(m.title) + '</div>' +
             '</a>';
         }).join('') + '</div>' +
       '</div></section>';
@@ -669,7 +749,7 @@
       };
       var ev = { '@type': 'SportsEvent', name: entry.label, sport: 'Esports', url: idUrl(id) };
       var date = dateText(h);
-      if (date) ev.description = 'Турнир №' + entry.season + (entry.h && entry.h.game ? ' по ' + entry.h.game : '') + ' — ' + date;
+      if (date) ev.description = 'Турнир №' + entry.season + ' по Dota 2 — ' + date;
       if (h.game) ev.about = h.game;
       ev.competitor = teams.filter(function (t) { return t && !isSlotName(t.name); })
         .map(function (t) { return { '@type': 'SportsTeam', name: t.name }; });
@@ -684,7 +764,7 @@
       '@context': 'https://schema.org',
       '@type': 'ItemList',
       name: 'История турниров Compass Arena',
-      description: 'Все турниры организации Compass Arena: чемпионы, финалисты и MVP.',
+      description: 'Все турниры организации Compass Arena по Dota 2: чемпионы, финалисты и MVP.',
       numberOfItems: items.length,
       itemListOrder: 'https://schema.org/ItemListOrderAscending',
       itemListElement: items
@@ -750,21 +830,23 @@
   function collectGroups() {
     lb.groups = {};
     lb.names = {};
-    var views = document.querySelectorAll('.pv[data-gallery]');
-    for (var i = 0; i < views.length; i++) {
-      var key = views[i].getAttribute('data-gallery');
-      var slides = views[i].querySelectorAll('.pv-slide');
+    var grids = document.querySelectorAll('.g-flow[data-gallery]');
+    for (var i = 0; i < grids.length; i++) {
+      var grid = grids[i];
+      var key = grid.getAttribute('data-gallery');
+      var items = grid.querySelectorAll('.g-item');
       var list = [];
-      for (var j = 0; j < slides.length; j++) {
-        var img = slides[j].querySelector('img.pv-img');
+      for (var j = 0; j < items.length; j++) {
+        var img = items[j].querySelector('img');
+        var capEl = items[j].querySelector('.g-cap');
         list.push({
-          url: img ? (img.getAttribute('src') || img.getAttribute('data-src') || '') : '',
-          caption: slides[j].getAttribute('data-cap') || '',
+          url: img ? img.getAttribute('src') : '',
+          caption: capEl ? capEl.textContent : '',
           alt: img ? (img.getAttribute('alt') || '') : ''
         });
       }
       lb.groups[key] = list;
-      lb.names[key] = views[i].getAttribute('data-gname') || 'Compass Arena';
+      lb.names[key] = grid.getAttribute('data-gname') || 'Compass Arena';
     }
   }
 
@@ -789,12 +871,13 @@
     document.addEventListener('click', function (e) {
       var target = e.target;
       if (!target || !target.closest) return;
-      if (target.closest('.pv-btn')) return;
-      var stage = target.closest('.pv-stage');
-      if (!stage) return;
-      var pv = stage.closest('.pv');
-      if (!pv) return;
-      lbOpen(chapterPhotos(pv.getAttribute('data-gallery')), pv._cur ? pv._cur() : 0);
+      var item = target.closest('.g-item');
+      if (!item) return;
+      var grid = item.closest('.g-flow');
+      if (!grid) return;
+      var photos = chapterPhotos(grid.getAttribute('data-gallery'));
+      var idx = parseInt(item.getAttribute('data-photo'), 10);
+      lbOpen(photos, isNaN(idx) ? 0 : idx);
     });
 
     var close = document.getElementById('lbClose');
@@ -834,7 +917,7 @@
   var lastActive = null;
 
   function initCoverObserver() {
-    var items = document.querySelectorAll('.h-hero');
+    var items = document.querySelectorAll('.h-hero, .ch-cover');
     if (coverIo) { coverIo.disconnect(); coverIo = null; }
     if (!isObs()) {
       for (var i = 0; i < items.length; i++) items[i].classList.add('in');
@@ -863,7 +946,7 @@
   }
 
   function initSpy() {
-    var sections = document.querySelectorAll('#books [id^="ch-"]');
+    var sections = document.querySelectorAll('#chapters [id^="ch-"]');
     if (spyIo) { spyIo.disconnect(); spyIo = null; }
     lastActive = null;
     if (sections.length <= 1 || !isObs()) return;
@@ -878,8 +961,15 @@
   /* ==========================================================
      Полный рендер
      ========================================================== */
-  /* Между турнирами отдельный разделитель не нужен: марка главы уже называет номер турнира */
-  function divider() { return ''; }
+  /* Разделитель между турнирами: линия + компас */
+  function divider(nextSeason) {
+    return '<div class="ch-divider">' +
+      '<div class="wrap">' +
+        '<div class="orn"><svg class="ic" aria-hidden="true"><use href="#i-compass"></use></svg></div>' +
+        '<p class="ch-divider-meta">Ниже — турнир №' + nextSeason + '</p>' +
+      '</div>' +
+      '</div>';
+  }
 
   function safe(fn, fallback, label) {
     try { return fn(); } catch (e) {
@@ -896,8 +986,12 @@
     var at = safe(function () { return allTime(d); }, { tournaments: 0, matches: 0, teams: [], clubList: [], currentPlayed: false }, 'сводка');
     var chapters = [];
     var archiveCount = entries.length;
+    var currentSeasonNo = archiveCount + 1;
 
     safe(function () { renderHero(d, sorted, at); }, null, 'первый экран');
+
+    var html = safe(function () { return currentHtml(currentSeason(d), currentSeasonNo, archiveCount); }, '', 'текущий сезон');
+    chapters.push({ id: 'ch-now', no: '№' + currentSeasonNo, title: 'Текущий сезон', date: '', current: true });
 
     var archive = '';
     for (var i = 0; i < entries.length; i++) {
@@ -920,8 +1014,8 @@
         '<h2 class="h2">Архив пока пуст</h2>' +
         '<p class="lead">Здесь появятся завершённые турниры организации: чемпион, состав, путь к титулу и кадры. ' +
         'Когда сезон доигран, организаторы фиксируют его в админке — и он встаёт в хронику отдельным турниром.</p>' +
-        '<div class="row" style="margin-top:22px"><a class="btn btn-gold" href="/#bracket">' + 'Текущая сетка</a>' +
-        '<a class="btn btn-ghost" href="/schedule.html">' + 'Расписание</a></div>' +
+        '<div class="row" style="margin-top:22px"><a class="btn btn-gold" href="/#bracket">' + ic('bracket') + 'Текущая сетка</a>' +
+        '<a class="btn btn-ghost" href="/schedule.html">' + ic('calendar') + 'Расписание</a></div>' +
         '</section>';
     }
 
@@ -932,7 +1026,7 @@
     if (champs || clubs) {
       extras += '<section class="h-sec" id="summary"><div class="wrap">' +
         '<div class="h-sec-head">' +
-          '<div><h2 class="h2">Сводка чемпионов</h2></div>' +
+          '<div><p class="h-eyebrow">' + ic('champion') + ' Итоги организации</p><h2 class="h2">Сводка чемпионов</h2></div>' +
           '<p class="h-note">Одна таблица на всю историю: номер турнира, кто взял титул и с каким счётом закончился финал.</p>' +
         '</div>' +
         '<div class="h-tables">' + champs + clubs + '</div>' +
@@ -940,6 +1034,9 @@
     }
     var mvp = safe(function () { return mvpShowcase(entries); }, '', 'витрина MVP');
 
+    /* Текущий сезон первым, дальше — главы хроники */
+    var root = document.getElementById('chapters');
+    if (root) root.innerHTML = html;
     var books = document.getElementById('books');
     if (books) books.innerHTML = archive + extras + mvp;
 
@@ -948,8 +1045,8 @@
 
     safe(function () { U().observeReveals(document); }, null, 'анимации');
     safe(function () { initCoverObserver(); }, null, 'обложки');
+    safe(function () { fitPhotos(document); }, null, 'пропорции кадров');
     safe(function () { collectGroups(); }, null, 'галереи');
-    safe(function () { initViewers(); }, null, 'просмотрщик фото');
     safe(function () { initSpy(); }, null, 'активная глава');
     safe(function () { initLightbox(); }, null, 'лайтбокс');
 

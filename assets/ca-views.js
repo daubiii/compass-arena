@@ -132,7 +132,7 @@
       '</div>' +
       '<div class="champ-actions">' +
         (opts.actions || ('<a class="btn btn-gold" href="#bracket">' + ic('bracket') + 'Сетка</a>' +
-          '<a class="btn btn-ghost" href="/history.html">' + ic('trophy') + 'История</a>')) +
+          '<a class="btn btn-ghost" href="/history.html">' + ic('champion') + 'История</a>')) +
       '</div>' +
       '</div>';
   }

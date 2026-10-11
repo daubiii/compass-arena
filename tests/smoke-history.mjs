@@ -102,38 +102,49 @@ function ok(cond, label, extra) {
   else { fails++; console.log('  FAIL ' + label + (extra !== undefined ? ' → ' + extra : '')); }
 }
 
-/* ================= (а) history пуст: идущий турнир в архив не попадает ================= */
-console.log('\nhistory.html — пустая история (архив только из закреплённых турниров)');
+/* ================= (а) history пуст: только текущий сезон ================= */
+console.log('\nhistory.html — пустая история (текущий сезон)');
 {
   const dom = makeDom('history.html', PRE);
   const { window } = dom;
   await sleep(160);
   const d = window.document;
+  const q = (s) => d.querySelector(s);
 
   ok(!!d.getElementById('ca-sprite'), 'спрайт иконок вставлен');
   ok(!!d.getElementById('ca-schema'), 'JSON-LD добавлен');
   ok(d.body.textContent.includes('История Compass Arena'), 'заголовок первого экрана');
 
-  // идущий турнир в архиве не показывается
-  ok(!d.getElementById('ch-now'), 'блока текущего сезона нет');
-  ok(d.querySelectorAll('.now').length === 0, 'нет карточек идущего турнира');
-  ok(!d.body.textContent.includes('До старта'), 'статусов идущего турнира нет');
+  // текущий сезон — единственная глава
+  ok(!!d.getElementById('ch-now'), 'блок текущего сезона отрисован');
+  ok(d.body.textContent.includes('Сезон №1'), 'марка текущего сезона');
+  ok(d.querySelectorAll('#chapters .now').length === 1, 'ровно один блок текущего сезона');
   ok(d.querySelectorAll('#books .ch').length === 0, 'глав архива нет');
-  ok(!!d.querySelector('.ch-empty'), 'показано пустое состояние архива');
-  ok(d.getElementById('chapterNav').hidden === true, 'панель навигации скрыта');
+  ok(d.getElementById('chapterNav').hidden === true, 'панель навигации скрыта при одной главе');
   ok(d.querySelectorAll('.h-chip').length === 0, 'чипов навигации нет');
 
+  // цифры первого экрана
   const figs = d.querySelectorAll('#heroFigures .h-figure');
   ok(figs.length === 4, 'четыре сводные цифры', figs.length);
   ok(figs[0] && figs[0].textContent.includes('0'), 'ноль турниров в архиве', figs[0] && figs[0].textContent.trim());
-  ok(figs[1] && figs[1].textContent.includes('0'), 'матчей в архиве — 0', figs[1] && figs[1].textContent.trim());
-  ok(figs[2] && figs[2].textContent.includes('0'), 'команд в архиве — 0', figs[2] && figs[2].textContent.trim());
+  ok(figs[1] && figs[1].textContent.includes('5'), 'матчей текущего сезона — 5', figs[1] && figs[1].textContent.trim());
+  ok(figs[2] && figs[2].textContent.includes('6'), 'команд — 6', figs[2] && figs[2].textContent.trim());
   ok(figs[3] && figs[3].textContent.includes('—'), 'действующий чемпион — прочерк', figs[3] && figs[3].textContent.trim());
 
+  // пустое состояние текущего сезона
+  ok(d.body.textContent.includes('До старта'), 'статус «До старта»');
+  ok(d.querySelectorAll('#ch-now .now-team').length === 6, 'шесть участников', d.querySelectorAll('#ch-now .now-team').length);
+  ok(!!q('#ch-now .now-bar i'), 'полоса прогресса есть');
+  ok(!!q('#ch-now a[href="/#bracket"]') && !!q('#ch-now a[href="/schedule.html"]'), 'кнопки на сетку и расписание');
+
+  // мёртвых зон нет
   ok(d.getElementById('summary') === null, 'сводки нет без истории');
   ok(d.getElementById('mvp') === null, 'витрины MVP нет');
   ok(d.querySelectorAll('.h-blank').length === 0, 'нет пустых заглушек');
   ok(d.querySelectorAll('img').length > 0 && Array.from(d.querySelectorAll('img')).every((i) => i.hasAttribute('alt')), 'у всех img есть alt');
+
+  // ссылки «назад» с главной работают: якорь существует
+  ok(!!d.getElementById('ch-ca-2025-05-10') === false, 'якорей архива нет (ожидаемо)');
 }
 
 /* ============ (б) история из двух турниров ============ */
@@ -148,7 +159,7 @@ console.log('\nhistory.html — архив из двух турниров');
   ok(d.querySelectorAll('#books .ch').length === 2, 'две главы архива', d.querySelectorAll('#books .ch').length);
   ok(!!d.getElementById('ch-ca-2025-05-10'), 'якорь #ch-ca-2025-05-10');
   ok(!!d.getElementById('ch-ca-2026-02-14'), 'якорь #ch-ca-2026-02-14');
-  ok(!d.getElementById('ch-now'), 'идущего турнира в архиве нет');
+  ok(!!d.getElementById('ch-now'), 'текущий сезон на месте');
 
   const ch1 = d.getElementById('ch-ca-2025-05-10');
   const ch2 = d.getElementById('ch-ca-2026-02-14');
@@ -171,27 +182,28 @@ console.log('\nhistory.html — архив из двух турниров');
   ok(rows[rows.length - 1].querySelector('.win').textContent.includes('Gaimin Gladiators'), 'победитель гранд-финала');
   ok(rows[rows.length - 1].querySelector('.lose').textContent.includes('Team Spirit'), 'проигравший гранд-финала');
 
-  // просмотрщик фото: один кадр на виду, остальные подгружаются по мере листания
-  const v1 = ch1.querySelector('.pv');
-  const v2 = ch2.querySelector('.pv');
-  ok(!!v1 && !!v2, 'у обеих глав есть просмотрщик фото');
-  ok(v1.querySelectorAll('.pv-slide').length === 2, 'в первой главе 2 кадра', v1.querySelectorAll('.pv-slide').length);
-  ok(v2.querySelectorAll('.pv-slide').length === 5, 'во второй главе 5 кадров', v2.querySelectorAll('.pv-slide').length);
-  ok(v1.querySelector('.pv-slide.is-on img.pv-img').getAttribute('src').includes('s1-cover.jpg'), 'первым виден первый кадр');
-  ok(v2.querySelectorAll('.pv-slide:not(.is-on) img.pv-img').length === 4, 'остальные кадры не скрыты в разметке');
-  ok(/Ещё 4/.test(v2.querySelector('.pv-next').textContent), 'стрелка зовёт листать: «Ещё 4»', v2.querySelector('.pv-next').textContent);
-  ok(v2.querySelector('.pv-count').textContent.replace(/\s+/g, '') === '1/5', 'счётчик 1 / 5', v2.querySelector('.pv-count').textContent);
-  ok(d.querySelectorAll('.g-grid, .ch-cover').length === 0, 'старых сеток и обложек нет');
-  const pimgs = Array.from(d.querySelectorAll('img.pv-img'));
-  ok(pimgs.length === 7 && pimgs.every((i) => (i.getAttribute('alt') || '').length > 0), 'у каждого из семи кадров есть alt', pimgs.length);
+  // обложки: фото и типографика
+  ok(!!ch1.querySelector('.ch-cover img'), 'обложка первой главы — фото');
+  ok(ch1.querySelector('.ch-cover img').getAttribute('alt').length > 0, 'alt обложки заполнен', ch1.querySelector('.ch-cover img').getAttribute('alt'));
+  ok(ch1.querySelector('.ch-cover img').getAttribute('src').includes('s1-cover.jpg'), 'первое фото стало обложкой');
+
+  // галереи: обложка исключается из галереи
+  const g1 = ch1.querySelector('.g-flow');
+  const g2 = ch2.querySelector('.g-flow');
+  ok(!!g1 && g1.querySelectorAll('.g-item').length === 1, 'галерея первой главы — 1 кадр', g1 && g1.querySelectorAll('.g-item').length);
+  ok(!!g2 && g2.querySelectorAll('.g-item').length === 4, 'галерея второй главы — 4 кадра', g2 && g2.querySelectorAll('.g-item').length);
+  const gimgs = Array.from(d.querySelectorAll('.g-item img'));
+  ok(gimgs.length === 5, 'всего пять кадров в галереях', gimgs.length);
+  ok(gimgs.every((i) => (i.getAttribute('alt') || '').length > 0), 'у каждого кадра осмысленный alt');
 
   // панель навигации по главам
   const nav = d.getElementById('chapterNav');
   ok(nav.hidden === false, 'панель навигации видна');
   const chips = d.querySelectorAll('.h-chip');
-  ok(chips.length === 2, 'два чипа в навигации', chips.length);
-  ok(chips[0].getAttribute('data-target') === 'ch-ca-2025-05-10', 'чип ведёт на якорь главы', chips[0].getAttribute('data-target'));
-  ok(chips[0].getAttribute('href') === '#ch-ca-2025-05-10', 'href чипа — якорь', chips[0].getAttribute('href'));
+  ok(chips.length === 3, 'три чипа в навигации', chips.length);
+  ok(chips[1].getAttribute('data-target') === 'ch-ca-2025-05-10', 'чип ведёт на якорь главы', chips[1].getAttribute('data-target'));
+  ok(chips[1].getAttribute('href') === '#ch-ca-2025-05-10', 'href чипа — якорь', chips[1].getAttribute('href'));
+  ok(chips[0].getAttribute('data-target') === 'ch-now', 'первый чип — текущий сезон');
 
   // таблица чемпионов
   ok(!!d.getElementById('summary'), 'блок сводки отрисован');
@@ -234,19 +246,18 @@ console.log('\nhistory.html — архив из двух турниров');
   ok(schema.itemListElement[1].item.winner.name === 'Gaimin Gladiators', 'победитель в JSON-LD', JSON.stringify(schema.itemListElement[1].item.winner));
 
   // лайтбокс
-  v2.querySelector('.pv-next').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-  v2.querySelector('.pv-next').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-  ok(v2.querySelector('.pv-count').textContent.replace(/\s+/g, '') === '3/5', 'стрелка листает кадры', v2.querySelector('.pv-count').textContent);
-  v2.querySelector('.pv-stage').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  const grid2 = ch2.querySelector('.g-flow');
+  const third = grid2.querySelectorAll('.g-item')[2];
+  third.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await sleep(40);
   const lbEl = d.getElementById('lb');
   ok(lbEl.classList.contains('active'), 'лайтбокс открылся по клику');
-  ok(d.getElementById('lbCount').textContent.trim() === '3 / 5', 'счётчик лайтбокса', d.getElementById('lbCount').textContent);
+  ok(d.getElementById('lbCount').textContent.trim() === '3 / 4', 'счётчик лайтбокса', d.getElementById('lbCount').textContent);
   ok(d.getElementById('lbImg').getAttribute('alt').length > 0, 'alt картинки лайтбокса');
   d.getElementById('lbNext').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-  ok(d.getElementById('lbCount').textContent.trim() === '4 / 5', 'переход вперёд по стрелке', d.getElementById('lbCount').textContent);
+  ok(d.getElementById('lbCount').textContent.trim() === '4 / 4', 'переход вперёд по стрелке', d.getElementById('lbCount').textContent);
   d.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-  ok(d.getElementById('lbCount').textContent.trim() === '3 / 5', 'переход назад по клавише');
+  ok(d.getElementById('lbCount').textContent.trim() === '3 / 4', 'переход назад по клавише');
   d.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   ok(!lbEl.classList.contains('active'), 'лайтбокс закрылся по Esc');
 
@@ -276,8 +287,10 @@ console.log('\nhistory.html — глава без фото и MVP (пустое 
   const d = window.document;
   const ch = d.getElementById('ch-ca-lean');
   ok(!!ch, 'глава без фото отрисована');
-  ok(ch.querySelector('.pv') === null, 'просмотрщик не рендерится без фото');
-  ok(d.querySelectorAll('#books .pv-slide').length === 0, 'ни одного кадра на странице');
+  ok(!!ch.querySelector('.ch-cover.is-flat'), 'типографическая обложка вместо фото');
+  ok(ch.querySelector('.ch-cover.is-flat img') === null, 'в плоской обложке нет img');
+  ok(ch.querySelectorAll('.g-flow').length === 0, 'галерея не рендерится вовсе');
+  ok(d.querySelectorAll('#books .g-item').length === 0, 'ни одного кадра на странице');
   ok(ch.querySelectorAll('.ch-row').length === 2, 'путь к титулу из двух серий', ch.querySelectorAll('.ch-row').length);
   ok(d.getElementById('mvp') === null, 'витрины MVP нет без MVP');
   ok(ch.textContent.includes('MVP') === false, 'блок MVP не подмешивается', ch.textContent.includes('MVP'));

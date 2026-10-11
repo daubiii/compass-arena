@@ -14,25 +14,19 @@
   var ic = U.icon;
 
   var FILTER = 'all';
+  var FILTERS = [
+    { key: 'all', label: 'Все матчи' },
+    { key: 'r1', label: 'Раунд 1' },
+    { key: 'semi', label: 'Полуфинал' },
+    { key: 'grand', label: 'Гранд-финал' },
+    { key: 'done', label: 'Сыгранные' }
+  ];
   var TICK = null;
 
-  /* Фильтры строятся из реальных стадий сетки: у любой структуры свои раунды */
-  var RANK = { upper: 0, lower: 1, grand: 2, third: 3 };
   function stageKey(m) {
-    return m.bracket === 'grand' ? 'grand' : 's-' + m.bracket + '-' + m.round;
-  }
-  function filtersFor(d) {
-    var list = [{ key: 'all', label: 'Все матчи' }], seen = {};
-    d.matches.slice().sort(function (a, b) {
-      return ((RANK[a.bracket] || 0) - (RANK[b.bracket] || 0)) || (a.round - b.round) || (a.num - b.num);
-    }).forEach(function (m) {
-      var k = stageKey(m);
-      if (seen[k]) return;
-      seen[k] = true;
-      list.push({ key: k, label: m.bracket === 'grand' ? 'Гранд-финал' : D.colLabel(m) });
-    });
-    list.push({ key: 'done', label: 'Сыгранные' });
-    return list;
+    if (m.bracket === 'grand' || m.id === 5) return 'grand';
+    if (m.round === 2 || m.id === 4) return 'semi';
+    return 'r1';
   }
 
   function visibleMatches(d) {
@@ -59,8 +53,6 @@
   function renderFilters(d) {
     var box = document.getElementById('filters');
     if (!box) return;
-    var FILTERS = filtersFor(d);
-    if (!FILTERS.some(function (f) { return f.key === FILTER; })) FILTER = 'all';
     box.innerHTML = FILTERS.map(function (f) {
       var n = countFor(d, f.key);
       return '<button class="chip-f' + (FILTER === f.key ? ' active' : '') + '" type="button" role="tab"' +
@@ -177,7 +169,7 @@
   function filterFromUrl() {
     try {
       var f = new URLSearchParams(location.search).get('f');
-      if (f && /^(all|done|grand|s-[a-z]+-\d+)$/.test(f)) return f;
+      if (f && FILTERS.some(function (x) { return x.key === f; })) return f;
     } catch (e) {}
     return 'all';
   }

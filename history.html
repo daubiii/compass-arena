@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>История Compass Arena — архив турниров, чемпионы и MVP</title>
-<meta name="description" content="Полный архив организации Compass Arena: все турниры, чемпионы, финалисты, MVP, хроники глав и сводка титулов.">
+<meta name="description" content="Полный архив организации Compass Arena: все турниры по Dota 2, чемпионы, финалисты, MVP, хроники глав и сводка титулов.">
 <meta name="theme-color" content="#08090c">
 <link rel="canonical" href="https://compassarena.ru/history.html">
 
@@ -75,27 +75,71 @@
 .h-sec-head { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 60px; align-items: end; margin-bottom: 46px; }
 .h-sec-head .h2 { margin-bottom: 0; }
 .h-note { color: var(--text-2); font-size: 15px; max-width: 56ch; justify-self: end; }
-.h-eyebrow { color: var(--text-3); font-size: 12.5px; letter-spacing: .02em; margin-bottom: 16px; }
+.h-eyebrow { display: flex; align-items: center; gap: 12px; color: var(--text-2); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 18px; }
+.h-eyebrow .ic { font-size: 20px; color: var(--gold); flex: none; }
+.h-eyebrow::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-2), transparent); }
+
+/* ---------- Текущая глава ---------- */
+.now { position: relative; padding-top: 84px; padding-bottom: 84px; }
+.now-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 44px; align-items: start; }
+.now h2 { font-family: var(--display); font-weight: 300; font-size: clamp(28px, 3.8vw, 48px); line-height: 1.06; letter-spacing: -.02em; margin-bottom: 16px; overflow-wrap: anywhere; }
+.now .lead { margin-bottom: 30px; }
+.now-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 26px; }
+.now-when { color: var(--text-3); font-size: 13px; }
+.now-line { display: flex; justify-content: space-between; gap: 14px; font-size: 13.5px; color: var(--text-2); margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+.now-bar { height: 1px; background: var(--line-2); position: relative; margin-bottom: 30px; }
+.now-bar i { position: absolute; left: 0; top: -1px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi)); }
+.now-roster { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 30px; }
+.now-team { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; font-size: 13.5px; background: var(--raise); }
+.now-team.is-champ { border-color: rgba(201,163,90,.5); color: var(--gold-hi); }
+.now-team .ic { font-size: 14px; }
+.now-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.now-side { display: grid; gap: 12px; }
+.now-card { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--raise); padding: 16px 18px; }
+.now-card .k { display: block; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 8px; }
+.now-card .v { font-family: var(--display); font-weight: 400; font-size: clamp(17px, 2vw, 22px); line-height: 1.2; overflow-wrap: anywhere; }
+.now-card .v.gold { color: var(--gold-hi); }
+.now-empty { border: 1px dashed var(--line-2); border-radius: var(--r-lg); padding: 30px; color: var(--text-2); }
+.now-empty .ic { font-size: 22px; color: var(--gold); margin-bottom: 14px; }
+.now-empty p { max-width: 52ch; }
 
 /* ---------- Глава архива ---------- */
 .ch { position: relative; padding: 78px 0 0; }
-.ch { scroll-margin-top: calc(var(--head-h) + 76px); }
-.ch-title { margin-bottom: 34px; }
-.ch .pv { margin-bottom: 8px; }
+.ch, .now { scroll-margin-top: calc(var(--head-h) + 76px); }
+.ch-title { margin-bottom: 30px; }
 .ch-title h2 { font-family: var(--display); font-weight: 300; font-size: clamp(28px, 4vw, 52px); line-height: 1.05; letter-spacing: -.02em; overflow-wrap: anywhere; }
 .ch-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 
-/* Заголовки блоков внутри главы — обычный текст, без иконок */
-.ch-h { font-family: var(--ui); font-weight: 500; font-size: 15px; color: var(--text); margin-bottom: 16px; }
-.ch-k { font-size: 13px; color: var(--text-3); margin-bottom: 12px; }
-.ch-story { display: grid; grid-template-columns: 1.1fr .9fr; gap: 56px; align-items: start; padding-top: 52px; }
-.ch-champ-name { font-family: var(--display); font-weight: 300; font-size: clamp(26px, 3.4vw, 44px); line-height: 1.08; letter-spacing: -.02em; color: var(--gold-hi); overflow-wrap: anywhere; }
-.ch-champ-name.is-runner { color: var(--text); font-size: clamp(20px, 2.4vw, 28px); }
-.ch-final { margin-top: 10px; font-size: 14px; color: var(--text-2); }
-.ch-roster { list-style: none; margin-top: 24px; max-width: 420px; border-top: 1px solid var(--line); }
-.ch-roster li { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 11px 2px; border-bottom: 1px solid var(--line); }
-.ch-roster b { font-weight: 500; font-size: 15px; }
-.ch-roster span { color: var(--text-3); font-size: 13px; }
+.ch-cover { position: relative; border-radius: var(--r-xl); overflow: hidden; min-height: 340px; height: min(72vh, 680px); }
+/* Фото целиком: контейнер повторяет пропорции кадра, поля (если кадр узкий) закрывает его же размытая копия */
+.ch-cover.has-photo { height: auto; min-height: 0; aspect-ratio: var(--r, 1.78); max-height: 84vh; background: #050608; }
+.ch-cover .ch-bg { position: absolute; inset: -6%; width: 112%; height: 112%; object-fit: cover; filter: blur(34px) saturate(1.1) brightness(.55); }
+.ch-cover .ch-photo { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; transform: scale(1.02); transition: transform 5s var(--ease-out); }
+.ch-cover.in .ch-photo { transform: scale(1); }
+.ch-capbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 30px; flex-wrap: wrap; padding: 22px 2px 0; }
+.ch-capbar .ch-tag { margin-bottom: 8px; }
+.ch-capbar .champ { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 3vw, 38px); line-height: 1.05; overflow-wrap: anywhere; }
+.ch-capbar .runner { font-size: 14px; color: var(--text-2); }
+.ch-capbar .runner b { color: var(--text); font-weight: 500; }
+.ch-cover.is-flat + .ch-capbar { display: none; }
+.ch-cover .ch-shade { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(4,5,7,.9) 0%, rgba(4,5,7,.2) 44%, rgba(4,5,7,0) 72%); }
+.ch-cover .ch-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: clamp(20px, 3.6vw, 44px); z-index: 1; }
+.ch-tag { display: inline-flex; align-items: center; gap: 9px; font-size: 12.5px; letter-spacing: .06em; color: var(--gold-hi); margin-bottom: 14px; }
+.ch-tag i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+.ch-cap .champ { font-family: var(--display); font-weight: 400; font-size: clamp(24px, 3.8vw, 48px); line-height: 1.05; overflow-wrap: anywhere; }
+.ch-cap .runner { margin-top: 10px; font-size: 14px; color: var(--text-2); }
+.ch-cap .runner b { color: var(--text); font-weight: 500; }
+.ch-cover.is-flat { display: flex; align-items: center; justify-content: center; text-align: center; background: linear-gradient(160deg, var(--card), var(--raise)); border: 1px solid var(--line); }
+.ch-cover.is-flat .flat-num { position: absolute; font-family: var(--display); font-weight: 200; font-size: clamp(150px, 22vw, 380px); line-height: 1; color: transparent; -webkit-text-stroke: 1px var(--line-2); user-select: none; }
+.ch-cover.is-flat .ch-cap { position: relative; }
+
+.ch-story { display: grid; grid-template-columns: 1fr 1fr; gap: 46px; align-items: start; padding-top: 46px; }
+.ch-block .h-eyebrow { margin-bottom: 18px; }
+.ch-champ-name { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 2.8vw, 32px); line-height: 1.15; margin-bottom: 18px; overflow-wrap: anywhere; }
+.ch-roster { display: flex; flex-wrap: wrap; gap: 8px; }
+.ch-player { display: inline-flex; align-items: baseline; gap: 9px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; font-size: 13.5px; background: var(--raise); }
+.ch-player b { font-weight: 500; }
+.ch-player span { color: var(--text-3); font-size: 11.5px; }
 .ch-quiet { color: var(--text-3); font-size: 14px; }
 
 .ch-mvp { border-left: 2px solid var(--gold); padding-left: 22px; }
@@ -116,7 +160,8 @@
 .ch-row .score { font-family: var(--display); font-weight: 400; font-size: 15px; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
 .ch-row .sides { font-size: 12px; color: var(--text-3); }
 
-.ch-end { padding: 64px 0 0; }
+.ch-gallery { padding-top: 46px; }
+.ch-end { padding: 52px 0; }
 .ch-end .rule { height: 1px; background: var(--line); }
 
 /* ---------- Разделение турниров ---------- */
@@ -144,6 +189,7 @@
 .h-chip.is-active .dt { color: #55575c; }
 .h-chip.is-current { border-color: rgba(201,163,90,.5); color: var(--gold-hi); }
 .h-chip.is-current .no { opacity: 1; }
+.now-empty .btn { margin-top: 16px; }
 
 /* ---------- Сводные таблицы ---------- */
 .h-tables { padding-top: 20px; }
@@ -178,6 +224,7 @@
 
 /* ---------- Адаптив ---------- */
 @media (max-width: 1020px) {
+  .now-grid { grid-template-columns: 1fr; gap: 30px; }
   .ch-story { grid-template-columns: 1fr; gap: 34px; }
   .h-sec-head { grid-template-columns: 1fr; }
   .h-note { justify-self: start; }
@@ -189,6 +236,8 @@
   .h-figures { grid-template-columns: 1fr 1fr; gap: 16px 20px; margin-top: 34px; }
   .h-sec { padding: 62px 0; }
   .ch { padding-top: 56px; }
+  .ch-cover { height: 48vh; border-radius: var(--r-lg); }
+  .ch-cover.has-photo { height: auto; }
   .ch-row { grid-template-columns: 1fr; gap: 6px; padding: 14px 2px; }
   .h-mvp-grid { grid-template-columns: 1fr; }
 }
@@ -204,7 +253,7 @@
 </head>
 <body>
 
-<a class="skip" href="#books">Перейти к архиву турниров</a>
+<a class="skip" href="#chapters">Перейти к архиву турниров</a>
 
 <header class="site-head" id="head">
   <div class="wrap head-row">
@@ -246,11 +295,11 @@
     </div>
     <div class="h-hero-shade"></div>
     <div class="wrap h-hero-body">
-      <p class="h-hero-kicker" id="heroKicker">Архив организации</p>
+      <p class="h-hero-kicker" id="heroKicker">Архив организации · Dota 2</p>
       <h1 id="heroTitle">История Compass Arena</h1>
       <p class="h-sub" id="heroSub">Все главы организации: чемпионы, финалисты, ключевые серии и кадры с трансляций.</p>
       <div class="h-figures" id="heroFigures"></div>
-      <div class="h-hero-foot"><span>Листайте — хроника идёт по главам</span><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"></use></svg></div>
+      
     </div>
   </section>
 
@@ -259,6 +308,7 @@
     <div class="h-nav-inner" id="chapterNavInner"></div>
   </nav>
 
+  <div id="chapters"></div>
   <div id="books"></div>
 
 </main>
@@ -271,7 +321,7 @@
           <img src="/img/mark.webp" width="34" height="34" alt="" loading="lazy">
           <b>Compass <i>Arena</i></b>
         </div>
-        <p class="foot-about">Организация киберспортивных турниров. История сезонов, чемпионы и хроники матчей — здесь.</p>
+        <p class="foot-about">Организация турниров по Dota 2. История сезонов, чемпионы и хроники матчей — здесь.</p>
       </div>
       <div class="foot-col">
         <h4>Турнир</h4>
@@ -294,7 +344,7 @@
       </div>
     </div>
     <div class="foot-bottom">
-      <span>© <span id="year">2026</span> Compass Arena · <span data-trademark>Dota 2 — товарные знаки принадлежат Valve Corporation</span></span>
+      <span>© <span id="year">2026</span> Compass Arena · Dota 2 — товарные знаки принадлежат Valve Corporation</span>
       <span><a href="/rules.html">Регламент</a> · <a href="/schedule.html">Расписание</a></span>
     </div>
   </div>

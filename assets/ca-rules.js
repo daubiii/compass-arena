@@ -49,7 +49,6 @@
   function init() {
     U.injectSprite();
     U.initChrome();
-    if (CA.data && CA.data.load) CA.data.load();
     initToc();
     var year = document.getElementById('year');
     if (year) year.textContent = new Date().getFullYear();
