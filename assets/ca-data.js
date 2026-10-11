@@ -174,6 +174,7 @@
         id: toInt(t.id) != null ? toInt(t.id) : i + 1,
         name: String(t.name == null ? '' : t.name),
         logo: t.logo || '',
+        seed: toInt(t.seed),
         players: normPlayers(t.players)
       });
     }
@@ -190,9 +191,15 @@
         winner: toInt(mm.winner),
         score1: mm.score1 == null || mm.score1 === '' ? null : toInt(mm.score1),
         score2: mm.score2 == null || mm.score2 === '' ? null : toInt(mm.score2),
-        vod: mm.vod || ''
+        vod: mm.vod || '',
+        num: toInt(mm.num),
+        label: mm.label ? String(mm.label) : '',
+        from1: normLink(mm.from1),
+        from2: normLink(mm.from2)
       });
     }
+    D.matches.forEach(function (m) { if (m.num == null) m.num = m.id; });
+    legacyLinks(D);
 
     if (src.schedule && typeof src.schedule === 'object') {
       Object.keys(src.schedule).forEach(function (k) {
@@ -203,28 +210,78 @@
     return D;
   }
 
-  /* ---------- Связи сетки: M1/M2 → M4, M4/M3 → M5 ---------- */
+  /* ---------- Связи сетки ----------
+     У матча могут быть from1/from2 = { m: id матча-источника, as: 'w' (победитель) | 'l' (проигравший) }.
+     Команда в слоте с такой связью всегда вычисляется из источника; слот без связи хранит команду сам.
+     Старые данные без связей (классические M1–M5) получают их автоматически: M1,M2 → M4; M4,M3 → M5. */
+  function normLink(v) {
+    if (!v || typeof v !== 'object') return null;
+    var id = toInt(v.m);
+    if (id == null) return null;
+    return { m: id, as: v.as === 'l' ? 'l' : 'w' };
+  }
+  function legacyLinks(D) {
+    var any = D.matches.some(function (m) { return m.from1 || m.from2; });
+    if (any) return;
+    var by = {};
+    D.matches.forEach(function (m) { by[m.id] = m; });
+    if (by[4] && by[1] && by[2]) { by[4].from1 = { m: 1, as: 'w' }; by[4].from2 = { m: 2, as: 'w' }; }
+    if (by[5] && by[4] && by[3]) { by[5].from1 = { m: 4, as: 'w' }; by[5].from2 = { m: 3, as: 'w' }; }
+  }
   function linkBracket(D) {
     var by = {};
     D.matches.forEach(function (m) { by[m.id] = m; });
-    if (by[4]) {
-      by[4].team1 = by[1] ? by[1].winner : by[4].team1;
-      by[4].team2 = by[2] ? by[2].winner : by[4].team2;
+    function pick(link) {
+      var src = link && by[link.m];
+      if (!src) return undefined;
+      return link.as === 'l' ? loserOf(src) : (src.winner == null ? null : src.winner);
     }
-    if (by[5]) {
-      by[5].team1 = by[4] ? by[4].winner : by[5].team1;
-      by[5].team2 = by[3] ? by[3].winner : by[5].team2;
+    function clean(m) {
+      var changed = false;
+      if (m.winner && m.winner !== m.team1 && m.winner !== m.team2) { m.winner = null; changed = true; }
+      if ((m.team1 == null || m.team2 == null) && m.winner != null) { m.winner = null; changed = true; }
+      if (changed) { m.score1 = null; m.score2 = null; }
+      return changed;
     }
-    // Чистим результаты, которые потеряли смысл после правок
-    D.matches.forEach(function (m) {
-      if (m.winner && m.winner !== m.team1 && m.winner !== m.team2) {
-        m.winner = null; m.score1 = null; m.score2 = null;
-      }
-      if ((m.team1 == null || m.team2 == null) && m.winner != null) {
-        m.winner = null; m.score1 = null; m.score2 = null;
-      }
-    });
+    /* Цепочка связей может быть длинной — повторяем, пока что-то меняется (но не дольше числа матчей) */
+    for (var pass = 0; pass <= D.matches.length; pass++) {
+      var changed = false;
+      D.matches.forEach(function (m) {
+        var a = pick(m.from1), b = pick(m.from2);
+        if (a !== undefined && m.team1 !== a) { m.team1 = a; changed = true; }
+        if (b !== undefined && m.team2 !== b) { m.team2 = b; changed = true; }
+        if (clean(m)) changed = true;
+      });
+      if (!changed) break;
+    }
     return D;
+  }
+
+  /* ---------- Финал сетки ----------
+     Структурный финал — последний матч, победитель которого никуда не идёт (матч за 3-е место не в счёт).
+     Если это «сброс» гранд-финала, а он не понадобился (победил игрок из верхней сетки) — решает первый гранд-финал. */
+  function findFinal(D) {
+    var cand = D.matches.filter(function (m) { return m.bracket !== 'third'; });
+    var feeds = {};
+    D.matches.forEach(function (m) {
+      [m.from1, m.from2].forEach(function (l) { if (l && l.as === 'w') feeds[l.m] = true; });
+    });
+    var grands = cand.filter(function (m) { return m.bracket === 'grand'; });
+    var fin = null;
+    if (grands.length) {
+      fin = grands.slice().sort(function (a, b) { return a.round - b.round || a.num - b.num; }).pop();
+    } else {
+      var leaves = cand.filter(function (m) { return !feeds[m.id] && (m.from1 || m.from2); });
+      fin = leaves.slice().sort(function (a, b) { return a.round - b.round || a.num - b.num; }).pop() || null;
+    }
+    if (!fin) return null;
+    if (fin.bracket === 'grand' && !fin.winner) {
+      var ordered = grands.slice().sort(function (a, b) { return a.round - b.round || a.num - b.num; });
+      var at = ordered.indexOf(fin);
+      var first = at > 0 ? ordered[at - 1] : null;
+      if (first && first.winner && first.winner === first.team1) return first;
+    }
+    return fin;
   }
 
   /* ---------- Готовый набор + вычисленные поля ---------- */
@@ -246,7 +303,8 @@
     });
 
     var now = Date.now();
-    var grand = D.byId[5];
+    CUR = D;
+    var grand = findFinal(D);
     D.grandFinal = grand || null;
     /* Чемпионом считается только реально существующая команда: если после сброса сезона
        в сетке остался старый winner, а команда удалена (или подставлена заглушка «Слот N»),
@@ -291,6 +349,8 @@
     return D;
   }
 
+  var CUR = null;   /* последний собранный набор — для подписей стадий, которым нужен контекст сетки */
+
   function team(D, id) { return id == null ? null : (D.teamsById[id] || null); }
   function teamName(D, id) { var t = team(D, id); return t ? t.name : '—'; }
   function loserOf(m) {
@@ -324,7 +384,8 @@
       var s1 = m.score1, s2 = m.score2;
       if (s1 != null && s2 != null) {
         st.maps += s1 + s2;
-        if (s1 === 2 || s2 === 2) { if ((s1 === 0 || s2 === 0)) st.sweeps++; else st.deciders++; }
+        var hi = Math.max(s1, s2), lo = Math.min(s1, s2);
+        if (hi >= 2) { if (lo === 0) st.sweeps++; else if (hi - lo === 1) st.deciders++; }
       }
       var w = st.records[m.winner], l = st.records[loserOf(m)];
       if (w) {
@@ -354,17 +415,77 @@
   }
 
   /* ---------- Подписи стадий ---------- */
+  function maxRound(D, bracket) {
+    var r = 0;
+    ((D && D.matches) || []).forEach(function (m) { if (m.bracket === bracket && m.round > r) r = m.round; });
+    return r;
+  }
+  /* Номер гранд-финала по порядку: 0 — первый, 1 — «сброс». Считаем по порядку раундов, а не по их числам
+     (в старых данных гранд-финал — это раунд 3). */
+  function grandIndex(D, m) {
+    var rounds = [];
+    ((D && D.matches) || []).forEach(function (x) { if (x.bracket === 'grand' && rounds.indexOf(x.round) === -1) rounds.push(x.round); });
+    rounds.sort(function (a, b) { return a - b; });
+    return Math.max(0, rounds.indexOf(m.round));
+  }
+  function hasBracket(D, bracket) {
+    return !!D && D.matches.some(function (m) { return m.bracket === bracket; });
+  }
   function stageLabel(m) {
     if (!m) return '';
-    if (m.bracket === 'grand' || m.id === 5) return 'Гранд-финал';
-    if (m.bracket === 'lower') return 'Нижняя сетка';
-    if (m.round === 2 || m.id === 4) return 'Полуфинал';
+    if (m.label) return m.label;
+    var D = CUR;
+    if (m.bracket === 'grand') return grandIndex(D, m) >= 1 ? 'Гранд-финал · сброс' : 'Гранд-финал';
+    if (m.bracket === 'third') return 'Матч за 3-е место';
+    if (m.bracket === 'lower') {
+      return m.round === maxRound(D, 'lower') ? 'Финал нижней сетки' : 'Нижняя сетка · раунд ' + m.round;
+    }
+    var last = maxRound(D, 'upper'), fromEnd = last - m.round;
+    if (hasBracket(D, 'lower')) {
+      if (fromEnd === 0) return 'Финал верхней сетки';
+      if (fromEnd === 1) return 'Полуфинал верхней сетки';
+      return 'Верхняя сетка · раунд ' + m.round;
+    }
+    if (hasBracket(D, 'grand')) return fromEnd === 0 ? 'Полуфинал' : 'Раунд ' + m.round;
+    if (fromEnd === 0 && last > 1) return 'Финал';
+    if (fromEnd === 1) return 'Полуфинал';
+    if (fromEnd === 2) return 'Четвертьфинал';
     return 'Раунд ' + m.round;
   }
-  var TBD = { 4: ['Победитель M1', 'Победитель M2'], 5: ['Победитель M4', 'Победитель M3'] };
+  /* Короткая подпись для шапки карточки: полную стадию показывает заголовок колонки */
+  function stageShort(m) {
+    if (!m) return '';
+    if (m.label) return m.label;
+    var D = CUR;
+    if (m.bracket === 'grand') return grandIndex(D, m) >= 1 ? 'Сброс' : 'Гранд-финал';
+    if (m.bracket === 'third') return '3 место';
+    if (hasBracket(D, 'lower')) return m.bracket === 'lower' ? 'Нижняя' : 'Верхняя';
+    return stageLabel(m);
+  }
+  /* Подпись колонки сетки */
+  function colLabel(m) {
+    if (!m) return '';
+    if (m.label) return m.label;
+    var D = CUR;
+    if (!hasBracket(D, 'lower') || m.bracket === 'grand' || m.bracket === 'third') return stageLabel(m);
+    if (m.bracket === 'lower') {
+      return m.round === maxRound(D, 'lower') ? 'Финал нижней' : 'Нижняя · раунд ' + m.round;
+    }
+    var fromEnd = maxRound(D, 'upper') - m.round;
+    if (fromEnd === 0) return 'Финал верхней';
+    if (fromEnd === 1) return 'Полуфинал верхней';
+    return 'Верхняя · раунд ' + m.round;
+  }
+  /* Ссылка на матч в подсказках: «M4» */
+  function matchRef(D, id) {
+    var m = D.byId ? D.byId[id] : null;
+    if (!m) { for (var i = 0; i < D.matches.length; i++) if (D.matches[i].id === id) { m = D.matches[i]; break; } }
+    return 'M' + (m ? m.num : id);
+  }
   function slotLabel(D, m, slot) {
     var t = team(D, slot === 1 ? m.team1 : m.team2);
-    var hint = TBD[m.id] ? TBD[m.id][slot - 1] : 'Ожидается';
+    var link = slot === 1 ? m.from1 : m.from2;
+    var hint = link ? (link.as === 'l' ? 'Проигравший ' : 'Победитель ') + matchRef(D, link.m) : 'Ожидается';
     /* Заглушка («Слот 3») — это не участник: показываем подсказку, откуда придёт команда */
     if (!isRealTeam(t)) return { text: hint, team: null, known: false };
     return { text: t.name, team: t, known: true };
@@ -501,6 +622,10 @@
     loserOf: loserOf,
     slotLabel: function (m, slot) { return slotLabel(D, m, slot); },
     stageLabel: stageLabel,
+    stageShort: stageShort,
+    colLabel: colLabel,
+    findFinal: findFinal,
+    matchRef: function (id) { return matchRef(D, id); },
     fmtDateTime: fmtDateTime,
     fmtShort: fmtShort,
     fmtDayKey: fmtDayKey,

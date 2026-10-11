@@ -15,7 +15,7 @@ const DEFAULT_DATA = {
     game: "Dota 2",
     format: "Custom Bracket",
     matches: "Bo3",
-    dates: "26 сентября 2026"
+    dates: ""
   },
   teams: [
     { id: 1, name: "Слот 1", players: [], logo: "" },
@@ -43,6 +43,8 @@ const DEFAULT_DATA = {
   alwaysShowBracketBanner: true
 };
 
+import { applyChallonge } from '../_lib/challonge.js';
+
 export async function onRequestGet(context) {
   const { env } = context;
 
@@ -57,6 +59,9 @@ export async function onRequestGet(context) {
   if (!Array.isArray(history)) history = [];
 
   // Отдаём объединённый объект: текущие данные + history
+  // Если сетка ведётся в Challonge — подмешиваем её (кэш 20 с, при сбое — последняя копия)
+  data = await applyChallonge(env, data);
+
   const response = Object.assign({}, data, { history });
 
   return new Response(JSON.stringify(response), {

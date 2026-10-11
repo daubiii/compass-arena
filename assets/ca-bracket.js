@@ -11,36 +11,124 @@
   var CA = global.CA = global.CA || {};
   var D = CA.data;
 
-  var LAYOUT = {
-    1: { col: 1, rowStart: 2, rowEnd: 4 },
-    2: { col: 1, rowStart: 4, rowEnd: 6 },
-    3: { col: 1, rowStart: 6, rowEnd: 8 },
-    4: { col: 2, rowStart: 2, rowEnd: 6 },
-    5: { col: 3, rowStart: 3, rowEnd: 8 }
-  };
-  var COLUMNS = [
-    { col: 1, label: 'Раунд 1' },
-    { col: 2, label: 'Полуфинал' },
-    { col: 3, label: 'Гранд-финал' }
-  ];
+  /* Раскладка считается из самих матчей и их связей (from1/from2), поэтому подходит любой структуре:
+     single / double elimination, матч за 3-е место, сброс гранд-финала, произвольные ручные сетки.
+     Единица сетки — «строка»: карточка занимает STEP строк, заголовки — 2 строки. */
+  var STEP = 4;
+  var ROW0 = 3;          // первая строка карточек верхней сетки (строки 1–2 — заголовки)
+  var SECTION_GAP = 1;   // пустых строк между верхней и нижней сеткой
 
   function esc(s) { return D.esc(s); }
   function ic(name, cls) { return CA.ui.icon(name, cls); }
 
-  /* ---------- Позиция карточки в сетке ---------- */
-  function gridArea(matchId) {
-    var l = LAYOUT[matchId];
-    if (!l) return '';
-    return l.rowStart + ' / ' + l.col + ' / ' + l.rowEnd + ' / ' + (l.col + 1);
+  /* ---------- Раскладка ---------- */
+  function sectionOf(m) { return m.bracket === 'lower' ? 'lower' : (m.bracket === 'grand' ? 'grand' : (m.bracket === 'third' ? 'third' : 'upper')); }
+  function byNum(a, b) { return (a.num - b.num) || (a.id - b.id); }
+  function uniqSorted(list) {
+    var out = [];
+    list.forEach(function (x) { if (out.indexOf(x) === -1) out.push(x); });
+    return out.sort(function (a, b) { return a - b; });
   }
-  function columnOf(matchId) {
-    var l = LAYOUT[matchId];
-    if (l) return l.col;
-    var m = D.match(matchId);
-    if (!m) return 1;
-    if (m.bracket === 'grand') return 3;
-    if (m.round >= 2) return 2;
-    return 1;
+
+  /* Вертикальная позиция матчей раздела: первый круг — подряд, дальше — по центру между источниками */
+  function placeSection(list, by, sec) {
+    var y = {};
+    uniqSorted(list.map(function (m) { return m.round; })).forEach(function (r) {
+      var items = list.filter(function (m) { return m.round === r; }).sort(byNum);
+      var rows = items.map(function (m) {
+        var srcs = [m.from1, m.from2].filter(function (l) { return l && l.as === 'w'; })
+          .map(function (l) { return by[l.m]; })
+          .filter(function (src) { return src && sectionOf(src) === sec && y[src.id] !== undefined; });
+        var want = srcs.length ? Math.round(srcs.reduce(function (acc, src) { return acc + y[src.id]; }, 0) / srcs.length) : null;
+        return { m: m, want: want };
+      });
+      rows.sort(function (a, b) {
+        if (a.want === null && b.want === null) return byNum(a.m, b.m);
+        if (a.want === null) return 1;
+        if (b.want === null) return -1;
+        return a.want - b.want || byNum(a.m, b.m);
+      });
+      var prev = -STEP;
+      rows.forEach(function (o) {
+        var v = o.want === null ? prev + STEP : Math.max(o.want, prev + STEP);
+        y[o.m.id] = v; prev = v;
+      });
+    });
+    return y;
+  }
+
+  function layout(matches) {
+    var by = {};
+    matches.forEach(function (m) { by[m.id] = m; });
+    var secs = { upper: [], lower: [], grand: [], third: [] };
+    matches.forEach(function (m) { secs[sectionOf(m)].push(m); });
+
+    var out = { items: {}, heads: [], cols: 0, rows: 0, order: [] };
+    var colOf = {};
+    function assignCols(list, startCol) {
+      var rounds = uniqSorted(list.map(function (m) { return m.round; }));
+      list.forEach(function (m) { colOf[m.id] = startCol + rounds.indexOf(m.round); });
+      return rounds.length;
+    }
+    var nUp = assignCols(secs.upper, 1);
+    var nLo = assignCols(secs.lower, 1);
+    var finalCol = Math.max(nUp, nLo, 1) + 1;
+    var nGr = assignCols(secs.grand, finalCol);
+    var thirdCol = nUp ? nUp : finalCol;
+    secs.third.forEach(function (m) { colOf[m.id] = thirdCol; });
+    out.cols = Math.max(nUp, nLo, nGr ? finalCol + nGr - 1 : 0, secs.third.length && !nUp ? finalCol : 0, 1);
+
+    var rowOf = {};
+    var yUp = placeSection(secs.upper, by, 'upper');
+    var upH = 0;
+    secs.upper.forEach(function (m) { rowOf[m.id] = ROW0 + yUp[m.id]; upH = Math.max(upH, yUp[m.id] + STEP); });
+
+    var lowHeadRow = 1;
+    if (secs.lower.length) {
+      lowHeadRow = ROW0 + (secs.upper.length ? upH + SECTION_GAP : 0);
+      var base = lowHeadRow + 2;
+      var yLo = placeSection(secs.lower, by, 'lower');
+      secs.lower.forEach(function (m) { rowOf[m.id] = base + yLo[m.id]; });
+    }
+    if (!secs.upper.length && secs.lower.length) lowHeadRow = 1;
+
+    // гранд-финал и «сброс»: по центру между источниками (по абсолютной позиции)
+    function absRow(id) { return rowOf[id]; }
+    secs.grand.slice().sort(function (a, b) { return a.round - b.round || byNum(a, b); }).forEach(function (m, i) {
+      var srcs = [m.from1, m.from2].filter(function (l) { return l && l.as === 'w' && rowOf[l.m] !== undefined; });
+      var v = srcs.length ? Math.round(srcs.reduce(function (acc, l) { return acc + absRow(l.m); }, 0) / srcs.length) : ROW0 + i * STEP;
+      rowOf[m.id] = v;
+    });
+    // матч за 3-е место — под финалом
+    secs.third.forEach(function (m) {
+      var lastUp = secs.upper.filter(function (x) { return colOf[x.id] === thirdCol; }).sort(byNum).pop();
+      rowOf[m.id] = lastUp ? rowOf[lastUp.id] + STEP + 1 : ROW0;
+    });
+
+    matches.forEach(function (m) {
+      out.items[m.id] = { col: colOf[m.id], row: rowOf[m.id], span: STEP };
+      out.rows = Math.max(out.rows, rowOf[m.id] + STEP - 1);
+    });
+
+    // заголовки колонок: верхняя/общая строка 1, нижняя сетка — над своим блоком
+    function addHeads(list, row) {
+      uniqSorted(list.map(function (m) { return colOf[m.id]; })).forEach(function (c) {
+        var inCol = list.filter(function (m) { return colOf[m.id] === c; }).sort(byNum);
+        out.heads.push({ col: c, row: row, matches: inCol });
+      });
+    }
+    addHeads(secs.upper, 1);
+    addHeads(secs.lower, secs.upper.length ? lowHeadRow : 1);
+    addHeads(secs.grand, 1);
+    out.rows = Math.max(out.rows, 2);
+
+    // порядок в DOM (для мобильной ленты): верхняя, нижняя, гранд, 3-е место; внутри — по колонкам
+    ['upper', 'lower', 'grand', 'third'].forEach(function (k) {
+      uniqSorted(secs[k].map(function (m) { return colOf[m.id]; })).forEach(function (c) {
+        out.order.push({ sec: k, col: c, matches: secs[k].filter(function (m) { return colOf[m.id] === c; }).sort(byNum) });
+      });
+    });
+    return out;
   }
 
   /* ---------- Карточка матча ---------- */
@@ -56,6 +144,13 @@
     if (m.isNext && when) return '<span class="st st-next">' + ic('clock') + esc(when) + '</span>';
     if (when) return '<span class="st">' + esc(when) + '</span>';
     return '<span class="st st-flag">Время уточняется</span>';
+  }
+
+  /* Номер в углу слота: посев команды, а если его нет — её номер в списке (для команд, добавленных из Challonge, пусто) */
+  function seedOf(teamId) {
+    var t = D.team(teamId);
+    if (t && t.seed) return t.seed;
+    return teamId != null && teamId < 1000000 ? teamId : '';
   }
 
   function slotHtml(m, slot) {
@@ -76,7 +171,7 @@
 
     var html = '<div class="' + cls + '" data-team="' + teamId + '" data-slot="' + slot + '" role="button" tabindex="0"' +
       ' aria-label="' + esc(info.text) + ' — состав команды">' +
-      '<span class="slot-seed">' + teamId + '</span>' +
+      '<span class="slot-seed">' + (seedOf(teamId)) + '</span>' +
       '<span class="slot-name">' + esc(info.text) + '</span>' +
       '<span class="slot-side">' +
       (hasScore ? '<span class="slot-score">' + esc(score) + '</span>' : '') +
@@ -85,7 +180,7 @@
     return html;
   }
 
-  function matchHtml(m) {
+  function matchHtml(m, place) {
     if (!m) return '';
     var cls = 'match m' + m.id;
     if (m.state === 'done') cls += ' is-done';
@@ -95,44 +190,53 @@
     if (m.bracket === 'grand') cls += ' is-grand';
     if (m.bracket === 'grand' && m.winner) cls += ' is-champion';
 
-    var head = '<div class="match-head">' +
-      '<span class="m-id">M' + m.id + ' · ' + esc(D.stageLabel(m)) + '</span>' +
-      statusHtml(m) +
-      '</div>';
-
+    /* VOD — в шапке карточки, а не отдельной строкой снизу: высота карточки не зависит от наличия записи */
     var vod = '';
     if (m.vod && m.state === 'done') {
-      vod = '<a class="btn btn-quiet btn-sm vod-link" href="' + esc(m.vod) + '" target="_blank" rel="noopener">' +
+      vod = '<a class="vod-link" href="' + esc(m.vod) + '" target="_blank" rel="noopener" aria-label="Запись матча">' +
         ic('play') + 'VOD</a>';
     }
+    var head = '<div class="match-head">' +
+      '<span class="m-id">M' + m.num + ' · ' + esc(D.stageShort(m)) + '</span>' +
+      '<span class="m-right">' + vod + statusHtml(m) + '</span>' +
+      '</div>';
 
-    return '<div class="' + cls + '" data-match="' + m.id + '" style="grid-area:' + gridArea(m.id) + '">' +
+    var pos = place || { col: 1, row: ROW0, span: STEP };
+    return '<div class="' + cls + '" data-match="' + m.id + '" style="grid-area:' + pos.row + ' / ' + pos.col + ' / ' + (pos.row + pos.span) + ' / ' + (pos.col + 1) + '">' +
       head + slotHtml(m, 1) + slotHtml(m, 2) +
-      (vod ? '<div class="match-foot">' + vod + '</div>' : '') +
       '</div>';
   }
 
-  function colHeadHtml(col, matches) {
-    var list = matches.filter(function (m) { return columnOf(m.id) === col.col; });
-    var done = list.filter(function (m) { return !!m.winner; }).length;
-    return '<div class="b-col-head" style="grid-column:' + col.col + '">' +
-      '<b>' + col.label + '</b>' +
-      '<span>' + (list.length ? done + '/' + list.length + ' сыграно' : '') + '</span>' +
+  function colHeadHtml(h) {
+    var done = h.matches.filter(function (m) { return !!m.winner; }).length;
+    var label = D.colLabel(h.matches[0]);
+    return '<div class="b-col-head" style="grid-column:' + h.col + ';grid-row:' + h.row + ' / span 2">' +
+      '<b>' + esc(label) + '</b>' +
+      '<span>' + (h.matches.length ? done + '/' + h.matches.length + ' сыграно' : '') + '</span>' +
       '</div>';
   }
 
   /* ---------- Полная разметка ---------- */
   function html(data) {
     var D0 = data || D.get();
-    var matches = D0.matches.slice().sort(function (a, b) { return a.id - b.id; });
+    var lay = layout(D0.matches);
+    var heads = {};
+    lay.heads.forEach(function (h) { heads[h.col + ':' + (h.matches[0] ? h.matches[0].bracket : '')] = h; });
     var parts = [];
-    COLUMNS.forEach(function (c) { parts.push(colHeadHtml(c, matches)); });
-    matches.forEach(function (m) {
-      if (!LAYOUT[m.id]) return;
-      parts.push(matchHtml(m));
+    lay.order.forEach(function (g) {
+      var first = g.matches[0];
+      var head = lay.heads.filter(function (h) { return h.col === g.col && h.matches.indexOf(first) !== -1; })[0];
+      var inner = (head ? colHeadHtml(head) : '') + g.matches.map(function (m) { return matchHtml(m, lay.items[m.id]); }).join('');
+      parts.push('<div class="b-col" data-sec="' + g.sec + '">' + inner + '</div>');
     });
     parts.push('<svg class="b-lines" aria-hidden="true"></svg>');
-    return parts.join('');
+    return { html: parts.join(''), layout: lay };
+  }
+
+  /* Контейнер сетки: сам root (страница монтирует в .bracket) или вложенный .bracket */
+  function boxOf(root) {
+    if (!root) return null;
+    return root.classList && root.classList.contains('bracket') ? root : root.querySelector('.bracket');
   }
 
   /* ---------- Линии связей ---------- */
@@ -147,7 +251,7 @@
   }
 
   function drawLines(root) {
-    var box = root.querySelector('.bracket');
+    var box = boxOf(root);
     if (!box) return;
     var svg = box.querySelector('.b-lines');
     if (!svg) return;
@@ -169,8 +273,9 @@
       };
     }
 
+    var gap = parseFloat(global.getComputedStyle(box).columnGap) || 48;
     var G = {};
-    [1, 2, 3, 4, 5].forEach(function (id) { G[id] = geo(id); });
+    D.get().matches.forEach(function (m) { G[m.id] = geo(m.id); });
 
     /* центр строки слота внутри карточки (head занимает верх) */
     function rowCenter(g, idx, id) {
@@ -181,20 +286,34 @@
       return sr.top - rect.top + sr.height / 2;
     }
 
-    function link(fromId, toId, rowIdx) {
-      var a = G[fromId], b = G[toId];
-      if (!a || !b) return '';
-      var m = D.match(fromId);
-      if (!m) return '';
-      var xm = (a.right + b.left) / 2;
-      var y1 = rowCenter(a, rowIdx, fromId);
-      var y2 = rowCenter(b, rowIdx, toId);
-      var cls = m.state === 'live' ? ' class="live"' : (m.winner ? ' class="on"' : '');
-      return '<path' + cls + ' d="' + elbow(a.right, y1, xm, y2, b.left) + '"/>';
-    }
-
-    var paths = link(1, 4, 0) + link(2, 4, 1) + link(4, 5, 0) + link(3, 5, 1);
+    /* Рисуем пути победителей. Падение проигравших в нижнюю сетку линией не показываем —
+       его описывает подпись «Проигравший M5» в слоте. Вертикаль — в зазоре перед целевой колонкой,
+       поэтому длинная связь (финал верхней сетки → гранд-финал) не пересекает чужие карточки. */
+    var paths = '';
+    D.get().matches.forEach(function (target) {
+      [target.from1, target.from2].forEach(function (link, idx) {
+        if (!link || link.as !== 'w') return;
+        var src = D.match(link.m), a = G[link.m], b = G[target.id];
+        if (!src || !a || !b) return;
+        var y1 = rowCenter(a, 0, link.m) - (a.height ? 0 : 0);
+        y1 = a.top + a.height / 2;
+        var y2 = rowCenter(b, idx, target.id);
+        var xm = b.left - gap / 2;
+        var cls = src.state === 'live' ? ' class="live"' : (src.winner ? ' class="on"' : '');
+        paths += '<path' + cls + ' d="' + elbow(a.right, y1, xm, y2, b.left) + '"/>';
+      });
+    });
     svg.innerHTML = paths;
+  }
+
+  /* Подсказка «листайте вбок» — только когда сетка шире экрана (на телефоне сетка вертикальная) */
+  function updateHint(root) {
+    var box = boxOf(root);
+    var scroller = box && box.closest ? box.closest('.bracket-scroll') : null;
+    var hint = global.document ? global.document.querySelector('.bracket-hint') : null;
+    if (!scroller || !hint) return;
+    var wide = scroller.scrollWidth > scroller.clientWidth + 4 && global.innerWidth > 820;
+    hint.style.display = wide ? 'inline' : '';
   }
 
   /* ---------- Монтирование ---------- */
@@ -203,10 +322,15 @@
   function render(root, opts) {
     if (!root) return;
     opts = opts || {};
-    root.innerHTML = html(opts.data);
-    var box = root.querySelector('.bracket');
+    var built = html(opts.data);
+    root.innerHTML = built.html;
+    var box = boxOf(root);
     if (box) {
-      var frame = function () { drawLines(root); };
+      box.style.setProperty('--cols', built.layout.cols);
+      box.style.setProperty('--rows', built.layout.rows);
+    }
+    if (box) {
+      var frame = function () { drawLines(root); updateHint(root); };
       if (global.ResizeObserver) {
         if (root._caRO) root._caRO.disconnect();
         root._caRO = new ResizeObserver(function () { requestAnimationFrame(frame); });
@@ -226,7 +350,7 @@
   }
 
   var onResize = debounce(function () {
-    instances.forEach(function (root) { drawLines(root); });
+    instances.forEach(function (root) { drawLines(root); updateHint(root); });
   }, 120);
 
   function autoInit(root, opts) {
@@ -235,12 +359,11 @@
   }
 
   CA.bracket = {
-    html: html,
+    html: function (data) { return html(data).html; },
+    layout: layout,
     render: render,
     drawLines: drawLines,
-    autoInit: autoInit,
-    gridArea: gridArea,
-    columnOf: columnOf
+    autoInit: autoInit
   };
 
   if (global.addEventListener) global.addEventListener('resize', onResize);

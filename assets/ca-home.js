@@ -29,7 +29,7 @@
     if (d.phase === 'post') {
       var champ = d.champion;
       kicker.innerHTML = ic('trophy') + ' Турнир завершён';
-      title.innerHTML = champ ? (esc(champ.name) + ' забирает<br><em>первый трофей</em>') : 'Турнир завершён';
+      title.innerHTML = champ ? (esc(champ.name) + ' забирает<br><em>трофей</em>') : 'Турнир завершён';
       lede.textContent = 'Финал сыгран. Ниже — итоги, сетка и хроника турнира. Следующий сезон Compass Arena уже готовится.';
       cta.innerHTML =
         '<a class="btn btn-gold btn-lg" href="#bracket">' + ic('bracket') + 'Сетка и итоги</a>' +
@@ -37,19 +37,48 @@
     } else if (d.phase === 'live') {
       kicker.innerHTML = '<span class="dot-live"></span> Идёт прямо сейчас';
       title.innerHTML = 'Турнир идёт —<br><em>смотрите вживую</em>';
-      lede.textContent = 'Шесть команд, серии до двух побед и один трофей. Матчи идут по расписанию, трансляция — на Twitch.';
+      lede.textContent = formatLine(d) + ' Матчи идут по расписанию, трансляция — на Twitch.';
       cta.innerHTML =
         '<a class="btn btn-live btn-lg" href="#stream">' + ic('live') + 'Смотреть эфир</a>' +
         '<a class="btn btn-ghost btn-lg" href="#bracket">' + ic('bracket') + 'Турнирная сетка</a>';
     } else {
-      kicker.innerHTML = 'Турнир по Dota 2 · первый сезон';
+      kicker.innerHTML = 'Турнир по ' + esc(d.tournament.game) + ' · сезон ' + (((d.history && d.history.length) || 0) + 1);
       title.innerHTML = 'Здесь сражаются<br>не ради участия —<br><em>здесь доказывают</em>';
-      lede.textContent = 'Один шанс, полная концентрация и один трофей на всех. Первый турнир организации Compass Arena.';
+      lede.textContent = 'Один шанс, полная концентрация и один трофей на всех.';
       cta.innerHTML =
         '<a class="btn btn-gold btn-lg" href="#bracket">' + ic('bracket') + 'Турнирная сетка</a>' +
         '<a class="btn btn-ghost btn-lg" href="#teams">' + ic('users') + 'Участники</a>';
     }
     void watch;
+  }
+
+  /* «Восемь команд, серии Bo3 и один трофей» — из данных турнира */
+  function formatLine(d) {
+    var n = d.teams.filter(function (t) { return D.isRealTeam(t); }).length;
+    var parts = [];
+    if (n) parts.push(n + ' ' + D.plural(n, 'команда', 'команды', 'команд'));
+    parts.push('серии ' + d.tournament.matches);
+    parts.push('один трофей');
+    var s = parts.join(', ');
+    return s.charAt(0).toUpperCase() + s.slice(1) + '.';
+  }
+
+  /* Подзаголовок секции сетки: описывает структуру, которая реально нарисована */
+  function renderBracketCopy(d) {
+    var kicker = document.getElementById('bracketKicker');
+    var copy = document.getElementById('bracketCopy');
+    var hasLower = d.matches.some(function (m) { return m.bracket === 'lower'; });
+    var n = d.teams.filter(function (t) { return D.isRealTeam(t); }).length;
+    var parts = [d.tournament.matches];
+    if (n) parts.push(n + ' ' + D.plural(n, 'команда', 'команды', 'команд'));
+    parts.push(hasLower ? 'двойное выбывание' : 'на выбывание');
+    if (kicker) kicker.textContent = parts.join(' · ');
+    if (copy) {
+      copy.textContent = (hasLower
+        ? 'Проигравший в верхней сетке не вылетает, а падает в нижнюю; второе поражение — конец турнира. Финалисты обеих сеток встречаются в гранд-финале.'
+        : 'Проигравший выбывает, победители проходят дальше — до финала.') +
+        ' Всего матчей: ' + d.matches.length + ', серии ' + d.tournament.matches + '.';
+    }
   }
 
   /* ---------- Статус под первым экраном ---------- */
@@ -111,7 +140,7 @@
   }
 
   function firstMatchLine(d) {
-    var m = d.byId[1] || d.matches[0];
+    var m = d.matches.slice().sort(function (a, b) { return a.num - b.num; })[0];
     if (!m) return '';
     var a = D.slotLabel(m, 1).text, b = D.slotLabel(m, 2).text;
     return '<span class="k">Первый матч</span><b>' + esc(a) + '</b> против <b>' + esc(b) + '</b>' +
@@ -285,6 +314,7 @@
     var root = document.getElementById('bracketWrap');
     if (!root) return;
     CA.bracket.render(root, { data: d });
+    renderBracketCopy(d);
     var legend = document.getElementById('bLegend');
     if (legend) {
       legend.innerHTML =
@@ -319,7 +349,7 @@
         '<div class="te-body"><h3 class="h3">Идёт регистрация команд</h3>' +
         '<p class="lead-sm">Составы нового сезона ещё собираются. Как только команды подтвердят участие, они появятся здесь, ' +
         'а на этой странице откроется турнирная сетка.</p></div>' +
-        '<a class="btn btn-gold" href="https://t.me/CompassArenaReg_bot" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку в боте</a>' +
+        '<a class="btn btn-gold" href="https://t.me/compassarenaa" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку</a>' +
         '</div>';
       U.observeReveals(grid);
       return;
@@ -386,7 +416,7 @@
     var ns = d.nextSeason || {};
     var title = ns.name || 'Compass Arena · второй сезон';
     var when = ns.date ? D.fmtDateTime(new Date(ns.date).getTime()) : '';
-    var note = ns.note || 'Мы готовим следующий турнир: больше команд, полноценная сетка с нижней частью и призовой фонд. Заявки — через Telegram-бота регистрации.';
+    var note = ns.note || 'Мы готовим следующий турнир: больше команд, полноценная сетка с нижней частью и призовой фонд. Заявки — в Telegram организации.';
     body.innerHTML =
       '<div class="ns-grid">' +
         '<div class="ns-main">' +
@@ -395,7 +425,7 @@
           '<p class="lead">' + esc(note) + '</p>' +
           (when ? '<div class="ns-when">' + ic('calendar') + '<span>Ориентир — <b>' + esc(when) + '</b></span></div>' : '') +
           '<div class="row" style="margin-top:26px">' +
-            '<a class="btn btn-gold" href="' + esc(ns.url || 'https://t.me/CompassArenaReg_bot') + '" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку в боте</a>' +
+            '<a class="btn btn-gold" href="' + esc(ns.url || 'https://t.me/compassarenaa') + '" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку</a>' +
             '<a class="btn btn-ghost" href="/rules.html">' + ic('shield') + 'Регламент</a>' +
           '</div>' +
         '</div>' +

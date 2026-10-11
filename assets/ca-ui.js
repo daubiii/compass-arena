@@ -289,6 +289,28 @@
     toggleMenu(false);
 
     observeReveals();
+    bindGame();
+  }
+
+  /* Подставляет в страницу название игры, формат серий, номер сезона и правообладателя из настроек турнира,
+     чтобы при смене дисциплины не править вёрстку: [data-game], [data-bo], [data-season], [data-trademark]. */
+  function publisherOf(game) {
+    return /dota|cs:?\s?go|cs\s?2|counter[- ]?strike/i.test(game) ? 'Valve Corporation' : 'их правообладателям';
+  }
+  function applyGame(d) {
+    var t = (d && d.tournament) || {};
+    var game = t.game ? String(t.game) : '';
+    if (game) {
+      $$('[data-game]').forEach(function (el) { el.textContent = game; });
+      $$('[data-trademark]').forEach(function (el) { el.textContent = game + ' — товарные знаки принадлежат ' + publisherOf(game); });
+    }
+    if (t.matches) $$('[data-bo]').forEach(function (el) { el.textContent = String(t.matches); });
+    var season = ((d && d.history && d.history.length) || 0) + 1;
+    $$('[data-season]').forEach(function (el) { el.textContent = String(season); });
+  }
+  function bindGame() {
+    if (!CA.data || !CA.data.onChange) return;
+    CA.data.onChange(function (d) { if (d && d.fromServer) applyGame(d); });
   }
 
   function contentReady(fn) { ready(fn); }
@@ -306,6 +328,7 @@
     dismiss: dismiss,
     setProgress: setProgress,
     initChrome: initChrome,
+    applyGame: applyGame,
     contentReady: contentReady
   };
 })(typeof window !== 'undefined' ? window : globalThis);

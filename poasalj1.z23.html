@@ -109,6 +109,13 @@
         .match-item .meta .tag { padding: 1px 8px; border-radius: 10px; font-size: 9px; font-weight: 600; }
         .match-item .meta .tag.upper { background: rgba(201,163,90,0.2); color: #c9a35a; }
         .match-item .meta .tag.grand { background: rgba(201,163,90,0.3); color: #e3c48a; }
+        .match-item .meta .tag.lower { background: rgba(110,140,200,0.2); color: #8fa8d8; }
+        .match-item .meta .tag.third { background: rgba(160,160,160,0.2); color: #b4b4b4; }
+        .manual-selects .m-num { color: #c9a35a; min-width: 34px; font-variant-numeric: tabular-nums; }
+        .manual-selects .auto-slot { color: #eae6da; font-size: 13px; }
+        .ch-status { margin-top: 10px; font-size: 13px; line-height: 1.5; color: #9aa3b2; }
+        .ch-status.ok { color: #6fcf97; } .ch-status.warn { color: #e0b252; } .ch-status.bad { color: #e07a6e; }
+        .ch-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
         .match-item .meta select { background: #0a0d12; border: 1px solid #242b35; color: #eae6da; padding: 3px 6px; border-radius: 4px; font-size: 11px; }
         .vod-row { display: flex; align-items: center; gap: 6px; width: 100%; }
         .vod-row label { color: #5f6773; font-size: 11px; white-space: nowrap; }
@@ -210,6 +217,10 @@
         .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .photo-thumb .p-remove { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; background: rgba(231,76,60,0.9); color: #fff; border: none; border-radius: 50%; cursor: pointer; font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center; }
         .photo-thumb .p-remove:hover { background: #e74c3c; }
+        .photo-thumb .p-order { position: absolute; left: 4px; top: 4px; display: flex; align-items: center; gap: 2px; background: rgba(0,0,0,0.7); border-radius: 11px; padding: 0 2px; }
+        .photo-thumb .p-order button { width: 20px; height: 22px; background: none; border: none; color: #eae6da; cursor: pointer; font-size: 12px; padding: 0; }
+        .photo-thumb .p-order button:disabled { opacity: .25; cursor: default; }
+        .photo-thumb .p-order span { font-size: 11px; color: #c9a35a; min-width: 12px; text-align: center; }
         .photo-thumb .p-caption-input { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); border: none; color: #eae6da; font-family: 'Manrope', sans-serif; font-size: 10px; padding: 3px 6px; outline: none; width: 100%; }
         .photo-thumb .p-caption-input:focus { background: rgba(201,163,90,0.2); }
         .photos-empty { color: #5f6773; font-size: 12px; font-style: italic; padding: 8px 0; }
@@ -362,7 +373,7 @@
 
     <div class="tab-content" id="tab-matches">
         <div class="card">
-            <div class="card-header"><h3>🏆 Управление матчами</h3><span style="color:#5f6773;font-size:12px;">M1–M3 — выбираешь команды. M4–M5 — автомат</span></div>
+            <div class="card-header"><h3>🏆 Управление матчами</h3><span id="matchHint" style="color:#5f6773;font-size:12px;"></span></div>
             <div class="match-list" id="matchList"></div>
         </div>
     </div>
@@ -381,7 +392,8 @@
                 <span id="historyCount" style="color:#5f6773;font-size:12px;">0 турниров</span>
             </div>
             <p class="hint" style="margin-bottom:12px;">
-                Каждый турнир — отдельная глава архива: номер, дата, чемпион, MVP и фото. Фиксация строгая: один сезон = одна глава,
+                На странице архива показываются только закреплённые турниры — идущий турнир туда не попадает, пока вы его не зафиксируете.
+                Каждый турнир — отдельная глава: номер, дата, чемпион, MVP и фото. Один сезон = одна глава,
                 повторное нажатие обновляет её, а не создаёт новую.
             </p>
             <div id="historyStatus" class="archive-status"></div>
@@ -405,9 +417,9 @@
             <div class="form-row three">
                 <div class="form-group"><label>Название</label><input type="text" id="settingsName" value="Compass Arena"></div>
                 <div class="form-group"><label>Игра</label><input type="text" id="settingsGame" value="Dota 2"></div>
-                <div class="form-group"><label>Формат</label><input type="text" id="settingsFormat" value="Bo3"></div>
+                <div class="form-group"><label>Формат серий</label><input type="text" id="settingsFormat" value="Bo3" placeholder="Bo3"></div>
             </div>
-            <div class="form-group" style="margin-bottom:10px;"><label>Даты (текстом)</label><input type="text" id="settingsDates" placeholder="26 сентября 2026"></div>
+            <div class="form-group" style="margin-bottom:10px;"><label>Даты (текстом)</label><input type="text" id="settingsDates" placeholder="например, 26 сентября"></div>
             <div class="form-row">
                 <div class="form-group">
                     <label>Старт проекта</label>
@@ -420,15 +432,10 @@
                     <span class="hint">Таймер считает до этой даты, после — открывается стрим.</span>
                 </div>
             </div>
-            <div class="toggle-row">
-                <input type="checkbox" id="settingsAlwaysBanner">
-                <label for="settingsAlwaysBanner">Показывать баннер «Турнирная сетка» всегда</label>
-            </div>
-            <button class="btn btn-primary" style="margin-top:14px;" onclick="saveSettings()">💾 Сохранить</button>
         </div>
         <div class="card">
             <div class="card-header"><h3>🚀 Следующий сезон</h3></div>
-            <p class="hint" style="margin-bottom:10px;">Показывается на главной после завершения турнира (когда выбран победитель M5). Если поля пустые — на сайте используется текст по умолчанию.</p>
+            <p class="hint" style="margin-bottom:10px;">Показывается на главной после завершения турнира (когда определён победитель турнира). Если поля пустые — на сайте используется текст по умолчанию.</p>
             <div class="form-row">
                 <div class="form-group"><label>Название</label><input type="text" id="settingsNsName" placeholder="Compass Arena · второй сезон"></div>
                 <div class="form-group"><label>Ориентировочная дата</label><input type="datetime-local" id="settingsNsDate"></div>
@@ -437,7 +444,30 @@
                 <div class="form-group"><label>Ссылка на заявку</label><input type="url" id="settingsNsUrl" placeholder="https://t.me/compassarenaa"></div>
                 <div class="form-group"><label>Короткое описание</label><input type="text" id="settingsNsNote" placeholder="Восемь команд, сетка с нижней частью"></div>
             </div>
-            <button class="btn btn-primary" style="margin-top:14px;" onclick="saveSettings()">💾 Сохранить</button>
+            <button class="btn btn-primary" style="margin-top:14px;" onclick="saveSettings()">💾 Сохранить настройки</button>
+        </div>
+        <div class="card" id="challongeCard">
+            <div class="card-header"><h3>🔗 Сетка из Challonge</h3></div>
+            <p class="hint" style="color:#9aa3b2;font-size:13px;line-height:1.55;margin-bottom:12px;">
+                Структуру сетки (любой формат, любое число команд) вы собираете в Challonge, а сайт сам рисует её в нашем дизайне
+                и обновляет счёт. Счёт можно вводить в Challonge с телефона — на сайте он появится в течение ~20 секунд.
+                Команды сопоставляются по названию, поэтому названия в Challonge и здесь должны совпадать.
+            </p>
+            <div class="toggle-row">
+                <input type="checkbox" id="chEnabled">
+                <label for="chEnabled">Брать сетку и счёт из Challonge</label>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+                <label>Ссылка на турнир или его ID</label>
+                <input type="text" id="chTournament" placeholder="https://challonge.com/abc123" autocomplete="off">
+            </div>
+            <div class="ch-row">
+                <button class="btn btn-primary" onclick="saveChallonge()">💾 Сохранить</button>
+                <button class="btn" onclick="challongeTest()">🔍 Проверить подключение</button>
+                <button class="btn" onclick="challongePush()">📤 Отправить команды в Challonge</button>
+                <button class="btn" onclick="challongeRefresh()">🔄 Обновить сейчас</button>
+            </div>
+            <div class="ch-status" id="chStatus"></div>
         </div>
         <div class="card">
             <div class="card-header"><h3>💾 Управление данными</h3></div>
@@ -527,7 +557,7 @@
         </div>
 
         <div class="form-group" style="margin-bottom:10px;">
-            <label>Фотографии (автосжатие до 1600×1600, ~500 КБ)</label>
+            <label>Фотографии — автосжатие до 1600 px по длинной стороне. На странице архива первый кадр виден сразу, остальные листаются стрелкой, порядок задаёте здесь.</label>
             <div class="btn-group">
                 <button class="btn" onclick="document.getElementById('histPhotoInput').click()">📷 Добавить фото</button>
                 <input type="file" id="histPhotoInput" accept="image/*" multiple style="display:none" onchange="onHistoryPhotos(event)">
@@ -567,7 +597,7 @@ var EDITING_HISTORY_PHOTOS = [];
 
 function getDefaultData() {
     return {
-        tournament: { name: "Compass Arena", game: "Dota 2", format: "Custom Bracket", matches: "Bo3", dates: "26 сентября 2026" },
+        tournament: { name: "Compass Arena", game: "Dota 2", format: "Custom Bracket", matches: "Bo3", dates: "" },
         teams: [
             { id: 1, name: "Слот 1", players: [], logo: "" },
             { id: 2, name: "Слот 2", players: [], logo: "" },
@@ -588,8 +618,7 @@ function getDefaultData() {
         freeAgents: [],
         tournamentStart: null,
         projectStart: null,
-        nextSeason: null,
-        alwaysShowBracketBanner: true
+        nextSeason: null
     };
 }
 
@@ -823,12 +852,12 @@ function loadData() {
             DATA = parsed;
             if (!DATA.schedule) DATA.schedule = {};
             if (!DATA.tournament) DATA.tournament = getDefaultData().tournament;
-            if (DATA.alwaysShowBracketBanner === undefined) DATA.alwaysShowBracketBanner = true;
             if (DATA.tournamentStart === undefined) DATA.tournamentStart = null;
             if (DATA.projectStart === undefined) DATA.projectStart = null;
             if (DATA.nextSeason === undefined) DATA.nextSeason = null;
             if (!DATA.teams) DATA.teams = [];
             if (!Array.isArray(DATA.freeAgents)) DATA.freeAgents = [];
+            if (!DATA.challonge || typeof DATA.challonge !== 'object') DATA.challonge = { enabled: false, tournament: '' };
             if (!DATA.matches) DATA.matches = getDefaultData().matches;
             for (var j = 0; j < DATA.teams.length; j++) {
                 if (DATA.teams[j].logo === undefined) DATA.teams[j].logo = '';
@@ -921,9 +950,6 @@ function renderEverything() {
         } catch(e) {}
     }
 
-    var bannerEl = document.getElementById('settingsAlwaysBanner');
-    if (bannerEl) bannerEl.checked = DATA.alwaysShowBracketBanner !== false;
-
     var ns = DATA.nextSeason || {};
     var nsNameEl = document.getElementById('settingsNsName');
     if (nsNameEl) nsNameEl.value = ns.name || '';
@@ -947,6 +973,7 @@ function renderEverything() {
     renderHistory();
     renderAgents();
     renderTeamsArchiveStatus();
+    renderChallonge();
 }
 
 function saveData(force) {
@@ -968,6 +995,7 @@ function saveData(force) {
     var pw = ensurePassword();
     // Собираем payload: DATA + history отдельным полем
     var payload = Object.assign({}, DATA, { history: HISTORY, clearHistory: !!force });
+    delete payload.bracketSource;   /* служебное поле ответа сервера — в хранилище не нужно */
 
     return fetch('/api/save', {
         method: 'POST',
@@ -985,9 +1013,21 @@ function saveData(force) {
                 return loadData().then(renderEverything);
             });
         }
+        if (res.status === 413) {
+            return res.text().then(function(msg) {
+                showToast('⚠️ ' + msg);
+                return false;
+            });
+        }
         if (!res.ok) throw new Error('save failed: ' + res.status);
         return res.json().catch(function() { return {}; });
     }).then(function(out) {
+        if (out === false) return false;
+        /* Новые фото сервер выносит в отдельное хранилище и присылает историю уже со ссылками */
+        if (out && Array.isArray(out.history)) {
+            HISTORY = out.history;
+            renderHistory();
+        }
         if (out && out.historyKept) {
             showToast('⚠️ Сервер сохранил прежний архив — чтобы очистить его, используйте «Очистить архив»');
             return loadData().then(renderEverything);
@@ -1027,40 +1067,121 @@ function getLoser(m) {
     return null;
 }
 
-function updateMatchLinks() {
-    var m = {};
+/* ------------------------------------------------------------
+   Связи сетки. У матча могут быть from1/from2 = { m: id матча-источника, as: 'w' | 'l' }:
+   команда в таком слоте вычисляется из источника (победитель / проигравший). Слот без связи
+   назначается вручную. Старые данные без связей получают классические: M1,M2 → M4; M4,M3 → M5.
+   ------------------------------------------------------------ */
+function mNum(m) { return m && m.num != null ? m.num : (m ? m.id : ''); }
+function mRef(id) { var m = getMatch(id); return 'M' + (m ? mNum(m) : id); }
+function normLinkA(v) {
+    if (!v || typeof v !== 'object') return null;
+    var id = parseInt(v.m, 10);
+    if (isNaN(id)) return null;
+    return { m: id, as: v.as === 'l' ? 'l' : 'w' };
+}
+function ensureLinks() {
+    var any = false;
     for (var i = 0; i < DATA.matches.length; i++) {
-        m[DATA.matches[i].id] = DATA.matches[i];
+        var mm = DATA.matches[i];
+        mm.from1 = normLinkA(mm.from1);
+        mm.from2 = normLinkA(mm.from2);
+        if (mm.from1 || mm.from2) any = true;
     }
+    if (any) return;
+    var by = {};
+    for (var j = 0; j < DATA.matches.length; j++) by[DATA.matches[j].id] = DATA.matches[j];
+    if (by[4] && by[1] && by[2]) { by[4].from1 = { m: 1, as: 'w' }; by[4].from2 = { m: 2, as: 'w' }; }
+    if (by[5] && by[4] && by[3]) { by[5].from1 = { m: 4, as: 'w' }; by[5].from2 = { m: 3, as: 'w' }; }
+}
 
-    if (m[4]) {
-        m[4].team1 = m[1] ? m[1].winner : null;
-        m[4].team2 = m[2] ? m[2].winner : null;
+function updateMatchLinks() {
+    ensureLinks();
+    var by = {};
+    for (var i = 0; i < DATA.matches.length; i++) by[DATA.matches[i].id] = DATA.matches[i];
+    function pick(link) {
+        var src = link && by[link.m];
+        if (!src) return undefined;
+        if (link.as === 'l') return getLoser(src);
+        return src.winner == null ? null : src.winner;
     }
-    if (m[5]) {
-        m[5].team1 = m[4] ? m[4].winner : null;
-        m[5].team2 = m[3] ? m[3].winner : null;
-    }
-
-    for (var k = 1; k <= 5; k++) {
-        var mm = m[k];
-        if (!mm || !mm.winner) continue;
-        if (mm.winner !== mm.team1 && mm.winner !== mm.team2) {
-            mm.winner = null;
-            mm.score1 = null;
-            mm.score2 = null;
+    for (var pass = 0; pass <= DATA.matches.length; pass++) {
+        var changed = false;
+        for (var k = 0; k < DATA.matches.length; k++) {
+            var m = DATA.matches[k];
+            var a = pick(m.from1), b = pick(m.from2);
+            if (a !== undefined && m.team1 !== a) { m.team1 = a; changed = true; }
+            if (b !== undefined && m.team2 !== b) { m.team2 = b; changed = true; }
+            var broken = (m.winner && m.winner !== m.team1 && m.winner !== m.team2) ||
+                ((m.team1 == null || m.team2 == null) && m.winner != null);
+            if (broken) { m.winner = null; m.score1 = null; m.score2 = null; changed = true; }
         }
-    }
-    for (var k2 = 1; k2 <= 5; k2++) {
-        var mm2 = m[k2];
-        if (!mm2) continue;
-        if ((mm2.team1 === null || mm2.team2 === null) && mm2.winner !== null) {
-            mm2.winner = null;
-            mm2.score1 = null;
-            mm2.score2 = null;
-        }
+        if (!changed) break;
     }
 }
+
+/* Финал сетки: гранд-финал (последний по порядку), иначе матч, победитель которого никуда не идёт.
+   Если «сброс» гранд-финала не понадобился, решает первый гранд-финал. */
+function findFinalA() {
+    ensureLinks();
+    var list = DATA.matches.filter(function(m) { return m.bracket !== 'third'; });
+    var feeds = {};
+    DATA.matches.forEach(function(m) {
+        [m.from1, m.from2].forEach(function(l) { if (l && l.as === 'w') feeds[l.m] = true; });
+    });
+    function byOrder(a, b) { return (a.round - b.round) || (mNum(a) - mNum(b)); }
+    var grands = list.filter(function(m) { return m.bracket === 'grand'; }).sort(byOrder);
+    var fin = null;
+    if (grands.length) fin = grands[grands.length - 1];
+    else {
+        var leaves = list.filter(function(m) { return !feeds[m.id] && (m.from1 || m.from2); }).sort(byOrder);
+        fin = leaves.length ? leaves[leaves.length - 1] : null;
+    }
+    if (fin && fin.bracket === 'grand' && !fin.winner) {
+        var at = grands.indexOf(fin);
+        var first = at > 0 ? grands[at - 1] : null;
+        if (first && first.winner && first.winner === first.team1) return first;
+    }
+    return fin;
+}
+
+function maxRoundA(bracket) {
+    var r = 0;
+    DATA.matches.forEach(function(m) { if (m.bracket === bracket && m.round > r) r = m.round; });
+    return r;
+}
+function hasBracketA(bracket) {
+    return DATA.matches.some(function(m) { return m.bracket === bracket; });
+}
+/* Название стадии для админки */
+function stageNameA(m) {
+    if (m.label) return m.label;
+    if (m.bracket === 'grand') {
+        var rounds = [];
+        DATA.matches.forEach(function(x) { if (x.bracket === 'grand' && rounds.indexOf(x.round) === -1) rounds.push(x.round); });
+        rounds.sort(function(a, b) { return a - b; });
+        return rounds.indexOf(m.round) >= 1 ? 'Гранд-финал · сброс' : 'Гранд-финал';
+    }
+    if (m.bracket === 'third') return 'Матч за 3-е место';
+    if (m.bracket === 'lower') return m.round === maxRoundA('lower') ? 'Финал нижней сетки' : 'Нижняя сетка · раунд ' + m.round;
+    var fromEnd = maxRoundA('upper') - m.round;
+    if (hasBracketA('lower')) {
+        if (fromEnd === 0) return 'Финал верхней сетки';
+        if (fromEnd === 1) return 'Полуфинал верхней сетки';
+        return 'Верхняя сетка · раунд ' + m.round;
+    }
+    if (hasBracketA('grand')) return fromEnd === 0 ? 'Полуфинал' : 'Раунд ' + m.round;
+    if (fromEnd === 0 && maxRoundA('upper') > 1) return 'Финал';
+    if (fromEnd === 1) return 'Полуфинал';
+    if (fromEnd === 2) return 'Четвертьфинал';
+    return 'Раунд ' + m.round;
+}
+function slotHintA(m, n) {
+    var l = n === 1 ? m.from1 : m.from2;
+    return l ? (l.as === 'l' ? 'Проигравший ' : 'Победитель ') + mRef(l.m) : 'Ожидается';
+}
+/* Сетка ведётся в Challonge: счёт и пары здесь только читаем */
+function challongeOn() { return !!(DATA.challonge && DATA.challonge.enabled && DATA.challonge.tournament); }
 
 // ============================================================
 // РУЧНОЕ НАЗНАЧЕНИЕ КОМАНД
@@ -1079,7 +1200,7 @@ function setMatchTeam(matchId, slot, teamId) {
     saveData();
     renderMatches();
     renderPreview();
-    showToast('✅ M' + matchId + ': команда назначена');
+    showToast('✅ ' + mRef(matchId) + ': команда назначена');
 }
 
 // ============================================================
@@ -1098,7 +1219,7 @@ function setScore(matchId) {
     saveData();
     renderMatches();
     renderPreview();
-    showToast('🔢 Счёт матча M' + matchId + ' сохранён: ' + (s1 != null ? s1 : '—') + ':' + (s2 != null ? s2 : '—'));
+    showToast('🔢 Счёт матча ' + mRef(matchId) + ' сохранён: ' + (s1 != null ? s1 : '—') + ':' + (s2 != null ? s2 : '—'));
 }
 
 // ============================================================
@@ -1377,16 +1498,14 @@ function renderPreview() {
     if (!wrap) return;
     updateMatchLinks();
 
-    var m1 = getMatch(1), m2 = getMatch(2), m3 = getMatch(3), m4 = getMatch(4), m5 = getMatch(5);
-
     function renderMiniMatch(m) {
         if (!m) return '<div class="preview-match empty">—</div>';
         var t1 = getTeam(m.team1);
         var t2 = getTeam(m.team2);
-        if (!t1 && !t2) return '<div class="preview-match empty">ожидание</div>';
+        if (!t1 && !t2) return '<div class="preview-match empty">' + escapeHtml(slotHintA(m, 1)) + ' / ' + escapeHtml(slotHintA(m, 2)) + '</div>';
 
-        var name1 = t1 ? t1.name : '—';
-        var name2 = t2 ? t2.name : '—';
+        var name1 = t1 ? t1.name : slotHintA(m, 1);
+        var name2 = t2 ? t2.name : slotHintA(m, 2);
         var w1 = (m.winner && m.winner === m.team1) ? 'win' : (m.winner ? 'loss' : null);
         var w2 = (m.winner && m.winner === m.team2) ? 'win' : (m.winner ? 'loss' : null);
         var cls1 = m.winner === m.team1 ? 'winner' : (m.winner ? 'loser' : '');
@@ -1394,11 +1513,11 @@ function renderPreview() {
 
         var html = '<div class="preview-match">';
         html += '<div class="preview-team ' + cls1 + '" onclick="' + (t1 ? 'openEditModal(' + t1.id + ')' : '') + '">';
-        html += '<span class="name">' + name1 + '</span>';
+        html += '<span class="name">' + escapeHtml(name1) + '</span>';
         if (w1) html += '<span class="badge ' + w1 + '">' + (w1 === 'win' ? 'W' : 'L') + '</span>';
         html += '</div>';
         html += '<div class="preview-team ' + cls2 + '" onclick="' + (t2 ? 'openEditModal(' + t2.id + ')' : '') + '">';
-        html += '<span class="name">' + name2 + '</span>';
+        html += '<span class="name">' + escapeHtml(name2) + '</span>';
         if (w2) html += '<span class="badge ' + w2 + '">' + (w2 === 'win' ? 'W' : 'L') + '</span>';
         html += '</div>';
         if (m.winner && m.score1 != null && m.score2 != null) {
@@ -1408,33 +1527,28 @@ function renderPreview() {
         return html;
     }
 
+    /* Стадии по порядку: верхняя сетка, нижняя, гранд-финал, матч за 3-е место */
+    var rank = { upper: 0, lower: 1, grand: 2, third: 3 };
+    var sorted = DATA.matches.slice().sort(function(a, b) {
+        return ((rank[a.bracket] || 0) - (rank[b.bracket] || 0)) || (a.round - b.round) || (mNum(a) - mNum(b));
+    });
+    var groups = [], byKey = {};
+    sorted.forEach(function(m) {
+        var key = (m.bracket || 'upper') + ':' + m.round;
+        if (!byKey[key]) { byKey[key] = { title: stageNameA(m), cls: m.bracket === 'grand' || m.bracket === 'third' ? 'grand' : 'upper', items: [] }; groups.push(byKey[key]); }
+        byKey[key].items.push(m);
+    });
+
     var html = '';
-
-    html += '<div class="preview-group">';
-    html += '<div class="preview-group-title upper">Раунд 1</div>';
-    html += '<div class="preview-rounds">';
-    html += '<div class="preview-round">';
-    html += '<div class="preview-round-label">M1</div>' + renderMiniMatch(m1);
-    html += '<div class="preview-round-label">M2</div>' + renderMiniMatch(m2);
-    html += '<div class="preview-round-label">M3</div>' + renderMiniMatch(m3);
-    html += '</div>';
-    html += '</div></div>';
-
-    html += '<div class="preview-group">';
-    html += '<div class="preview-group-title upper">Раунд 2</div>';
-    html += '<div class="preview-rounds">';
-    html += '<div class="preview-round">';
-    html += '<div class="preview-round-label">Полуфинал</div>' + renderMiniMatch(m4);
-    html += '</div>';
-    html += '</div></div>';
-
-    html += '<div class="preview-group">';
-    html += '<div class="preview-group-title grand">Финал</div>';
-    html += '<div class="preview-rounds">';
-    html += '<div class="preview-round">';
-    html += '<div class="preview-round-label">Гранд</div>' + renderMiniMatch(m5);
-    html += '</div>';
-    html += '</div></div>';
+    groups.forEach(function(g) {
+        html += '<div class="preview-group">';
+        html += '<div class="preview-group-title ' + g.cls + '">' + escapeHtml(g.title) + '</div>';
+        html += '<div class="preview-rounds"><div class="preview-round">';
+        g.items.forEach(function(m) {
+            html += '<div class="preview-round-label">' + mRef(m.id) + '</div>' + renderMiniMatch(m);
+        });
+        html += '</div></div></div>';
+    });
 
     html += '<div class="preview-group">';
     html += '<div class="preview-group-title eliminated">Выбывшие</div>';
@@ -1445,6 +1559,8 @@ function renderPreview() {
         if (!mm.winner) continue;
         var loserId = getLoser(mm);
         if (!loserId) continue;
+        /* В двойной сетке проигравший верхней идёт в нижнюю — он ещё не выбыл */
+        if (hasBracketA('lower') && mm.bracket === 'upper') continue;
         var team = getTeam(loserId);
         if (team) eliminated.push({ team: team, matchId: mm.id });
     }
@@ -1452,7 +1568,7 @@ function renderPreview() {
         html += '<div class="preview-eliminated-item"><span class="meta">пока никого</span></div>';
     } else {
         for (var e = 0; e < eliminated.length; e++) {
-            html += '<div class="preview-eliminated-item"><span class="name">' + eliminated[e].team.name + '</span> <span class="meta">M' + eliminated[e].matchId + '</span></div>';
+            html += '<div class="preview-eliminated-item"><span class="name">' + escapeHtml(eliminated[e].team.name) + '</span> <span class="meta">' + mRef(eliminated[e].matchId) + '</span></div>';
         }
     }
     html += '</div></div></div>';
@@ -1469,86 +1585,83 @@ function renderMatches() {
     updateMatchLinks();
     container.innerHTML = '';
 
-    var sorted = DATA.matches.slice().sort(function(a,b){return a.id - b.id;});
+    var onC = challongeOn();
+    var hintEl = document.getElementById('matchHint');
+    if (hintEl) hintEl.textContent = onC
+        ? 'сетка из Challonge'
+        : 'команды назначаются в слотах без связи; остальные заполняются победителями и проигравшими сами';
+    if (onC) {
+        var note = document.createElement('div');
+        note.className = 'card';
+        note.style.cssText = 'margin-bottom:12px;color:#9aa3b2;';
+        note.innerHTML = '🔗 Пары и счёт ведутся в <b>Challonge</b> — здесь они только для просмотра. ' +
+            'Можно прикрепить ссылки на записи (VOD); время и эфир — на вкладке «Расписание».';
+        container.appendChild(note);
+    }
+
+    var rank = { upper: 0, lower: 1, grand: 2, third: 3 };
+    var sorted = DATA.matches.slice().sort(function(a, b) {
+        return ((rank[a.bracket] || 0) - (rank[b.bracket] || 0)) || (a.round - b.round) || (mNum(a) - mNum(b));
+    });
+
+    function teamSelect(m, slot) {
+        var cur = slot === 1 ? m.team1 : m.team2;
+        var sel = '<select onchange="setMatchTeam(' + m.id + ', ' + slot + ', this.value)">';
+        sel += '<option value="">— команда ' + slot + ' —</option>';
+        for (var t = 0; t < DATA.teams.length; t++) {
+            var tm = DATA.teams[t];
+            sel += '<option value="' + tm.id + '"' + (cur === tm.id ? ' selected' : '') + '>' + escapeHtml(tm.name) + '</option>';
+        }
+        return sel + '</select>';
+    }
+    function slotCell(m, slot) {
+        var link = slot === 1 ? m.from1 : m.from2;
+        var teamId = slot === 1 ? m.team1 : m.team2;
+        if (onC || link) {
+            return '<span class="auto-slot">' + (teamId ? escapeHtml(getTeamName(teamId)) : '<span style="color:#5f6773;">' + escapeHtml(slotHintA(m, slot)) + '</span>') + '</span>';
+        }
+        return teamSelect(m, slot);
+    }
 
     for (var i = 0; i < sorted.length; i++) {
         var m = sorted[i];
         var div = document.createElement('div');
-        var isManual = (m.id <= 3);
-        div.className = 'match-item ' + (isManual ? 'manual' : 'auto');
+        var hasManual = !onC && (!m.from1 || !m.from2);
+        div.className = 'match-item ' + (hasManual ? 'manual' : 'auto');
 
-        var label = (m.bracket === 'grand') ? 'Финал' : ('Раунд ' + m.round);
-
-        var bodyHtml = '';
-        if (isManual) {
-            var sel1 = '<select onchange="setMatchTeam(' + m.id + ', 1, this.value)">';
-            var sel2 = '<select onchange="setMatchTeam(' + m.id + ', 2, this.value)">';
-            var opts1 = '<option value="">— команда 1 —</option>';
-            var opts2 = '<option value="">— команда 2 —</option>';
-            for (var t1i = 0; t1i < DATA.teams.length; t1i++) {
-                var team1 = DATA.teams[t1i];
-                var selA = (m.team1 === team1.id) ? ' selected' : '';
-                var selB = (m.team2 === team1.id) ? ' selected' : '';
-                opts1 += '<option value="' + team1.id + '"' + selA + '>' + team1.name + '</option>';
-                opts2 += '<option value="' + team1.id + '"' + selB + '>' + team1.name + '</option>';
-            }
-            sel1 += opts1 + '</select>';
-            sel2 += opts2 + '</select>';
-
-            var winnerHtml = '';
-            if (m.team1 && m.team2) {
-                if (!m.winner) {
-                    winnerHtml = '<select onchange="setWinner(' + m.id + ', this.value)"><option value="">— победитель —</option>';
-                    winnerHtml += '<option value="' + m.team1 + '">' + getTeamName(m.team1) + '</option>';
-                    winnerHtml += '<option value="' + m.team2 + '">' + getTeamName(m.team2) + '</option>';
-                    winnerHtml += '</select>';
-                } else {
-                    winnerHtml = '<span class="winner">→ ' + getTeamName(m.winner) + '</span>';
-                    winnerHtml += '<div class="score-input-group">';
-                    winnerHtml += '<label>Счёт:</label>';
-                    winnerHtml += '<input type="number" min="0" max="9" id="admin-score1-' + m.id + '" class="score-input" value="' + (m.score1 != null ? m.score1 : '') + '" placeholder="0">';
-                    winnerHtml += '<span class="score-sep">:</span>';
-                    winnerHtml += '<input type="number" min="0" max="9" id="admin-score2-' + m.id + '" class="score-input" value="' + (m.score2 != null ? m.score2 : '') + '" placeholder="0">';
-                    winnerHtml += '<button class="btn btn-sm score-save" onclick="setScore(' + m.id + ')">✓</button>';
-                    winnerHtml += '<button class="btn btn-sm" onclick="resetMatch(' + m.id + ')">↩️ Сбросить</button>';
-                    winnerHtml += '</div>';
-                }
+        var winnerHtml = '';
+        var canPlay = !!(m.team1 && m.team2);
+        if (onC) {
+            if (m.winner) {
+                winnerHtml = '<span class="winner">→ ' + escapeHtml(getTeamName(m.winner)) + '</span>' +
+                    (m.score1 != null && m.score2 != null ? ' <span class="meta">' + m.score1 + ':' + m.score2 + '</span>' : '');
             } else {
-                winnerHtml = '<span style="color:#5f6773;">— сначала выбери команды —</span>';
+                winnerHtml = '<span style="color:#5f6773;">' + (canPlay ? 'ещё не сыгран' : 'ожидание') + '</span>';
             }
-
-            bodyHtml = '<div class="manual-selects">' + sel1 + '<span class="vs">vs</span>' + sel2 + '</div>' +
-                       '<div class="meta" style="margin-top:6px;">' + winnerHtml + '</div>';
+        } else if (canPlay) {
+            if (!m.winner) {
+                winnerHtml = '<select onchange="setWinner(' + m.id + ', this.value)"><option value="">— победитель —</option>';
+                winnerHtml += '<option value="' + m.team1 + '">' + escapeHtml(getTeamName(m.team1)) + '</option>';
+                winnerHtml += '<option value="' + m.team2 + '">' + escapeHtml(getTeamName(m.team2)) + '</option>';
+                winnerHtml += '</select>';
+            } else {
+                winnerHtml = '<span class="winner">→ ' + escapeHtml(getTeamName(m.winner)) + '</span>';
+                winnerHtml += '<div class="score-input-group">';
+                winnerHtml += '<label>Счёт:</label>';
+                winnerHtml += '<input type="number" min="0" max="9" id="admin-score1-' + m.id + '" class="score-input" value="' + (m.score1 != null ? m.score1 : '') + '" placeholder="0">';
+                winnerHtml += '<span class="score-sep">:</span>';
+                winnerHtml += '<input type="number" min="0" max="9" id="admin-score2-' + m.id + '" class="score-input" value="' + (m.score2 != null ? m.score2 : '') + '" placeholder="0">';
+                winnerHtml += '<button class="btn btn-sm score-save" onclick="setScore(' + m.id + ')">✓</button>';
+                winnerHtml += '<button class="btn btn-sm" onclick="resetMatch(' + m.id + ')">↩️ Сбросить</button>';
+                winnerHtml += '</div>';
+            }
         } else {
-            var t1 = getTeamName(m.team1);
-            var t2 = getTeamName(m.team2);
-            var canPlay = !!(m.team1 && m.team2);
-
-            var winnerHtml = '';
-            if (canPlay) {
-                if (!m.winner) {
-                    winnerHtml = '<select onchange="setWinner(' + m.id + ', this.value)"><option value="">— победитель —</option>';
-                    winnerHtml += '<option value="' + m.team1 + '">' + getTeamName(m.team1) + '</option>';
-                    winnerHtml += '<option value="' + m.team2 + '">' + getTeamName(m.team2) + '</option>';
-                    winnerHtml += '</select>';
-                } else {
-                    winnerHtml = '<span class="winner">→ ' + getTeamName(m.winner) + '</span>';
-                    winnerHtml += '<div class="score-input-group">';
-                    winnerHtml += '<label>Счёт:</label>';
-                    winnerHtml += '<input type="number" min="0" max="9" id="admin-score1-' + m.id + '" class="score-input" value="' + (m.score1 != null ? m.score1 : '') + '" placeholder="0">';
-                    winnerHtml += '<span class="score-sep">:</span>';
-                    winnerHtml += '<input type="number" min="0" max="9" id="admin-score2-' + m.id + '" class="score-input" value="' + (m.score2 != null ? m.score2 : '') + '" placeholder="0">';
-                    winnerHtml += '<button class="btn btn-sm score-save" onclick="setScore(' + m.id + ')">✓</button>';
-                    winnerHtml += '<button class="btn btn-sm" onclick="resetMatch(' + m.id + ')">↩️ Сбросить</button>';
-                    winnerHtml += '</div>';
-                }
-            } else {
-                winnerHtml = '<span style="color:#5f6773;">ожидание (автоматически)</span>';
-            }
-
-            bodyHtml = '<div class="teams"><span>' + t1 + '</span><span class="vs">vs</span><span>' + t2 + '</span></div>' +
-                       '<div class="meta" style="margin-top:6px;"><span class="tag ' + m.bracket + '">' + label + '</span>' + winnerHtml + '</div>';
+            winnerHtml = '<span style="color:#5f6773;">' + (hasManual ? '— сначала выбери команды —' : 'ожидание (автоматически)') + '</span>';
         }
+
+        var bodyHtml = '<div class="manual-selects"><b class="m-num">' + mRef(m.id) + '</b>' +
+            slotCell(m, 1) + '<span class="vs">vs</span>' + slotCell(m, 2) + '</div>' +
+            '<div class="meta" style="margin-top:6px;"><span class="tag ' + (m.bracket || 'upper') + '">' + escapeHtml(stageNameA(m)) + '</span>' + winnerHtml + '</div>';
 
         bodyHtml += '<div class="meta vod-row" style="margin-top:6px;">' +
             '<label>🎬 VOD:</label>' +
@@ -1576,19 +1689,19 @@ function setWinner(matchId, teamId) {
     if (DATA.liveMatchId === matchId) DATA.liveMatchId = null;
     saveData();
     renderMatches();
-    showToast('🏆 Победитель матча M' + matchId + ' выбран');
+    showToast('🏆 Победитель матча ' + mRef(matchId) + ' выбран');
 }
 
 function resetMatch(matchId) {
     var match = getMatch(matchId);
     if (!match) return;
-    if (!confirm('Сбросить результат матча M' + matchId + '?')) return;
+    if (!confirm('Сбросить результат матча ' + mRef(matchId) + '?')) return;
     match.winner = null;
     match.score1 = null;
     match.score2 = null;
     saveData();
     renderMatches();
-    showToast('↩️ Результат матча M' + matchId + ' сброшен');
+    showToast('↩️ Результат матча ' + mRef(matchId) + ' сброшен');
 }
 
 function renderSchedule() {
@@ -1608,7 +1721,7 @@ function renderSchedule() {
         var time = (DATA.schedule && DATA.schedule[m.id]) ? DATA.schedule[m.id] : '';
         var div = document.createElement('div');
         div.className = 'match-item';
-        div.innerHTML = '<div class="teams"><span>M' + m.id + ':</span><span>' + getTeamName(m.team1) + '</span><span class="vs">vs</span><span>' + getTeamName(m.team2) + '</span>' + (m.winner ? '<span class="winner">✅</span>' : '') + '</div><div class="meta"><input type="datetime-local" value="' + time + '" onchange="setSchedule(' + m.id + ', this.value)" style="background:#0a0d12;border:1px solid #242b35;color:#eae6da;padding:3px 6px;border-radius:4px;font-size:11px;"/></div>';
+        div.innerHTML = '<div class="teams"><span>' + mRef(m.id) + ':</span><span>' + getTeamName(m.team1) + '</span><span class="vs">vs</span><span>' + getTeamName(m.team2) + '</span>' + (m.winner ? '<span class="winner">✅</span>' : '') + '</div><div class="meta"><input type="datetime-local" value="' + time + '" onchange="setSchedule(' + m.id + ', this.value)" style="background:#0a0d12;border:1px solid #242b35;color:#eae6da;padding:3px 6px;border-radius:4px;font-size:11px;"/></div>';
         container.appendChild(div);
     }
 }
@@ -1891,7 +2004,7 @@ function chapterIsStale() {
 /* Снапшот текущего турнира (без записи в HISTORY) */
 function buildSnapshot() {
     updateMatchLinks();
-    var grand = getMatch(5);
+    var grand = findFinalA();
     var now = new Date();
     var id = 'ca-' + now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate()) + '-' + now.getTime();
     var dateStr = DATA.tournament.dates || (pad2(now.getDate()) + '.' + pad2(now.getMonth() + 1) + '.' + now.getFullYear());
@@ -1906,7 +2019,7 @@ function buildSnapshot() {
         fingerprint: seasonFingerprint(),
         // Снапшот данных на момент фиксации
         teams: JSON.parse(JSON.stringify(DATA.teams || [])),
-        matches: JSON.parse(JSON.stringify(DATA.matches || [])),
+        matches: JSON.parse(JSON.stringify(DATA.matches || [])).map(function(m) { m.final = !!(grand && m.id === grand.id); return m; }),
         championId: grand ? grand.winner : null,
         runnerUpId: grand ? getLoser(grand) : null,
         mvp: { teamId: null, playerNick: '', note: '' },
@@ -1917,7 +2030,7 @@ function buildSnapshot() {
 /* Турнир выглядит завершённым: есть победитель финала или сыграны матчи */
 function tournamentLooksFinished() {
     updateMatchLinks();
-    var grand = getMatch(5);
+    var grand = findFinalA();
     if (grand && grand.winner) return true;
     for (var i = 0; i < DATA.matches.length; i++) if (DATA.matches[i].winner) return true;
     return false;
@@ -1973,7 +2086,7 @@ function offerArchiveBefore(action) {
 /* Кнопка «Зафиксировать»: строгий сценарий без дублей */
 function snapshotCurrentTournament() {
     updateMatchLinks();
-    var grand = getMatch(5);
+    var grand = findFinalA();
 
     if (currentSeasonArchived()) {
         var h = archivedChapter();
@@ -1995,7 +2108,7 @@ function snapshotCurrentTournament() {
     }
 
     if (!grand || !grand.winner) {
-        if (!confirm('В финале (M5) ещё нет победителя. Зафиксировать всё равно? (глава будет без чемпиона)')) return;
+        if (!confirm('В финале ещё нет победителя. Зафиксировать всё равно? (глава будет без чемпиона)')) return;
     }
 
     var snapshot = archiveCurrentSeason();
@@ -2212,7 +2325,12 @@ function renderHistoryPhotos() {
         div.className = 'photo-thumb';
         div.innerHTML =
             '<img src="' + p.url + '" alt="">' +
-            '<button class="p-remove" onclick="removeHistoryPhoto(' + i + ')">×</button>' +
+            '<button class="p-remove" onclick="removeHistoryPhoto(' + i + ')" title="Удалить">×</button>' +
+            '<div class="p-order">' +
+                '<button type="button" onclick="moveHistoryPhoto(' + i + ',-1)" title="Раньше"' + (i === 0 ? ' disabled' : '') + '>←</button>' +
+                '<span>' + (i + 1) + '</span>' +
+                '<button type="button" onclick="moveHistoryPhoto(' + i + ',1)" title="Позже"' + (i === EDITING_HISTORY_PHOTOS.length - 1 ? ' disabled' : '') + '>→</button>' +
+            '</div>' +
             '<input type="text" class="p-caption-input" placeholder="подпись..." value="' + escapeHtml(p.caption || '') + '" onchange="setHistoryPhotoCaption(' + i + ', this.value)">';
         grid.appendChild(div);
     }
@@ -2237,6 +2355,15 @@ function onHistoryPhotos(e) {
         })(i);
     }
     e.target.value = '';
+}
+
+function moveHistoryPhoto(idx, dir) {
+    var to = idx + dir;
+    if (to < 0 || to >= EDITING_HISTORY_PHOTOS.length) return;
+    var tmp = EDITING_HISTORY_PHOTOS[idx];
+    EDITING_HISTORY_PHOTOS[idx] = EDITING_HISTORY_PHOTOS[to];
+    EDITING_HISTORY_PHOTOS[to] = tmp;
+    renderHistoryPhotos();
 }
 
 function removeHistoryPhoto(idx) {
@@ -2374,7 +2501,109 @@ function setSchedule(matchId, time) {
     if (!DATA.schedule) DATA.schedule = {};
     DATA.schedule[matchId] = time;
     saveData();
-    showToast('🕐 Время матча M' + matchId + ' сохранено');
+    showToast('🕐 Время матча ' + mRef(matchId) + ' сохранено');
+}
+
+/* ---------- Challonge ---------- */
+function chParse(input) {
+    var raw = String(input || '').trim();
+    if (!raw) return '';
+    if (/^[A-Za-z0-9_-]+$/.test(raw)) return raw;
+    try {
+        var u = new URL(/^https?:\/\//i.test(raw) ? raw : 'https://' + raw);
+        var host = u.hostname.toLowerCase();
+        if (host !== 'challonge.com' && !/\.challonge\.com$/.test(host)) return null;
+        var slug = u.pathname.split('/').filter(Boolean)[0];
+        return slug && /^[A-Za-z0-9_-]+$/.test(slug) ? slug : null;
+    } catch (e) { return null; }
+}
+function chSetStatus(text, kind) {
+    var el = document.getElementById('chStatus');
+    if (!el) return;
+    el.className = 'ch-status' + (kind ? ' ' + kind : '');
+    el.textContent = text || '';
+}
+function renderChallonge() {
+    var c = DATA.challonge || {};
+    var en = document.getElementById('chEnabled');
+    var tr = document.getElementById('chTournament');
+    if (en) en.checked = !!c.enabled;
+    if (tr && document.activeElement !== tr) tr.value = c.tournament || '';
+    var src = DATA.bracketSource;
+    if (!c.enabled) { chSetStatus('Выключено: сетка и счёт ведутся вручную на вкладке «Матчи».', ''); return; }
+    if (!src) { chSetStatus('Нажмите «Обновить сейчас», чтобы загрузить сетку.', ''); return; }
+    if (src.ok && src.info) {
+        chSetStatus('✅ Подключено: «' + src.info.name + '» · ' + src.info.type + ' · статус ' + src.info.state +
+            ' · участников ' + src.info.participants + ' · матчей ' + src.info.matches, 'ok');
+    } else if (src.stale) {
+        chSetStatus('⚠️ Challonge сейчас недоступен — на сайте показана последняя сохранённая копия. ' + (src.error || ''), 'warn');
+    } else {
+        chSetStatus('❌ ' + (src.error || 'Не удалось получить сетку'), 'bad');
+    }
+}
+function chCall(action) {
+    var id = chParse((document.getElementById('chTournament') || {}).value);
+    if (!id) { showToast('⚠️ Укажите ссылку вида https://challonge.com/abc123'); return Promise.resolve(null); }
+    return fetch('/api/challonge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: ensurePassword(), action: action, tournament: id })
+    }).then(function(res) {
+        if (res.status === 403) { ADMIN_PW = null; showToast('⛔ Неверный пароль'); return null; }
+        return res.json().catch(function() { return { ok: false, error: 'Сервер вернул не JSON' }; });
+    }).catch(function() { return { ok: false, error: 'Нет связи с сервером' }; });
+}
+function challongeTest() {
+    chSetStatus('Проверяю…', '');
+    chCall('test').then(function(r) {
+        if (!r) { chSetStatus('', ''); return; }
+        if (r.ok) {
+            chSetStatus('✅ Турнир найден: «' + r.info.name + '» · ' + r.info.type + ' · статус ' + r.info.state +
+                ' · участников ' + r.info.participants + ' · матчей ' + r.info.matches, 'ok');
+        } else {
+            chSetStatus('❌ ' + (r.error || 'Ошибка'), 'bad');
+        }
+    });
+}
+function challongePush() {
+    if (!confirm('Добавить в Challonge команды из нашего списка, которых там ещё нет?\n\nЭто работает, только пока турнир в Challonge не начат.')) return;
+    chSetStatus('Отправляю команды…', '');
+    /* сначала сохраняем текущий список команд, потому что сервер берёт его из хранилища */
+    saveData().then(function() { return chCall('push'); }).then(function(r) {
+        if (!r) { chSetStatus('', ''); return; }
+        if (r.ok) {
+            chSetStatus('✅ Добавлено команд: ' + r.added + (r.skipped ? ' (уже были в Challonge: ' + r.skipped + ')' : ''), 'ok');
+            showToast('📤 Команды отправлены в Challonge');
+        } else {
+            chSetStatus('❌ ' + (r.error || 'Ошибка'), 'bad');
+        }
+    });
+}
+function challongeRefresh() {
+    loadData().then(function() { renderEverything(); renderChallonge(); showToast('🔄 Данные обновлены'); });
+}
+function saveChallonge() {
+    var enabled = document.getElementById('chEnabled').checked;
+    var raw = document.getElementById('chTournament').value.trim();
+    var id = chParse(raw);
+    if (enabled && !id) { showToast('⚠️ Укажите корректную ссылку на турнир Challonge'); return; }
+    var prev = DATA.challonge || {};
+    var prevId = chParse(prev.tournament || '');
+    var switching = enabled && id && (!prev.enabled || prevId !== id);
+    if (switching && tournamentLooksFinished() && !currentSeasonArchived()) {
+        if (!confirm('Текущий турнир выглядит завершённым, но ещё не зафиксирован в архиве.\n\nПри переключении на другую сетку его результаты пропадут с сайта. Продолжить?')) return;
+    }
+    DATA.challonge = { enabled: enabled, tournament: raw };
+    if (switching) {
+        /* Новый турнир — старые время матчей и эфир к нему не относятся */
+        DATA.schedule = {};
+        DATA.liveMatchId = null;
+        DATA.archivedSnapshotId = null;
+    }
+    saveData().then(function(ok) {
+        if (ok === false) return;
+        return loadData().then(function() { renderEverything(); renderChallonge(); showToast(enabled ? '🔗 Challonge подключён' : '💾 Настройки сетки сохранены'); });
+    });
 }
 
 function saveSettings() {
@@ -2384,15 +2613,14 @@ function saveSettings() {
     var dates = document.getElementById('settingsDates').value.trim();
     var startVal = document.getElementById('settingsStart').value;
     var projVal = document.getElementById('settingsProjectStart').value;
-    var banner = document.getElementById('settingsAlwaysBanner').checked;
 
     DATA.tournament.name = name || 'Compass Arena';
     DATA.tournament.game = game || 'Dota 2';
     DATA.tournament.matches = format || 'Bo3';
-    DATA.tournament.dates = dates || '26 сентября 2026';
+    DATA.tournament.dates = dates;
     DATA.tournamentStart = startVal ? new Date(startVal).toISOString() : null;
     DATA.projectStart = projVal ? new Date(projVal).toISOString() : null;
-    DATA.alwaysShowBracketBanner = banner;
+    delete DATA.alwaysShowBracketBanner;
 
     // Следующий сезон: пустая карточка превращается в null, чтобы сайт показал текст по умолчанию
     var nsName = (document.getElementById('settingsNsName') || {}).value;
@@ -2966,9 +3194,11 @@ function botApplyTeams() {
     DATA.teams = plan.teams;
     DATA.freeAgents = plan.agents;
     /* Матчи под старые команды не подходят — сетку и расписание сбрасываем */
-    DATA.matches = getDefaultData().matches;
-    DATA.schedule = {};
-    DATA.liveMatchId = null;
+    if (!challongeOn()) {
+        DATA.matches = getDefaultData().matches;
+        DATA.schedule = {};
+        DATA.liveMatchId = null;
+    }
     DATA.archivedSnapshotId = null;
 
     var fileName = plan.fileName;

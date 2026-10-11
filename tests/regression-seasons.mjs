@@ -94,20 +94,19 @@ console.log('\nA. История после чистого сброса сезо
   const d = w.document;
   const chs = Array.from(d.querySelectorAll('#books .ch'));
   ok(chs.length === 2, 'оба турнира в архиве', chs.length);
-  ok(!!d.getElementById('ch-now'), 'блок текущего сезона на месте');
-  ok(d.body.textContent.includes('Сезон №3'), 'текущий сезон пронумерован как №3');
-  ok(d.body.textContent.includes('регистрация'), 'у сезона явный статус «регистрация»');
+  ok(!d.getElementById('ch-now'), 'идущего сезона в архиве нет');
+  ok(!d.body.textContent.includes('Сезон №'), 'нумерации идущего сезона нет');
   ok(chs[0].textContent.includes('Турнир №1 из 02'), 'марка первого турнира', chs[0].querySelector('.h-mark .no')?.textContent);
   ok(chs[1].textContent.includes('Турнир №2 из 02'), 'марка второго турнира', chs[1].querySelector('.h-mark .no')?.textContent);
   ok(chs[0].textContent.includes('Compass Arena #1'), 'одинаковые названия разведены: #1');
   ok(chs[1].textContent.includes('Compass Arena #2'), 'одинаковые названия разведены: #2');
-  ok(d.querySelectorAll('.ch-divider').length === 1, 'между турнирами есть разделитель', d.querySelectorAll('.ch-divider').length);
+  ok(d.querySelectorAll('.ch-divider').length === 0, 'лишних разделителей между турнирами нет');
   ok(d.querySelectorAll('#summary table.tbl').length === 2, 'обе сводные таблицы на месте');
   const champTable = d.querySelector('#summary .h-table-block .tbl');
   ok(champTable.textContent.includes('№1') && champTable.textContent.includes('№2'), 'в таблице чемпионов номера турниров');
   ok(champTable.textContent.includes('Команд') === false && !d.body.textContent.includes('Слот 1'), 'заглушки «Слот N» не попали на страницу');
-  ok(d.querySelectorAll('.h-chip').length === 3, 'навигация: текущий сезон + 2 турнира', d.querySelectorAll('.h-chip').length);
-  ok(d.querySelector('.h-chip .no').textContent.includes('№3'), 'первый чип — сезон №3', d.querySelector('.h-chip .no').textContent);
+  ok(d.querySelectorAll('.h-chip').length === 2, 'навигация: два турнира', d.querySelectorAll('.h-chip').length);
+  ok(d.querySelector('.h-chip .no').textContent.includes('№1'), 'первый чип — турнир №1', d.querySelector('.h-chip .no').textContent);
   ok(d.querySelectorAll('img:not([alt])').length === 0, 'у всех img есть alt');
   ok(errors.length === 0, 'без ошибок в консоли', errors[0]);
 }
@@ -133,7 +132,7 @@ console.log('\nC. Пустой архив + регистрация нового 
   const d = w.document;
   ok(!!d.querySelector('.ch-empty'), 'есть аккуратное пустое состояние архива');
   ok(d.querySelectorAll('#books .ch').length === 0, 'нет пустых глав');
-  ok(d.body.textContent.includes('Сезон №1'), 'текущий сезон — №1');
+  ok(!d.getElementById('ch-now'), 'идущего сезона в архиве нет');
   ok((d.body.textContent || '').length > 500, 'страница не пустая', (d.body.textContent || '').length);
   ok(errors.length === 0, 'без ошибок в консоли', errors[0]);
 }

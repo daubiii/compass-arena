@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Compass Arena — турнир по Dota 2</title>
-<meta name="description" content="Compass Arena — организация турниров по Dota 2. Сетка, расписание матчей, прямая трансляция и история турниров.">
+<title>Compass Arena — киберспортивные турниры</title>
+<meta name="description" content="Compass Arena — организация киберспортивных турниров. Сетка, расписание матчей, прямая трансляция и история турниров.">
 <meta name="theme-color" content="#08090c">
 <link rel="canonical" href="https://compassarena.ru/">
 
@@ -16,14 +16,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Compass Arena">
 <meta property="og:locale" content="ru_RU">
-<meta property="og:title" content="Compass Arena — турнир по Dota 2">
-<meta property="og:description" content="Сетка, расписание и прямая трансляция. Организация турниров по Dota 2.">
+<meta property="og:title" content="Compass Arena — киберспортивные турниры">
+<meta property="og:description" content="Сетка, расписание и прямая трансляция. Организация киберспортивных турниров.">
 <meta property="og:image" content="https://compassarena.ru/img/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://compassarena.ru/">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Compass Arena — турнир по Dota 2">
+<meta name="twitter:title" content="Compass Arena — киберспортивные турниры">
 <meta name="twitter:description" content="Сетка, расписание и прямая трансляция.">
 <meta name="twitter:image" content="https://compassarena.ru/img/og-image.jpg">
 
@@ -40,7 +40,7 @@
   "name": "Compass Arena",
   "url": "https://compassarena.ru/",
   "logo": "https://compassarena.ru/favicon.png",
-  "description": "Организация турниров по Dota 2.",
+  "description": "Организация киберспортивных турниров.",
   "sameAs": [
     "https://www.twitch.tv/compassarena",
     "https://t.me/compassarenaa"
@@ -271,7 +271,7 @@ body[data-phase="live"] .hero, body[data-phase="post"] .hero { min-height: clamp
   <canvas id="dust" aria-hidden="true"></canvas>
 
   <div class="wrap hero-body">
-    <p class="hero-kicker" id="heroKicker">Турнир по Dota 2 · первый сезон</p>
+    <p class="hero-kicker" id="heroKicker">Турнир по <span data-game>Dota 2</span></p>
     <h1 id="heroTitle">Здесь сражаются<br>не ради участия —<br><em>здесь доказывают</em></h1>
     <p class="lede" id="heroLede">Один шанс, полная концентрация и один трофей на всех. Первый турнир организации Compass Arena.</p>
     <div class="hero-cta" id="heroCta">
@@ -335,13 +335,10 @@ body[data-phase="live"] .hero, body[data-phase="post"] .hero { min-height: clamp
   <div class="wrap">
     <div class="sec-head reveal">
       <div>
-        <p class="kicker">Bo3 · шесть команд · без нижней сетки</p>
+        <p class="kicker" id="bracketKicker">Серии <span data-bo>Bo3</span></p>
         <h2 class="h2">Турнирная сетка</h2>
       </div>
-      <p class="sec-copy">
-        В <em>Раунде 1</em> играют все шесть команд: три матча, каждый до двух побед. Победители <em>M1</em> и <em>M2</em>
-        встречаются в полуфинале, победитель <em>M3</em> проходит напрямую в гранд-финал. <b>Один матч — один трофей.</b>
-      </p>
+      <p class="sec-copy" id="bracketCopy">Сетка собирается из итогов матчей: победители проходят дальше.</p>
     </div>
 
     <div class="bracket-scroll reveal" id="bracketScroll">
@@ -429,7 +426,7 @@ body[data-phase="live"] .hero, body[data-phase="post"] .hero { min-height: clamp
           <img src="/img/mark.webp" width="34" height="34" alt="" loading="lazy">
           <b>Compass <i>Arena</i></b>
         </div>
-        <p class="foot-about">Организация турниров по Dota 2. Первый сезон — шесть команд и один трофей.</p>
+        <p class="foot-about">Организация турниров по <span data-game>Dota 2</span>.</p>
       </div>
       <div class="foot-col">
         <h4>Турнир</h4>
@@ -452,7 +449,7 @@ body[data-phase="live"] .hero, body[data-phase="post"] .hero { min-height: clamp
       </div>
     </div>
     <div class="foot-bottom">
-      <span>© <span id="year">2026</span> Compass Arena · Dota 2 — товарные знаки принадлежат Valve Corporation</span>
+      <span>© <span id="year">2026</span> Compass Arena · <span data-trademark>Dota 2 — товарные знаки принадлежат Valve Corporation</span></span>
       <span><a href="/rules.html">Регламент</a> · <a href="/schedule.html">Расписание</a></span>
     </div>
   </div>
