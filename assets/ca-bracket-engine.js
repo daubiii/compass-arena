@@ -134,7 +134,7 @@
       }
 
       result.grandFinal = { ids: [finalMatch.id], rule: 'single' };
-      result.stageLabels = stageLabels(upper, result.matches, null);
+      result.stageLabels = stageLabels(upper, result.matches, null, size);
       return result;
     }
 
@@ -167,7 +167,7 @@
     }
 
     result.grandFinal = { ids: gfIds, first: gf.id, rule: gfRule };
-    result.stageLabels = stageLabels(upper, result.matches, lower);
+    result.stageLabels = stageLabels(upper, result.matches, lower, size);
     result.matches = ctx.matches;
     return result;
   }
@@ -378,15 +378,15 @@
   }
 
   /* ---------- подписи стадий ---------- */
-  function stageLabels(upper, matches, lower) {
+  function stageLabels(upper, matches, lower, size) {
     var labels = {};
     var r, i;
     for (r = 0; r < upper.length; r++) {
-      for (i = 0; i < upper[r].length; i++) labels[upper[r][i].id] = upperLabel(r + 1, upper.length);
+      for (i = 0; i < upper[r].length; i++) labels[upper[r][i].id] = upperLabel(r + 1, upper.length, size);
     }
     if (lower) {
       for (r = 0; r < lower.length; r++) {
-        for (i = 0; i < lower[r].length; i++) labels[lower[r][i].id] = lowerLabel(r + 1, lower.length);
+        for (i = 0; i < lower[r].length; i++) labels[lower[r][i].id] = lowerLabel(r + 1, lower.length, size);
       }
     }
     matches.forEach(function (m) {
@@ -396,20 +396,27 @@
     return labels;
   }
 
-  function upperLabel(round, total) {
+  /**
+   * Подпись раунда. Названия по «остатку» до финала понятны на любой сетке,
+   * а ранние раунды называем по числу матчей в них: «1/4 финала», «1/8 финала».
+   */
+  function roundLabel(part, round, total, size) {
     var left = total - round;
-    if (left === 0) return 'Финал верхней';
-    if (left === 1) return 'Полуфинал верхней';
-    if (left === 2) return 'Четвертьфинал верхней';
-    return 'Верхняя · раунд ' + round;
+    if (left === 0) return 'Финал ' + part;
+    if (left === 1) return 'Полуфинал ' + part;
+    if (left === 2) return 'Четвертьфинал ' + part;
+    /* В раунде столько матчей, сколько участников делить на два */
+    var inRound = Math.max(1, Math.round((size || Math.pow(2, total)) / Math.pow(2, round)));
+    if (inRound >= 2) return '1/' + inRound + ' финала ' + part;
+    return 'Раунд ' + round + ' ' + part;
   }
 
-  function lowerLabel(round, total) {
-    var left = total - round;
-    if (left === 0) return 'Финал нижней';
-    if (left === 1) return 'Полуфинал нижней';
-    if (left === 2) return 'Четвертьфинал нижней';
-    return 'Нижняя · раунд ' + round;
+  function upperLabel(round, total, size) {
+    return roundLabel('верхней', round, total, size);
+  }
+
+  function lowerLabel(round, total, size) {
+    return roundLabel('нижней', round, total, size);
   }
 
   /**

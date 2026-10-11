@@ -335,17 +335,21 @@ body[data-phase="live"] .hero, body[data-phase="post"] .hero { min-height: clamp
   <div class="wrap">
     <div class="sec-head reveal">
       <div>
-        <p class="kicker">Bo3 · шесть команд · без нижней сетки</p>
+        <p class="kicker" id="bracketKicker">Bo3 · шесть команд · без нижней сетки</p>
         <h2 class="h2">Турнирная сетка</h2>
       </div>
-      <p class="sec-copy">
-        В <em>Раунде 1</em> играют все шесть команд: три матча, каждый до двух побед. Победители <em>M1</em> и <em>M2</em>
-        встречаются в полуфинале, победитель <em>M3</em> проходит напрямую в гранд-финал. <b>Один матч — один трофей.</b>
-      </p>
+      <p class="sec-copy" id="bracketCopy"></p>
     </div>
 
-    <div class="bracket-scroll reveal" id="bracketScroll">
-      <div class="bracket" id="bracketWrap"></div>
+    <div class="bracket-wrap reveal" id="bracketWrapBox">
+      <div class="bracket-scroll" id="bracketScroll">
+        <div class="bracket" id="bracketWrap"></div>
+      </div>
+      <button class="b-expand" id="bracketExpand" type="button" aria-haspopup="dialog" aria-controls="bracketViewer">
+        <span class="b-expand-label">Развернуть сетку полностью</span>
+        <svg class="ic" aria-hidden="true" focusable="false"><use href="#i-expand"></use></svg>
+      </button>
+      <span class="b-fade" aria-hidden="true"></span>
     </div>
 
     <div class="bracket-foot">
@@ -359,6 +363,32 @@ body[data-phase="live"] .hero, body[data-phase="post"] .hero { min-height: clamp
     <svg class="ic" aria-hidden="true"><use href="#i-compass"></use></svg>
   </div>
 </section>
+
+<!-- ============ СЕТКА: ПОЛНОЭКРАННЫЙ ПРОСМОТР ============ -->
+<div class="bview" id="bracketViewer" hidden>
+  <div class="bview-panel" role="dialog" aria-modal="true" aria-labelledby="bracketViewerTitle">
+    <div class="bview-bar">
+      <div class="bview-title">
+        <svg class="ic" aria-hidden="true" focusable="false"><use href="#i-bracket"></use></svg>
+        <b id="bracketViewerTitle">Турнирная сетка</b>
+        <span id="bracketViewerSub"></span>
+      </div>
+      <div class="bview-actions">
+        <span class="bview-hint">Тяните мышью или колесом · Shift + колесо — вбок</span>
+        <button class="btn btn-quiet btn-sm" type="button" id="bracketViewerClose">
+          <svg class="ic" aria-hidden="true" focusable="false"><use href="#i-close"></use></svg>
+          Свернуть
+        </button>
+      </div>
+    </div>
+    <div class="bview-canvas" id="bracketViewerCanvas">
+      <div class="bview-inner" id="bracketViewerInner">
+        <div class="bracket" id="bracketViewerBracket"></div>
+      </div>
+    </div>
+    <div class="bview-foot" id="bracketViewerLegend"></div>
+  </div>
+</div>
 
 <!-- ============ ВЫБЫВШИЕ ============ -->
 <section class="sec-tight" id="eliminatedSection">

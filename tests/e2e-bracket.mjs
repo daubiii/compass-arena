@@ -95,7 +95,31 @@ const cards = hw.document.querySelectorAll('#bracketWrap .match').length;
 ok(cards === (data.matches || []).length, 'главная отрисовала все матчи сохранённой сетки',
   JSON.stringify([cards, (data.matches || []).length]));
 const heads = Array.from(hw.document.querySelectorAll('#bracketWrap .b-col-head b')).map((b) => b.textContent);
-ok(heads.some((h) => /Нижняя/.test(h)), 'на главной есть колонки нижней сетки', heads.join(' | '));
+ok(heads.some((h) => /нижней/.test(h)), 'на главной есть колонки нижней сетки', heads.join(' | '));
+/* Линии связей считаются по реальной геометрии, а в jsdom её нет (все
+   размеры нулевые) — здесь проверяем только, что слой линий и контейнер
+   сетки доехали до страницы. Сами пути проверяются в Chrome:
+   node scripts/_measure.mjs и /probe.html. */
+ok(!!hw.document.querySelector('#bracketWrap .bracket'), 'контейнер сетки на месте');
+ok(!!hw.document.querySelector('#bracketWrap .b-lines'), 'слой линий связей вставлен');
+const kicker = (hw.document.getElementById('bracketKicker') || {}).textContent || '';
+ok(/Bo3 · \d+ команд/.test(kicker), 'подпись над сеткой считается по данным', kicker);
+/* В подписи должно быть ровно то, что нарисовано: если команд в заявках больше,
+   чем в сетке, показываем размер сетки, а не число заявок. */
+const expectedTeams = Math.min(data.teams.length, data.bracket.teamCount);
+ok(new RegExp('Bo3 · ' + expectedTeams + ' ').test(kicker),
+  'в подписи столько команд, сколько реально в сетке', kicker + ' (ожидали ' + expectedTeams + ')');
+const copyText = (hw.document.getElementById('bracketCopy') || {}).textContent || '';
+ok(new RegExp('Матчей: ' + (data.matches || []).length).test(copyText),
+  'в описании столько матчей, сколько нарисовано', copyText.slice(0, 60));
+
+/* Подписи колонок должны соответствовать матчам, а не настройкам сетки:
+   сверяем, что подпись первой колонки совпадает со стадией её первого матча. */
+const firstHead = (hw.document.querySelector('#bracketWrap .b-col-head b') || {}).textContent || '';
+const firstCard = hw.document.querySelector('#bracketWrap .match .m-id');
+ok(!!firstHead && !!firstCard && firstCard.textContent.indexOf(firstHead) >= 0,
+  'подпись колонки совпадает со стадией матча в ней',
+  JSON.stringify([firstHead, firstCard && firstCard.textContent]));
 
 /* Расписание тоже должно собраться из новой сетки */
 const sched = await (await fetch(BASE + '/schedule.html')).text();

@@ -1,9 +1,10 @@
-/* Сайт: отрисовка универсальной сетки (4…16 команд, SE и DE) и пересчёт связей.
-   Компонент сетки и слой данных подключаются как на странице.
+/* Сайт: отрисовка универсальной сетки (4…16 команд, SE и DE), компактный вид
+   с кнопкой разворота и пересчёт связей после ввода результатов.
+   Компоненты подключаются так же, как на странице.
    Запуск: node tests/bracket-view.mjs */
 import fs from 'node:fs';
 import path from 'node:path';
-import { JSDOM } from 'jsdom';
+import { JSDOM, VirtualConsole } from 'jsdom';
 
 const ROOT = process.cwd();
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -28,7 +29,7 @@ async function boot(data) {
     url: 'https://compassarena.ru/',
     pretendToBeVisual: true,
     runScripts: 'dangerously',
-    virtualConsole: new (await import('jsdom')).VirtualConsole(),
+    virtualConsole: new VirtualConsole(),
     beforeParse(win) {
       win.fetch = async () => ({ ok: true, status: 200, json: async () => JSON.parse(JSON.stringify(data)) });
     }
@@ -86,7 +87,8 @@ console.log('\nA. Single elimination, 8 команд');
   ok(wrap.querySelectorAll('.b-col-head').length === 3, 'три колонки: раунд 1, полуфинал, финал',
     wrap.querySelectorAll('.b-col-head').length);
   const bracket = wrap.querySelector('.bracket');
-  ok(!!bracket && bracket.getAttribute('data-cols') === '3', 'в разметке указано число колонок', bracket && bracket.getAttribute('data-cols'));
+  ok(!!bracket && bracket.getAttribute('data-cols') === '3', 'в разметке указано число колонок',
+    bracket && bracket.getAttribute('data-cols'));
 
   const first = D.matches.filter((m) => m.round === 1);
   ok(first.every((m) => !!m.team1 && !!m.team2), 'в первом раунде у всех пар есть команды');
@@ -126,15 +128,17 @@ console.log('\nB. Double elimination, 6 команд (два BYE)');
   ok(D.matches.filter((m) => m.bracket === 'grand').length === 1, 'один гранд-финал');
 
   const heads = Array.from(wrap.querySelectorAll('.b-col-head b')).map((b) => b.textContent);
-  ok(heads.some((h) => /Нижняя/.test(h)), 'есть колонки нижней сетки', JSON.stringify(heads));
+  ok(heads.some((h) => /нижней/.test(h)), 'есть колонки нижней сетки', JSON.stringify(heads));
+  ok(heads[0] === 'Четвертьфинал верхней' || /верхней/.test(heads[0]), 'первая колонка — верхняя сетка', heads[0]);
   ok(heads[heads.length - 1] === 'Гранд-финал', 'последняя колонка — гранд-финал', heads.join(' | '));
-  ok(wrap.querySelectorAll('.match.is-lower').length === 6, 'карточки нижней сетки помечены', wrap.querySelectorAll('.match.is-lower').length);
+  ok(wrap.querySelectorAll('.match.is-lower').length === 6, 'карточки нижней сетки помечены',
+    wrap.querySelectorAll('.match.is-lower').length);
 
   const byeMatches = D.matches.filter((m) => m.round === 1 && m.bracket === 'upper' && (!m.team1 || !m.team2));
   ok(byeMatches.length === 2, 'две пары с BYE', byeMatches.length);
   ok(byeMatches.every((m) => m.winner), 'победитель BYE-пары проставлен автоматически',
     JSON.stringify(byeMatches.map((m) => m.winner)));
-  ok(/проходит без игры/.test(wrap.textContent), 'на карточке видно, что команда прошла без игры');
+  ok(/Без игры|Без соперника/.test(wrap.textContent), 'на карточке видно, что команда прошла без игры');
 }
 
 /* ============ C. Двойное поражение проигравшего ============ */
@@ -172,7 +176,7 @@ console.log('\nD. 16 команд, DE');
   ok(wrap.querySelectorAll('.match').length === 31, 'все матчи отрисованы', wrap.querySelectorAll('.match').length);
   ok(wrap.querySelectorAll('.b-col-head').length === cols, 'у каждой колонки есть заголовок');
 
-  /* Карточки не накладываются: в одной колонке разные ряды */
+  /* Карточки не накладываются и у всех есть место в сетке */
   const placed = Array.from(wrap.querySelectorAll('.match')).map((el) => {
     const style = el.getAttribute('style') || '';
     const col = /grid-column:([^;]+)/.exec(style);
@@ -215,6 +219,116 @@ console.log('\nE. Старый турнир продолжает рисоват�
   const heads = Array.from(wrap.querySelectorAll('.b-col-head b')).map((b) => b.textContent);
   ok(heads.length === 3, 'три колонки старой сетки', heads.join(' | '));
   ok(/Полуфинал/.test(heads.join(' ')), 'подписи старых раундов на месте', heads.join(' | '));
+}
+
+/* ============ F. Компактное превью и полноэкранный просмотр ============ */
+console.log('\nF. Компактная сетка и окно просмотра');
+{
+  /* Главная при загрузке сама вызывает init() и render(), поэтому даём ей
+     минимальный, но полный набор контейнеров: те блоки нам не интересны,
+     но без них отрисовка упадёт. */
+  const ids = ['heroKicker', 'heroTitle', 'heroLede', 'heroCta', 'heroStatus', 'cdDays', 'cdHours',
+    'cdMinutes', 'cdSeconds', 'cdAnnounce', 'nmCount', 'streamSection', 'streamWaiting', 'streamLive',
+    'streamBar', 'streamBarText', 'streamPoster', 'streamPosterTitle', 'streamPosterText', 'streamPlay',
+    'streamNext', 'streamMiniTimer', 'streamFrame', 'streamToggle', 'bLegend', 'bracketKicker',
+    'bracketCopy', 'eliminatedList', 'eliminatedCount', 'eliminatedSection', 'teamsGrid',
+    'schedulePreviewList', 'archiveSection', 'archiveList', 'next-season', 'nextSeasonBody',
+    'championSection', 'championBanner', 'champChip', 'champChipName', 'teamDialog', 'teamDialogLogo',
+    'teamDialogName', 'teamDialogSub', 'teamDialogBody', 'teamDialogStats', 'phaseNote', 'toTop', 'dust',
+    'bracketViewer', 'bracketViewerCanvas', 'bracketViewerInner', 'bracketViewerBracket',
+    'bracketViewerSub', 'bracketViewerLegend', 'bracketViewerClose'];
+
+  const dom = new JSDOM(
+    '<!doctype html><html><body data-phase="pre">' +
+    ids.filter((id) => id !== 'bracketViewerClose').map((id) => '<div id="' + id + '"></div>').join('') +
+    '<button id="bracketViewerClose" type="button">Свернуть</button>' +
+    '<div class="bracket-wrap" id="bracketWrapBox">' +
+    '<div class="bracket-scroll" id="bracketScroll"><div class="bracket" id="bracketWrap"></div></div>' +
+    '<button class="b-expand" id="bracketExpand" type="button">' +
+    '<span class="b-expand-label">Развернуть сетку полностью</span></button>' +
+    '</div></body></html>',
+    {
+      url: 'https://compassarena.ru/', pretendToBeVisual: true, runScripts: 'dangerously',
+      virtualConsole: new VirtualConsole(),
+      beforeParse(win) { win.fetch = async () => ({ ok: true, status: 200, json: async () => ({}) }); }
+    }
+  );
+  const w = dom.window;
+  /* Скрытое окно: в разметке страницы это атрибут hidden */
+  w.document.getElementById('bracketViewer').setAttribute('hidden', '');
+  for (const f of ['assets/ca-ui.js', 'assets/ca-bracket-engine.js', 'assets/ca-data.js', 'assets/ca-views.js', 'assets/ca-bracket.js', 'assets/ca-home.js']) {
+    w.eval(read(f));
+  }
+  await sleep(80);
+
+  const raw = buildData(w, 10, 'de', { grandFinal: 'simple' });
+  /* Зовём именно отрисовку сетки: остальные блоки главной в этом мини-DOM не нужны */
+  w.CA.home.renderBracket(w.CA.data.setRaw(raw));
+  await sleep(60);
+
+  const box = w.document.getElementById('bracketWrapBox');
+  const button = w.document.getElementById('bracketExpand');
+  const viewer = w.document.getElementById('bracketViewer');
+  const canvas = w.document.getElementById('bracketViewerCanvas');
+  const host = w.document.getElementById('bracketViewerBracket');
+  ok(!!box && !!button && !!viewer, 'есть превью, кнопка и окно просмотра');
+
+  const cap = Number(box.getAttribute('data-cap'));
+  ok(cap > 0 && cap <= 560, 'ограничитель по высоте посчитан', cap);
+  ok(box.classList.contains('is-compact'), 'в превью сетка компактная');
+  ok(viewer.hidden === true, 'окно просмотра по умолчанию закрыто');
+  ok(/Развернуть/.test(button.textContent), 'на кнопке написано «Развернуть»', button.textContent.trim());
+
+  button.dispatchEvent(new w.Event('click', { bubbles: true }));
+  await sleep(80);
+  ok(viewer.hidden === false, 'клик по кнопке открывает окно просмотра');
+  ok(!!host.querySelector('.bracket'), 'внутри окна нарисована сетка');
+  ok(host.querySelectorAll('.match').length === raw.matches.length, 'в окне все матчи',
+    host.querySelectorAll('.match').length);
+  ok((w.document.getElementById('bracketViewerSub').textContent || '').indexOf('10 команд') >= 0,
+    'в шапке окна подписано число команд', w.document.getElementById('bracketViewerSub').textContent);
+  ok(/Свернуть/.test(w.document.getElementById('bracketViewerClose').textContent),
+    'в окне есть кнопка «Свернуть»');
+
+  /* Закрытие кнопкой, фоном и Esc */
+  w.document.getElementById('bracketViewerClose').dispatchEvent(new w.Event('click', { bubbles: true }));
+  await sleep(40);
+  ok(viewer.hidden === true, 'кнопка «Свернуть» закрывает окно');
+
+  button.dispatchEvent(new w.Event('click', { bubbles: true }));
+  await sleep(60);
+  viewer.dispatchEvent(new w.Event('click', { bubbles: true }));
+  await sleep(40);
+  ok(viewer.hidden === true, 'клик по фону закрывает окно');
+
+  button.dispatchEvent(new w.Event('click', { bubbles: true }));
+  await sleep(60);
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await sleep(40);
+  ok(viewer.hidden === true, 'Esc закрывает окно');
+
+  /* Перерисовка данных при открытом окне не должна его закрывать */
+  button.dispatchEvent(new w.Event('click', { bubbles: true }));
+  await sleep(60);
+  w.CA.home.renderBracket(w.CA.data.get());
+  await sleep(60);
+  ok(viewer.hidden === false, 'перерисовка данных не закрывает окно');
+  ok(host.querySelectorAll('.match').length === raw.matches.length, 'и не теряет матчи',
+    host.querySelectorAll('.match').length);
+
+  /* В окне доступны оба направления прокрутки (стили задаёт CSS, здесь — факт наличия) */
+  ok(!!canvas, 'полотно окна прокручивается (контейнер на месте)');
+  w.CA.home.closeBracketViewer();
+  await sleep(30);
+  ok(viewer.hidden === true, 'программное закрытие тоже работает');
+
+  /* Для маленькой сетки ограничитель не должен схлопывать карточки */
+  const smaller = buildData(w, 4, 'se');
+  w.CA.home.renderBracket(w.CA.data.setRaw(smaller));
+  await sleep(60);
+  const smallCap = Number(box.getAttribute('data-cap'));
+  ok(smallCap >= 120, 'для маленькой сетки ограничитель не схлопывает карточки', smallCap);
+  w.close();
 }
 
 console.log(fails ? '\nПРОВАЛЕНО: ' + fails : '\nвсе проверки пройдены');

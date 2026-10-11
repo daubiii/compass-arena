@@ -284,7 +284,9 @@
   function renderBracket(d) {
     var root = document.getElementById('bracketWrap');
     if (!root) return;
+    bracketHead(d);
     CA.bracket.render(root, { data: d });
+    syncBracketHeight(d);
     var legend = document.getElementById('bLegend');
     if (legend) {
       legend.innerHTML =
@@ -293,6 +295,247 @@
         '<span><i class="done"></i>Сыгран</span>' +
         '<span class="tz">Время — московское (МСК)</span>';
     }
+  }
+
+  /* Компактная сетка: сверху видно начало плей-офф, остальное — по кнопке.
+
+     Ограничитель считаем в пикселях, а не в vh: сетка — это грид из рядов
+     фиксированной высоты, и нам важно показать целое число раундов, а не
+     «сколько влезет в окно». Берём два первых раунда (включая старт нижней
+     сетки) и обрезаем сразу под ними — так у любого размера видно ровно
+     начало турнира, а внизу остаётся место расписанию и остальным блокам. */
+  function bracketCapHeight(d) {
+    var MAX = 560;                  /* предел: выше расписание уезжает с экрана */
+    var PAD = 26;                   /* нижний отступ самого .bracket-scroll */
+    var matches = (d && d.matches) || [];
+    var engine = global.CA && CA.bracket;
+    if (!matches.length || !engine || !engine.layout) return MAX;
+
+    var first = null;
+    matches.forEach(function (m) {
+      if (m.bracket === 'grand' || m.bracket === 'third') return;
+      if (first === null || m.round < first) first = m.round;
+    });
+    if (first === null) return MAX;
+    var keep = [first, first + 1];
+
+    /* Позиции берём у того же раскладчика, что рисует сетку, — расхождений не будет */
+    var lay = engine.layout(matches);
+    var unit = lay.unit || 67;
+    var bottom = 0;
+    matches.forEach(function (m) {
+      var item = lay.items[m.id];
+      if (!item) return;
+      if (keep.indexOf(m.round) < 0) return;
+      bottom = Math.max(bottom, (item.row + item.span) * unit);
+    });
+    if (!bottom) return MAX;
+
+    return Math.min(MAX, Math.round(bottom + PAD));
+  }
+
+  /** Показываем кнопку «Развернуть», если сетка не влезла в ограничитель */
+  function syncBracketHeight(d) {
+    var box = document.getElementById('bracketWrapBox');
+    var wrap = document.getElementById('bracketWrap');
+    if (!box || !wrap) return;
+
+    var cap = bracketCapHeight(d);
+    box.style.setProperty('--b-cap', cap + 'px');
+    box.setAttribute('data-cap', String(cap));
+    box.classList.add('is-compact');
+
+    /* В jsdom геометрии нет (все высоты нулевые) — считаем, что сетка не влезла,
+       и оставляем кнопку доступной: так её видно в проверках и в «тонком» браузере. */
+    var natural = wrap.getBoundingClientRect().height;
+    var tooTall = !natural || natural > cap;
+    box.setAttribute('data-bracket-overflow', tooTall ? '1' : '0');
+    if (!tooTall) box.classList.remove('is-compact');
+
+    /* Перерисовка данных не должна закрывать открытое окно просмотра */
+    if (bracketViewerOpen) renderBracketViewer(d);
+  }
+
+  /* ---------- Полноэкранный просмотр сетки ---------- */
+
+  var bracketViewerOpen = false;
+  var bracketViewerReturn = null;
+
+  function openBracketViewer() {
+    var viewer = document.getElementById('bracketViewer');
+    var canvas = document.getElementById('bracketViewerCanvas');
+    if (!viewer) return;
+
+    bracketViewerReturn = document.activeElement;
+    bracketViewerOpen = true;
+    viewer.hidden = false;
+    document.body.classList.add('bview-open');
+    renderBracketViewer(D.get());
+
+    /* Ставим полотно в начало и пересчитываем линии после показа */
+    if (canvas) canvas.scrollTop = 0, canvas.scrollLeft = 0;
+    global.requestAnimationFrame(function () {
+      var target = document.getElementById('bracketViewerBracket');
+      if (target && CA.bracket) CA.bracket.drawLines(target.parentNode);
+      var close = document.getElementById('bracketViewerClose');
+      if (close) close.focus();
+    });
+  }
+
+  function closeBracketViewer() {
+    var viewer = document.getElementById('bracketViewer');
+    if (!viewer || viewer.hidden) return;
+    bracketViewerOpen = false;
+    viewer.hidden = true;
+    document.body.classList.remove('bview-open');
+    if (bracketViewerReturn && bracketViewerReturn.focus) bracketViewerReturn.focus();
+    bracketViewerReturn = null;
+  }
+
+  /** Рисуем сетку внутри окна просмотра (и обновляем подписи) */
+  function renderBracketViewer(d) {
+    var viewer = document.getElementById('bracketViewer');
+    var host = document.getElementById('bracketViewerBracket');
+    if (!viewer || viewer.hidden || !host) return;
+
+    CA.bracket.render(host, { data: d });
+
+    var info = bracketInfo(d);
+    var sub = document.getElementById('bracketViewerSub');
+    if (sub) {
+      sub.textContent = info.matchType + ' · ' + info.inBracket + ' ' +
+        D.plural(info.inBracket, 'команда', 'команды', 'команд') + ' · ' +
+        info.matches + ' ' + D.plural(info.matches, 'матч', 'матча', 'матчей') +
+        (info.byes ? ' · без игры: ' + info.byes : '');
+    }
+
+    var legend = document.getElementById('bracketViewerLegend');
+    var source = document.getElementById('bLegend');
+    if (legend) legend.innerHTML = source ? source.innerHTML : '';
+
+    global.requestAnimationFrame(function () {
+      if (CA.bracket) CA.bracket.drawLines(host.parentNode);
+    });
+  }
+
+  /** Открытие/закрытие окна: кнопка, клик по превью, Esc, клик по фону */
+  function initBracketExpand() {
+    var box = document.getElementById('bracketWrapBox');
+    var button = document.getElementById('bracketExpand');
+    var viewer = document.getElementById('bracketViewer');
+    var close = document.getElementById('bracketViewerClose');
+    if (!box || box.getAttribute('data-expand-ready') === '1') return;
+    box.setAttribute('data-expand-ready', '1');
+
+    if (button) {
+      button.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openBracketViewer();
+      });
+    }
+    /* Клик по самой сетке — тоже разворот, чтобы «тыкнуть» было проще */
+    box.addEventListener('click', function () {
+      if (box.classList.contains('is-compact')) openBracketViewer();
+    });
+
+    if (close) close.addEventListener('click', closeBracketViewer);
+    if (viewer) {
+      /* Клик по тёмному фону вокруг панели закрывает окно */
+      viewer.addEventListener('click', function (e) {
+        if (e.target === viewer) closeBracketViewer();
+      });
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && bracketViewerOpen) closeBracketViewer();
+    });
+    /* Shift + колесо — привычный горизонтальный скролл вбок */
+    var canvas = document.getElementById('bracketViewerCanvas');
+    if (canvas) {
+      canvas.addEventListener('wheel', function (e) {
+        if (!e.shiftKey) return;
+        canvas.scrollLeft += (e.deltaY || e.deltaX);
+        e.preventDefault();
+      }, { passive: false });
+    }
+    global.addEventListener('resize', function () {
+      if (bracketViewerOpen) {
+        var host = document.getElementById('bracketViewerBracket');
+        if (host && CA.bracket) CA.bracket.drawLines(host.parentNode);
+      }
+    });
+  }
+
+  /**
+   * Сводка по сетке: команды, размер, серии, число матчей, BYE.
+   * Всё считается от данных, а настройки сетки используются только там, где
+   * они с данными не спорят: иначе подпись «10 команд» могла оказаться над
+   * сеткой на восемь.
+   */
+  function bracketInfo(d) {
+    var cfg = d.bracket || null;
+    var teams = (d.realTeams && d.realTeams.length) ? d.realTeams.length : (d.teams || []).length;
+    var matches = d.matches || [];
+    var isDe = (cfg && cfg.format === 'de') || matches.some(function (m) { return m.bracket === 'lower'; });
+    var size = 0;
+    if (cfg && cfg.size && cfg.size >= 2 && matches.length >= cfg.size - 1) size = cfg.size;
+    var byes = 0;
+    if (size) {
+      var byesFromData = matches.filter(function (m) { return m.bye; }).length;
+      byes = byesFromData || Math.max(0, size - teams);
+    }
+    /* Сколько команд реально в сетке: если заявок больше размера — сетка ограничена,
+       если меньше — в подписи честнее показать число заявок, а BYE скажем отдельно. */
+    var inBracket = (size && teams > size) ? size : (teams || size);
+    return {
+      teams: teams,
+      size: size,
+      inBracket: inBracket,
+      matchType: (cfg && cfg.matchType) || (d.tournament && d.tournament.matches) || 'Bo3',
+      isDe: isDe,
+      matches: matches.length,
+      grand: matches.filter(function (m) { return m.bracket === 'grand'; }).length,
+      byes: byes
+    };
+  }
+
+  /**
+   * Подписи над сеткой: сколько команд, какие серии и как устроен плей-офф.
+   * Текст считается по данным турнира, поэтому подходит и старой сетке на
+   * шесть команд, и универсальной на 4…16 команд в SE или DE.
+   */
+  function bracketHead(d) {
+    var kicker = document.getElementById('bracketKicker');
+    var copy = document.getElementById('bracketCopy');
+    if (!kicker && !copy) return;
+    var plural = D.plural;
+
+    var info = bracketInfo(d);
+
+    if (kicker) {
+      kicker.textContent = info.matchType + ' · ' + info.inBracket + ' ' +
+        plural(info.inBracket, 'команда', 'команды', 'команд') + ' · ' +
+        (info.isDe ? 'нижняя сетка' : 'без нижней сетки');
+    }
+    if (!copy) return;
+
+    if (!info.matches) {
+      copy.innerHTML = 'Сетку собирают после жеребьёвки: команды расставляются по посеву, ' +
+        'связи между матчами считаются автоматически.';
+      return;
+    }
+
+    var parts = [];
+    parts.push(info.isDe
+      ? 'Плей-офф на вылет: проигравший в верхней сетке получает второй шанс в нижней.'
+      : 'Плей-офф на вылет: проиграл серию — выбыл.');
+    parts.push('Матчей: <b>' + info.matches + '</b>' + (info.grand > 1 ? ', гранд-финал со сбросом.' : '.'));
+    if (info.byes) {
+      parts.push('Команд меньше размера сетки — <b>' + info.byes + '</b> ' +
+        plural(info.byes, 'команда', 'команды', 'команд') + ' ' +
+        plural(info.byes, 'проходит', 'проходят', 'проходят') + ' первый раунд без игры.');
+    }
+    parts.push('Победитель каждого матча идёт дальше автоматически.');
+    copy.innerHTML = parts.join(' ');
   }
 
   function renderEliminated(d) {
@@ -564,6 +807,7 @@
     U.initChrome();
     initChip();
     initTeamDialog();
+    initBracketExpand();
     initDust();
     initStreamPlayer();
 
@@ -597,6 +841,13 @@
     }, 1000);
   }
 
-  CA.home = { init: init, render: render };
+  CA.home = {
+    init: init,
+    render: render,
+    renderBracket: renderBracket,
+    bracketCapHeight: bracketCapHeight,
+    openBracketViewer: openBracketViewer,
+    closeBracketViewer: closeBracketViewer
+  };
   U.contentReady(init);
 })(typeof window !== 'undefined' ? window : globalThis);

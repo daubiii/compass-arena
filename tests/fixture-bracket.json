@@ -1,0 +1,650 @@
+{
+ "tournament": {
+  "name": "Compass Arena",
+  "game": "Dota 2",
+  "format": "Custom Bracket",
+  "matches": "Bo3",
+  "dates": "26 сентября 2030"
+ },
+ "teams": [
+  {
+   "id": 1,
+   "name": "Team Spirit",
+   "logo": "",
+   "players": [
+    {
+     "nick": "Игрок 1",
+     "role": 1
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "name": "Team Liquid",
+   "logo": "",
+   "players": [
+    {
+     "nick": "Игрок 2",
+     "role": 1
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "name": "Gaimin Gladiators",
+   "logo": "",
+   "players": [
+    {
+     "nick": "Игрок 3",
+     "role": 1
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "name": "BetBoom Team",
+   "logo": "",
+   "players": [
+    {
+     "nick": "Игрок 4",
+     "role": 1
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "name": "OG",
+   "logo": "",
+   "players": [
+    {
+     "nick": "Игрок 5",
+     "role": 1
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "name": "Virtus.pro",
+   "logo": "",
+   "players": [
+    {
+     "nick": "Игрок 6",
+     "role": 1
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "name": "Tundra",
+   "logo": "",
+   "players": [
+    {
+     "nick": "Игрок 7",
+     "role": 1
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "name": "Falcons",
+   "logo": "",
+   "players": [
+    {
+     "nick": "Игрок 8",
+     "role": 1
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "name": "Nigma",
+   "logo": "",
+   "players": [
+    {
+     "nick": "Игрок 9",
+     "role": 1
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "name": "Entity",
+   "logo": "",
+   "players": [
+    {
+     "nick": "Игрок 10",
+     "role": 1
+    }
+   ]
+  }
+ ],
+ "matches": [
+  {
+   "id": 1,
+   "round": 1,
+   "bracket": "upper",
+   "team1": 1,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": null,
+   "from2": null
+  },
+  {
+   "id": 2,
+   "round": 1,
+   "bracket": "upper",
+   "team1": 8,
+   "team2": 9,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": null,
+   "from2": null
+  },
+  {
+   "id": 3,
+   "round": 1,
+   "bracket": "upper",
+   "team1": 4,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": null,
+   "from2": null
+  },
+  {
+   "id": 4,
+   "round": 1,
+   "bracket": "upper",
+   "team1": 5,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": null,
+   "from2": null
+  },
+  {
+   "id": 5,
+   "round": 1,
+   "bracket": "upper",
+   "team1": 2,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": null,
+   "from2": null
+  },
+  {
+   "id": 6,
+   "round": 1,
+   "bracket": "upper",
+   "team1": 7,
+   "team2": 10,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": null,
+   "from2": null
+  },
+  {
+   "id": 7,
+   "round": 1,
+   "bracket": "upper",
+   "team1": 3,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": null,
+   "from2": null
+  },
+  {
+   "id": 8,
+   "round": 1,
+   "bracket": "upper",
+   "team1": 6,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": null,
+   "from2": null
+  },
+  {
+   "id": 9,
+   "round": 2,
+   "bracket": "upper",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 1,
+    "as": "w"
+   },
+   "from2": {
+    "m": 2,
+    "as": "w"
+   }
+  },
+  {
+   "id": 10,
+   "round": 2,
+   "bracket": "upper",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 3,
+    "as": "w"
+   },
+   "from2": {
+    "m": 4,
+    "as": "w"
+   }
+  },
+  {
+   "id": 11,
+   "round": 2,
+   "bracket": "upper",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 5,
+    "as": "w"
+   },
+   "from2": {
+    "m": 6,
+    "as": "w"
+   }
+  },
+  {
+   "id": 12,
+   "round": 2,
+   "bracket": "upper",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 7,
+    "as": "w"
+   },
+   "from2": {
+    "m": 8,
+    "as": "w"
+   }
+  },
+  {
+   "id": 13,
+   "round": 3,
+   "bracket": "upper",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 9,
+    "as": "w"
+   },
+   "from2": {
+    "m": 10,
+    "as": "w"
+   }
+  },
+  {
+   "id": 14,
+   "round": 3,
+   "bracket": "upper",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 11,
+    "as": "w"
+   },
+   "from2": {
+    "m": 12,
+    "as": "w"
+   }
+  },
+  {
+   "id": 15,
+   "round": 4,
+   "bracket": "upper",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 13,
+    "as": "w"
+   },
+   "from2": {
+    "m": 14,
+    "as": "w"
+   }
+  },
+  {
+   "id": 16,
+   "round": 1,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": null,
+   "from2": {
+    "m": 2,
+    "as": "l"
+   }
+  },
+  {
+   "id": 17,
+   "round": 1,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": null,
+   "from2": null,
+   "idle": true
+  },
+  {
+   "id": 18,
+   "round": 1,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": null,
+   "from2": {
+    "m": 6,
+    "as": "l"
+   }
+  },
+  {
+   "id": 19,
+   "round": 1,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": null,
+   "from2": null,
+   "idle": true
+  },
+  {
+   "id": 20,
+   "round": 2,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 16,
+    "as": "w"
+   },
+   "from2": {
+    "m": 9,
+    "as": "l"
+   }
+  },
+  {
+   "id": 21,
+   "round": 2,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 17,
+    "as": "w"
+   },
+   "from2": {
+    "m": 10,
+    "as": "l"
+   }
+  },
+  {
+   "id": 22,
+   "round": 2,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 18,
+    "as": "w"
+   },
+   "from2": {
+    "m": 11,
+    "as": "l"
+   }
+  },
+  {
+   "id": 23,
+   "round": 2,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 19,
+    "as": "w"
+   },
+   "from2": {
+    "m": 12,
+    "as": "l"
+   }
+  },
+  {
+   "id": 24,
+   "round": 3,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 20,
+    "as": "w"
+   },
+   "from2": {
+    "m": 21,
+    "as": "w"
+   }
+  },
+  {
+   "id": 25,
+   "round": 3,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 22,
+    "as": "w"
+   },
+   "from2": {
+    "m": 23,
+    "as": "w"
+   }
+  },
+  {
+   "id": 26,
+   "round": 4,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 24,
+    "as": "w"
+   },
+   "from2": {
+    "m": 13,
+    "as": "l"
+   }
+  },
+  {
+   "id": 27,
+   "round": 4,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 25,
+    "as": "w"
+   },
+   "from2": {
+    "m": 14,
+    "as": "l"
+   }
+  },
+  {
+   "id": 28,
+   "round": 5,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 26,
+    "as": "w"
+   },
+   "from2": {
+    "m": 27,
+    "as": "w"
+   }
+  },
+  {
+   "id": 29,
+   "round": 6,
+   "bracket": "lower",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 28,
+    "as": "w"
+   },
+   "from2": {
+    "m": 15,
+    "as": "l"
+   }
+  },
+  {
+   "id": 30,
+   "round": 11,
+   "bracket": "grand",
+   "team1": null,
+   "team2": null,
+   "winner": null,
+   "score1": null,
+   "score2": null,
+   "vod": "",
+   "from1": {
+    "m": 15,
+    "as": "w"
+   },
+   "from2": {
+    "m": 29,
+    "as": "w"
+   }
+  }
+ ],
+ "schedule": {},
+ "liveMatchId": null,
+ "tournamentStart": "2030-09-26T12:00:00+03:00",
+ "projectStart": "2030-01-01T00:00:00+03:00",
+ "nextSeason": {
+  "name": "Compass Arena · второй сезон",
+  "date": "2031-01-15T12:00:00+03:00",
+  "note": "Восемь команд, сетка с нижней частью и полноценный призовой фонд. Заявки — в Telegram организации.",
+  "url": "https://t.me/compassarenaa"
+ },
+ "history": [],
+ "bracket": {
+  "format": "de",
+  "teamCount": 10,
+  "size": 16,
+  "matchType": "Bo3",
+  "thirdPlace": false,
+  "grandFinal": "simple",
+  "byes": 6,
+  "createdAt": "2026-10-11T18:00:24.677Z"
+ }
+}

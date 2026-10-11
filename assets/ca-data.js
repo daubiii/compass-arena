@@ -417,10 +417,60 @@
   }
 
   /* ---------- Подписи стадий ---------- */
-  function stageLabel(m) {
+  /**
+   * Подпись раунда по «остатку» до финала: финал, полуфинал, четвертьфинал,
+   * а ранние раунды — по числу матчей в них («1/8 финала»). Считается от самих
+   * матчей, поэтому подписи всегда соответствуют тому, что нарисовано, даже
+   * если конфиг сетки почему-то разошёлся с данными.
+   */
+  function roundLabel(part, round, total, size) {
+    var left = total - round;
+    if (left === 0) return 'Финал ' + part;
+    if (left === 1) return 'Полуфинал ' + part;
+    if (left === 2) return 'Четвертьфинал ' + part;
+    var inRound = Math.max(1, Math.round((size || Math.pow(2, total)) / Math.pow(2, round)));
+    if (inRound >= 2) return '1/' + inRound + ' финала ' + part;
+    return 'Раунд ' + round + ' ' + part;
+  }
+
+  /** Сколько раундов в части сетки (по самим матчам) и размер сетки */
+  function bracketShape(matches) {
+    var maxUpper = 0, maxLower = 0, firstRound = null;
+    (matches || []).forEach(function (m) {
+      if (m.bracket === 'lower') maxLower = Math.max(maxLower, m.round);
+      else if (m.bracket !== 'grand' && m.bracket !== 'third') maxUpper = Math.max(maxUpper, m.round);
+      if (m.bracket !== 'grand' && m.bracket !== 'third') {
+        firstRound = firstRound === null ? m.round : Math.min(firstRound, m.round);
+      }
+    });
+    var size = 1;
+    if (firstRound !== null) {
+      var firstRoundMatches = (matches || []).filter(function (m) {
+        return m.round === firstRound && m.bracket !== 'grand' && m.bracket !== 'third';
+      }).length;
+      size = Math.pow(2, Math.round(Math.log(firstRoundMatches * 2) / Math.LN2)) || 2;
+    }
+    return { upper: maxUpper, lower: maxLower, size: size };
+  }
+
+  /**
+   * Подпись стадии. У универсальной сетки (есть настройки D.bracket) считаем
+   * по раундам, у старой сетки на шесть матчей остаётся прежняя логика по
+   * номерам: у неё раундов «как надо» нет, и «1/2 финала» выглядело бы странно.
+   */
+  function stageLabel(m, matches) {
     if (!m) return '';
-    if (m.bracket === 'grand' || m.id === 5) return 'Гранд-финал';
-    if (m.bracket === 'lower') return 'Нижняя сетка';
+    if (m.bracket === 'grand') return m.resetFor ? 'Гранд-финал · сброс' : 'Гранд-финал';
+    if (m.bracket === 'third') return 'Матч за 3-е место';
+    var generated = !!(D && D.bracket && D.bracket.format);
+    var list = matches || (D && D.matches);
+    if (generated && list && list.length) {
+      var shape = bracketShape(list);
+      if (m.bracket === 'lower' && shape.lower) return roundLabel('нижней', m.round, shape.lower, shape.size / 2);
+      if (shape.upper) return roundLabel('верхней', m.round, shape.upper, shape.size);
+    }
+    if (m.id === 5 && !m.resetFor) return 'Гранд-финал';
+    if (m.bracket === 'lower') return 'Нижняя · раунд ' + m.round;
     if (m.round === 2 || m.id === 4) return 'Полуфинал';
     return 'Раунд ' + m.round;
   }
@@ -428,6 +478,11 @@
   function slotLabel(D, m, slot) {
     var t = team(D, slot === 1 ? m.team1 : m.team2);
     var hint = TBD[m.id] ? TBD[m.id][slot - 1] : 'Ожидается';
+    /* Универсальная сетка знает источник слота: победитель или проигравший другого матча */
+    var src = slot === 1 ? m.from1 : m.from2;
+    if (src) hint = (src.as === 'l' ? 'Проигравший M' : 'Победитель M') + src.m;
+    else if (m.idle) hint = 'Не играется';
+    else if (!src && m.id > 5) hint = 'Проходит без игры';
     /* Заглушка («Слот 3») — это не участник: показываем подсказку, откуда придёт команда */
     if (!isRealTeam(t)) return { text: hint, team: null, known: false };
     return { text: t.name, team: t, known: true };

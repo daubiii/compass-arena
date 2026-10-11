@@ -461,6 +461,123 @@ body[data-phase="live"] .head-live { display: inline-flex; }
 /* ==========================================================
    11. МАТЧ И СЕТКА
    ========================================================== */
+/* Компактная сетка: сверху видно начало плей-офф, дальше — по кнопке.
+   Ограничитель в px задаёт ca-home.js: он знает число рядов и высоту ряда. */
+.bracket-wrap {
+  --b-cap: none;
+  position: relative;
+  margin-top: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--r-lg, 20px);
+  transition: border-color .35s var(--ease), box-shadow .45s var(--ease);
+}
+.bracket-wrap .bracket-scroll {
+  max-height: var(--b-cap);
+  overflow-y: hidden;
+}
+/* Сетка целиком видна в отдельном окне, поэтому в превью она больше не растягивается */
+.bracket-wrap.is-expanded .bracket-scroll { max-height: var(--b-cap); }
+
+/* Затухание внизу: подсказывает, что сетка продолжается */
+.b-fade {
+  display: none;
+  position: absolute; left: 0; right: 0; bottom: 0; height: 128px;
+  pointer-events: none; border-radius: 0 0 var(--r-lg, 20px) var(--r-lg, 20px);
+  background: linear-gradient(180deg, rgba(8, 9, 12, 0) 0%, var(--bg) 78%);
+}
+.bracket-wrap.is-compact .b-fade { display: block; }
+
+/* Рамка-подсветка: при наведении намекает, что сетку можно раскрыть */
+.bracket-wrap.is-compact {
+  cursor: pointer;
+  border-color: var(--line);
+}
+.bracket-wrap.is-compact:hover {
+  border-color: rgba(201, 163, 90, .45);
+  box-shadow: 0 0 0 1px rgba(201, 163, 90, .18), 0 30px 70px -40px rgba(201, 163, 90, .55);
+}
+
+.b-expand {
+  display: none;
+  align-items: center; justify-content: center; gap: 10px;
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: 20px; z-index: 3;
+  padding: 0 22px; height: 44px; border-radius: 999px;
+  border: 1px solid rgba(201, 163, 90, .45);
+  background: linear-gradient(180deg, rgba(201, 163, 90, .16), rgba(201, 163, 90, .05)), var(--card);
+  color: var(--gold-hi, var(--gold));
+  font: 500 14px/1 var(--ui); letter-spacing: .01em; cursor: pointer;
+  box-shadow: 0 16px 40px -24px rgba(201, 163, 90, .85);
+  transition: border-color .3s, box-shadow .4s, color .3s;
+}
+.bracket-wrap.is-compact .b-expand { display: inline-flex; }
+.b-expand .ic { font-size: 16px; }
+.b-expand:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 22px 50px -22px rgba(201, 163, 90, .95), 0 0 0 4px rgba(201, 163, 90, .1);
+}
+.b-expand:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+
+/* ==========================================================
+   Просмотр сетки: отдельное окно во весь экран.
+   Внутри — полотно, которое свободно листается вбок и вниз:
+   ползунки живут на одном контейнере, поэтому они всегда рядом
+   и не надо сначала прокрутить вниз, чтобы дотянуться до
+   горизонтального ползунка.
+   ========================================================== */
+.bview {
+  position: fixed; inset: 0; z-index: 90;
+  background: rgba(3, 4, 7, .96);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  animation: bview-in .22s var(--ease);
+}
+.bview[hidden] { display: none; }
+@keyframes bview-in { from { opacity: 0; } to { opacity: 1; } }
+body.bview-open { overflow: hidden; }
+
+.bview-panel {
+  position: absolute; inset: 14px;
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  border: 1px solid var(--line-2); border-radius: var(--r-lg, 20px);
+  background: linear-gradient(180deg, var(--card-2), var(--bg));
+  box-shadow: 0 40px 120px -40px rgba(0, 0, 0, .9);
+  overflow: hidden;
+}
+.bview-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 12px 16px; border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(201, 163, 90, .06), transparent);
+}
+.bview-title { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.bview-title .ic { font-size: 18px; color: var(--gold); }
+.bview-title b { font-weight: 500; letter-spacing: .01em; }
+.bview-title span { color: var(--text-3); font-size: 13px; }
+.bview-actions { display: flex; align-items: center; gap: 14px; }
+.bview-hint { color: var(--text-3); font-size: 12.5px; }
+.bview-actions .btn .ic { font-size: 14px; margin-right: 6px; }
+
+/* Полотно: оба скролла на одном элементе — ползунки всегда под рукой */
+.bview-canvas {
+  overflow: auto; overscroll-behavior: contain;
+  padding: 26px 22px 30px;
+  scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(201, 163, 90, .05), transparent 70%),
+    var(--bg);
+}
+.bview-canvas::-webkit-scrollbar { width: 10px; height: 10px; }
+.bview-canvas::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 6px; }
+.bview-canvas::-webkit-scrollbar-thumb:hover { background: var(--line-3); }
+.bview-canvas::-webkit-scrollbar-track { background: transparent; }
+.bview-inner { display: inline-block; min-width: 100%; }
+.bview .bracket { min-width: 0; }
+.bview-foot {
+  border-top: 1px solid var(--line); padding: 10px 16px;
+  font-size: 12.5px; color: var(--text-3);
+}
+.bview-foot .b-legend { margin-top: 0; }
+.bview-foot .b-legend .tz { margin-left: auto; }
+
 .bracket-scroll {
   overflow-x: auto; overflow-y: hidden; padding: 4px 2px 20px;
   scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
@@ -471,25 +588,26 @@ body[data-phase="live"] .head-live { display: inline-flex; }
 
 .bracket {
   --card-h: 116px;
-  --gap: 28px;
-  --u: 52px;
-  /* Колонок и рядов столько, сколько нужно сетке: их считает ca-bracket.js
-     и передаёт в переменные --b-cols / --b-rows */
+  /* Высота одного «ряда» сетки. Карточка занимает минимум два ряда, поэтому
+     --b-unit считает ca-bracket.js: он знает и высоту карточки, и число рядов. */
+  --u: var(--b-unit, 58px);
   position: relative;
   display: grid;
-  grid-template-columns: repeat(var(--b-cols, 3), minmax(238px, 1fr));
-  grid-template-rows: auto repeat(var(--b-rows, 6), var(--u));
-  column-gap: clamp(44px, 6vw, 96px);
+  grid-template-columns: repeat(var(--b-cols, 3), minmax(232px, 1fr));
+  grid-template-rows: auto repeat(var(--b-rows, 8), var(--u));
+  grid-auto-rows: var(--u);
+  column-gap: clamp(36px, 4.5vw, 76px);
   row-gap: 0;
-  min-width: calc(var(--b-cols, 3) * 280px);
-  align-items: start;
+  min-width: calc(var(--b-cols, 3) * 264px);
+  align-items: center;
 }
+.b-col-gap { align-self: stretch; }
 .b-col { display: contents; }
 .b-col-head {
   z-index: 4;
   grid-row: 1; align-self: start;
   display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
-  padding: 8px 2px; margin-bottom: 8px;
+  padding: 8px 2px; margin-bottom: 10px;
   border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, var(--bg) 68%, rgba(8, 9, 12, 0));
   -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
@@ -497,7 +615,10 @@ body[data-phase="live"] .head-live { display: inline-flex; }
 }
 .b-col-head b { font-weight: 500; color: var(--text-2); }
 .b-col-head .ic { font-size: 14px; }
-.b-lines { position: absolute; inset: 0; pointer-events: none; overflow: visible; z-index: 0; }
+.b-lines {
+  position: absolute; left: 0; top: 0; pointer-events: none; z-index: 0;
+  overflow: visible;
+}
 .b-lines path { fill: none; stroke: rgba(255, 255, 255, .16); stroke-width: 1; }
 .b-lines path.on { stroke: var(--gold); stroke-opacity: .8; }
 .b-lines path.is-loser { stroke-dasharray: 4 4; stroke-opacity: .55; }
@@ -517,12 +638,17 @@ body[data-phase="live"] .head-live { display: inline-flex; }
 .match:hover { transform: translateY(-2px); }
 .match-head {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 7px 12px; min-height: 28px;
+  padding: 6px 12px; min-height: 26px;
   border-bottom: 1px solid var(--line);
-  font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  font-size: 11px; letter-spacing: .05em; text-transform: uppercase;
   color: var(--text-3); font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden;   /* шапка всегда в одну строку */
 }
-.match-head .m-id { color: var(--text-3); }
+.match-head .m-id {
+  color: var(--text-3);
+  overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.match-head .st { flex: none; }
 .match-head .ic { font-size: 12px; }
 .match.is-live { border-color: rgba(201, 79, 67, .6); box-shadow: 0 0 0 1px rgba(201, 79, 67, .2), 0 18px 44px -18px rgba(201, 79, 67, .55); }
 .match.is-live .match-head { color: var(--blood-hi); }
@@ -920,15 +1046,21 @@ body[data-phase="live"] .head-live { display: inline-flex; }
   .orn .ic { font-size: 18px; }
   .arena-compass { font-size: 150vw; right: -40%; top: -6%; opacity: .05; }
 
-  /* Сетка на телефоне — вертикальная лента вместо горизонтального скролла */
+  /* Сетка на телефоне — вертикальная лента вместо горизонтального скролла:
+     ограничитель по высоте и кнопка разворота тут не нужны */
   .bracket-scroll { overflow: visible; padding: 0; }
+  .bracket-wrap { --b-cap: none; border-color: transparent; cursor: auto; }
+  .bracket-wrap.is-compact { border-color: transparent; cursor: auto; }
+  .bracket-wrap.is-compact:hover { border-color: transparent; box-shadow: none; }
+  .bracket-wrap .b-fade, .bracket-wrap .b-expand { display: none !important; }
   .bracket {
-    display: block; min-width: 0;
+    display: flex; flex-direction: column; gap: 12px;
+    min-width: 0;
     --card-h: auto;
   }
   .bracket .b-lines { display: none; }
   .b-col-head { position: static; margin: 26px 0 12px; backdrop-filter: none; -webkit-backdrop-filter: none; background: none; }
-  .b-col:first-child .b-col-head { margin-top: 0; }
+  .bracket .b-col-head:first-child { margin-top: 0; }
   .bracket .match { margin-bottom: 12px; }
   .match {
     position: static;
