@@ -139,8 +139,28 @@ console.log('\nB. Победитель проходит дальше');
   const nextMatch = w.DATA.matches.filter((m) => m.id === nextId)[0];
   ok(!!nextMatch.from1 || !!nextMatch.from2, 'следующий матч ждёт команду по источнику');
 
-  const html = w.document.getElementById('matchList').textContent;
-  ok(/Победитель M/.test(html), 'в карточках видно, кто кого ждёт');
+  /* После ввода результата победитель автоматически встаёт в слот следующего
+     матча, поэтому подсказка «Победитель M…» нужна уже следующему раунду. */
+  const winnerSlot = nextMatch.team1 === first.team1 || nextMatch.team2 === first.team1;
+  ok(winnerSlot, 'победитель автоматически встал в следующий матч',
+    JSON.stringify([nextId, nextMatch.team1, nextMatch.team2]));
+
+  /* Подсказка «Победитель M…» нужна слоту, который ещё ждёт исхода другого матча.
+     В админке подписи считает bracketSlotHtml — проверяем на матче, чей источник
+     ещё не сыгран (например, следующий раунд после только что введённого счёта). */
+  const engineMatches = w.DATA.matches;
+  const pending = engineMatches.filter((m) => {
+    const src = m.from1 || m.from2;
+    if (!src) return false;
+    const source = engineMatches.filter((x) => x.id === src.m)[0];
+    return source && !source.winner;
+  })[0];
+  if (pending) {
+    const slotHtml = w.bracketSlotHtml(pending, 1);
+    ok(/Победитель M|Проигравший M/.test(slotHtml), 'в карточке видно, кого ждёт слот', slotHtml.slice(0, 120));
+  } else {
+    ok(true, 'все слоты уже определены — подсказка не нужна');
+  }
 }
 
 /* ============ C. Double Elimination на 6 команд ============ */

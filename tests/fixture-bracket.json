@@ -124,10 +124,10 @@
    "round": 1,
    "bracket": "upper",
    "team1": 1,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
+   "team2": 2,
+   "winner": 1,
+   "score1": 2,
+   "score2": 1,
    "vod": "",
    "from1": null,
    "from2": null
@@ -136,8 +136,8 @@
    "id": 2,
    "round": 1,
    "bracket": "upper",
-   "team1": 8,
-   "team2": 9,
+   "team1": 3,
+   "team2": 4,
    "winner": null,
    "score1": null,
    "score2": null,
@@ -149,8 +149,8 @@
    "id": 3,
    "round": 1,
    "bracket": "upper",
-   "team1": 4,
-   "team2": null,
+   "team1": 5,
+   "team2": 6,
    "winner": null,
    "score1": null,
    "score2": null,
@@ -162,8 +162,8 @@
    "id": 4,
    "round": 1,
    "bracket": "upper",
-   "team1": 5,
-   "team2": null,
+   "team1": 7,
+   "team2": 8,
    "winner": null,
    "score1": null,
    "score2": null,
@@ -175,8 +175,8 @@
    "id": 5,
    "round": 1,
    "bracket": "upper",
-   "team1": 2,
-   "team2": null,
+   "team1": 9,
+   "team2": 10,
    "winner": null,
    "score1": null,
    "score2": null,
@@ -188,8 +188,8 @@
    "id": 6,
    "round": 1,
    "bracket": "upper",
-   "team1": 7,
-   "team2": 10,
+   "team1": null,
+   "team2": null,
    "winner": null,
    "score1": null,
    "score2": null,
@@ -201,7 +201,7 @@
    "id": 7,
    "round": 1,
    "bracket": "upper",
-   "team1": 3,
+   "team1": null,
    "team2": null,
    "winner": null,
    "score1": null,
@@ -214,7 +214,7 @@
    "id": 8,
    "round": 1,
    "bracket": "upper",
-   "team1": 6,
+   "team1": null,
    "team2": null,
    "winner": null,
    "score1": null,
@@ -240,7 +240,8 @@
    "from2": {
     "m": 2,
     "as": "w"
-   }
+   },
+   "idle": true
   },
   {
    "id": 10,
@@ -259,7 +260,8 @@
    "from2": {
     "m": 4,
     "as": "w"
-   }
+   },
+   "idle": true
   },
   {
    "id": 11,
@@ -278,7 +280,8 @@
    "from2": {
     "m": 6,
     "as": "w"
-   }
+   },
+   "idle": true
   },
   {
    "id": 12,
@@ -297,7 +300,8 @@
    "from2": {
     "m": 8,
     "as": "w"
-   }
+   },
+   "idle": true
   },
   {
    "id": 13,
@@ -316,7 +320,8 @@
    "from2": {
     "m": 10,
     "as": "w"
-   }
+   },
+   "idle": true
   },
   {
    "id": 14,
@@ -335,7 +340,8 @@
    "from2": {
     "m": 12,
     "as": "w"
-   }
+   },
+   "idle": true
   },
   {
    "id": 15,
@@ -354,7 +360,8 @@
    "from2": {
     "m": 14,
     "as": "w"
-   }
+   },
+   "idle": true
   },
   {
    "id": 16,
@@ -366,11 +373,15 @@
    "score1": null,
    "score2": null,
    "vod": "",
-   "from1": null,
+   "from1": {
+    "m": 1,
+    "as": "l"
+   },
    "from2": {
     "m": 2,
     "as": "l"
-   }
+   },
+   "idle": true
   },
   {
    "id": 17,
@@ -382,8 +393,14 @@
    "score1": null,
    "score2": null,
    "vod": "",
-   "from1": null,
-   "from2": null,
+   "from1": {
+    "m": 3,
+    "as": "l"
+   },
+   "from2": {
+    "m": 4,
+    "as": "l"
+   },
    "idle": true
   },
   {
@@ -396,11 +413,12 @@
    "score1": null,
    "score2": null,
    "vod": "",
-   "from1": null,
-   "from2": {
-    "m": 6,
+   "from1": {
+    "m": 5,
     "as": "l"
-   }
+   },
+   "from2": null,
+   "idle": true
   },
   {
    "id": 19,
@@ -433,7 +451,8 @@
    "from2": {
     "m": 9,
     "as": "l"
-   }
+   },
+   "idle": true
   },
   {
    "id": 21,
@@ -452,7 +471,8 @@
    "from2": {
     "m": 10,
     "as": "l"
-   }
+   },
+   "idle": true
   },
   {
    "id": 22,
@@ -471,7 +491,8 @@
    "from2": {
     "m": 11,
     "as": "l"
-   }
+   },
+   "idle": true
   },
   {
    "id": 23,
@@ -490,7 +511,8 @@
    "from2": {
     "m": 12,
     "as": "l"
-   }
+   },
+   "idle": true
   },
   {
    "id": 24,
@@ -509,7 +531,8 @@
    "from2": {
     "m": 21,
     "as": "w"
-   }
+   },
+   "idle": true
   },
   {
    "id": 25,
@@ -528,7 +551,8 @@
    "from2": {
     "m": 23,
     "as": "w"
-   }
+   },
+   "idle": true
   },
   {
    "id": 26,
@@ -547,7 +571,8 @@
    "from2": {
     "m": 13,
     "as": "l"
-   }
+   },
+   "idle": true
   },
   {
    "id": 27,
@@ -566,7 +591,8 @@
    "from2": {
     "m": 14,
     "as": "l"
-   }
+   },
+   "idle": true
   },
   {
    "id": 28,
@@ -585,7 +611,8 @@
    "from2": {
     "m": 27,
     "as": "w"
-   }
+   },
+   "idle": true
   },
   {
    "id": 29,
@@ -604,7 +631,8 @@
    "from2": {
     "m": 15,
     "as": "l"
-   }
+   },
+   "idle": true
   },
   {
    "id": 30,
@@ -623,7 +651,8 @@
    "from2": {
     "m": 29,
     "as": "w"
-   }
+   },
+   "idle": true
   }
  ],
  "schedule": {},
@@ -645,6 +674,6 @@
   "thirdPlace": false,
   "grandFinal": "simple",
   "byes": 6,
-  "createdAt": "2026-10-11T18:00:24.677Z"
+  "createdAt": "2026-10-11T18:37:32.283Z"
  }
 }

@@ -24,6 +24,7 @@ const teams = names.slice(0, teamCount).map((name, i) => ({
 const plan = E.generate({ teamCount, format, matchType: 'Bo3', grandFinal: 'simple' });
 plan.matches.forEach((m) => {
   if (m.round === 1 && m.bracket === 'upper') {
+    /* team1/team2 — это уже номера сеяных, а не команды: расставляем по посеву */
     if (m.team1 !== null) m.team1 = teams[m.team1 - 1] ? teams[m.team1 - 1].id : null;
     if (m.team2 !== null) m.team2 = teams[m.team2 - 1] ? teams[m.team2 - 1].id : null;
   }

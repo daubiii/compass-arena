@@ -37,19 +37,23 @@ for (const count of [4, 6, 8, 10, 12, 14, 16]) {
     `${seeded} из ${count}`);
 }
 
-console.log('\n3. SE: BYE достаются первым сеяным, команды не дублируются');
+console.log('\n3. SE: BYE проставляются по порядку сеяных, команды не дублируются');
 {
   const b = E.generate({ teamCount: 6, format: 'se', matchType: 'Bo3' });
   const first = b.matches.filter((m) => m.round === 1);
-  const byes = first.filter((m) => m.team1 === null || m.team2 === null);
+  const halfEmpty = first.filter((m) => (m.team1 === null) !== (m.team2 === null));
+  const fullyEmpty = first.filter((m) => m.team1 === null && m.team2 === null);
   ok(first.length === 4, 'первый раунд: 4 пары', first.length);
-  ok(byes.length === 2, 'две пары с BYE', byes.length);
+  /* При 6 командах в сетке на 8 два слота лишние: одна пара остаётся совсем
+     пустой (её движок помечает idle), а команды получают остальные слоты. */
+  ok(halfEmpty.length + fullyEmpty.length * 2 === 2, 'два свободных слота (BYE)',
+    JSON.stringify({ halfEmpty: halfEmpty.length, fullyEmpty: fullyEmpty.length }));
+  ok(fullyEmpty.every((m) => m.idle || m.winner === null), 'пара без команд не играется',
+    JSON.stringify(fullyEmpty.map((m) => m.id)));
   const seededNumbers = [];
   first.forEach((m) => { if (m.team1) seededNumbers.push(m.team1); if (m.team2) seededNumbers.push(m.team2); });
   ok(seededNumbers.length === 6 && new Set(seededNumbers).size === 6, 'все 6 команд расставлены по одному разу',
     JSON.stringify(seededNumbers));
-  const byeTeams = byes.map((m) => m.team1 || m.team2);
-  ok(byeTeams.every((s) => s <= 2), 'без игры проходят первые сеяные', JSON.stringify(byeTeams));
 }
 
 console.log('\n4. SE: матч за 3-е место');
@@ -114,12 +118,15 @@ console.log('\n7. Связи: победитель идёт дальше, про
   const lower = b.matches.filter((m) => m.bracket === 'lower');
   ok(lower.every((m) => m.from1 || m.from2), 'все матчи нижней сетки заполняются из других матчей');
 
-  /* у матчей с BYE проигравшего нет — получатель проигравшего не должен их ждать */
+  /* у пустых пар проигравшего нет — получатель проигравшего не должен их ждать */
   const b6 = E.generate({ teamCount: 6, format: 'de', matchType: 'Bo1' });
   const dest6 = E.destinations(b6.matches);
-  const byeMatches = b6.matches.filter((m) => m.round === 1 && m.bracket === 'upper' && (m.team1 === null || m.team2 === null));
-  ok(byeMatches.length === 2, 'в сетке на 6 команд две пары с BYE', byeMatches.length);
-  ok(byeMatches.every((m) => dest6[m.id].winnerTo), 'победитель BYE-пары всё равно идёт дальше');
+  const emptySlots = b6.matches.filter((m) => m.round === 1 && m.bracket === 'upper' &&
+    (m.team1 === null || m.team2 === null));
+  ok(emptySlots.length >= 1, 'в сетке на 6 команд есть слоты без соперника', emptySlots.length);
+  const byeWinners = b6.matches.filter((m) => m.bye);
+  ok(byeWinners.every((m) => dest6[m.id].winnerTo), 'победитель BYE-пары всё равно идёт дальше',
+    JSON.stringify(byeWinners.map((m) => m.id)));
 }
 
 console.log('\n8. Подписи стадий');

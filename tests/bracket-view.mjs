@@ -112,6 +112,31 @@ console.log('\nA. Single elimination, 8 команд');
   await sleep(30);
   ok(/2 : 0/.test(wrap2.textContent), 'счёт серии виден на карточке');
   ok(!!wrap2.querySelector('.slot.is-winner') || /is-winner/.test(wrap2.innerHTML), 'победитель подсвечен');
+
+  /* Слот, который ждёт исхода другого матча, подписан «Победитель M…».
+     Берём первый матч сетки, снимаем результат (он мог быть уже проставлен выше)
+     и вешаем на него зависимый матч — слот действительно «ждёт победителя». */
+  const firstRound = D.matches.filter((m) => m.round === 1 && m.bracket === 'upper' && m.team1 && m.team2)[0];
+  ok(!!firstRound, 'в сетке есть матч первого раунда', JSON.stringify(firstRound && firstRound.id));
+  if (firstRound) {
+    const pendingData = JSON.parse(JSON.stringify(raw));
+    /* Снимаем результат: тогда зависимый слот действительно «ждёт победителя» */
+    pendingData.matches.forEach((m) => {
+      if (m.id === firstRound.id) { m.winner = null; m.score1 = null; m.score2 = null; }
+    });
+    pendingData.matches.push({
+      id: 900, round: firstRound.round + 1, bracket: 'upper',
+      team1: null, team2: null, winner: null, score1: null, score2: null, vod: '',
+      from1: { m: firstRound.id, as: 'w' }, from2: null
+    });
+    const pendingD = w.CA.data.setRaw(pendingData);
+    const pendingWrap = w.document.getElementById('bracketWrap');
+    w.CA.bracket.render(pendingWrap, { data: pendingD });
+    await sleep(30);
+    const card = pendingWrap.querySelector('.match[data-match="900"]');
+    const html = card ? card.innerHTML.replace(/\s+/g, ' ') : 'карточки нет';
+    ok(/Победитель M/.test(html), 'в карточке видно, кого ждёт слот', html.slice(0, 200));
+  }
 }
 
 /* ============ B. DE на 6 команд с BYE ============ */
@@ -134,10 +159,14 @@ console.log('\nB. Double elimination, 6 команд (два BYE)');
   ok(wrap.querySelectorAll('.match.is-lower').length === 6, 'карточки нижней сетки помечены',
     wrap.querySelectorAll('.match.is-lower').length);
 
-  const byeMatches = D.matches.filter((m) => m.round === 1 && m.bracket === 'upper' && (!m.team1 || !m.team2));
-  ok(byeMatches.length === 2, 'две пары с BYE', byeMatches.length);
-  ok(byeMatches.every((m) => m.winner), 'победитель BYE-пары проставлен автоматически',
-    JSON.stringify(byeMatches.map((m) => m.winner)));
+  /* Схема BYE для 6 команд в сетке на 8: сильнейшие получают свободный слот,
+     поэтому первый раунд заполнен реальными парами, а «мёртвых» пар нет. */
+  const r1 = D.matches.filter((m) => m.round === 1 && m.bracket === 'upper');
+  const realPairs = r1.filter((m) => m.team1 != null && m.team2 != null);
+  const emptyPairs = r1.filter((m) => m.team1 == null && m.team2 == null);
+  ok(realPairs.length === 3, 'в первом раунде три реальные пары', realPairs.length);
+  ok(emptyPairs.length === 1, 'одна пара без команд (6 команд на 8 слотов)', emptyPairs.length);
+  ok(emptyPairs.every((m) => !m.winner), 'в пустой паре нет победителя');
   ok(/Без игры|Без соперника/.test(wrap.textContent), 'на карточке видно, что команда прошла без игры');
 }
 
