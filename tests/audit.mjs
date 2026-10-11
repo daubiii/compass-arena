@@ -37,7 +37,6 @@ const PAGES = {
   'schedule.html': ['assets/ca-schedule.js', 'assets/ca-ui.js', 'assets/ca-views.js'],
   'history.html': ['assets/ca-history.js', 'assets/ca-ui.js', 'assets/ca-views.js'],
   'rules.html': ['assets/ca-rules.js', 'assets/ca-ui.js'],
-  'brackets.html': ['assets/ca-brackets.js', 'assets/ca-bracket-page.js', 'assets/ca-ui.js'],
   '404.html': ['assets/ca-ui.js']
 };
 

@@ -163,6 +163,8 @@
       startFromServer: startFromServer,
       nextSeason: src.nextSeason || null,
       alwaysShowBracketBanner: src.alwaysShowBracketBanner !== false,
+      /* Настройки универсальной сетки (если турнир собран движком) */
+      bracket: (src.bracket && typeof src.bracket === 'object') ? src.bracket : null,
       history: Array.isArray(src.history) ? src.history : [],
       fromServer: !!(raw && typeof raw === 'object' && (src.teams || src.matches))
     };
@@ -181,7 +183,7 @@
     var matches = Array.isArray(src.matches) && src.matches.length ? src.matches : def.matches;
     for (var m = 0; m < matches.length; m++) {
       var mm = matches[m] || {};
-      D.matches.push({
+      var match = {
         id: toInt(mm.id) != null ? toInt(mm.id) : m + 1,
         round: toInt(mm.round) || 1,
         bracket: mm.bracket || (toInt(mm.round) >= 3 ? 'grand' : 'upper'),
@@ -191,7 +193,13 @@
         score1: mm.score1 == null || mm.score1 === '' ? null : toInt(mm.score1),
         score2: mm.score2 == null || mm.score2 === '' ? null : toInt(mm.score2),
         vod: mm.vod || ''
-      });
+      };
+      /* Источники слотов универсальной сетки: { m: id, as: 'w'|'l' } */
+      if (mm.from1) match.from1 = { m: toInt(mm.from1.m), as: mm.from1.as === 'l' ? 'l' : 'w' };
+      if (mm.from2) match.from2 = { m: toInt(mm.from2.m), as: mm.from2.as === 'l' ? 'l' : 'w' };
+      if (mm.idle) match.idle = true;
+      if (mm.resetFor) match.resetFor = toInt(mm.resetFor);
+      D.matches.push(match);
     }
 
     if (src.schedule && typeof src.schedule === 'object') {
@@ -203,20 +211,31 @@
     return D;
   }
 
-  /* ---------- Связи сетки: M1/M2 → M4, M4/M3 → M5 ---------- */
+  /* ---------- Связи сетки ----------
+     Старый турнир (6 команд, M1–M5) расставляется жёстко; новая универсальная
+     сетка приходит с готовыми источниками слотов (from1/from2), и мы просто
+     подставляем победителей и проигравших по этим связям. */
   function linkBracket(D) {
     var by = {};
     D.matches.forEach(function (m) { by[m.id] = m; });
-    if (by[4]) {
-      by[4].team1 = by[1] ? by[1].winner : by[4].team1;
-      by[4].team2 = by[2] ? by[2].winner : by[4].team2;
+
+    if (D.bracket && D.bracket.format) {
+      linkGeneratedBracket(D, by);
+    } else {
+      if (by[4]) {
+        by[4].team1 = by[1] ? by[1].winner : by[4].team1;
+        by[4].team2 = by[2] ? by[2].winner : by[4].team2;
+      }
+      if (by[5]) {
+        by[5].team1 = by[4] ? by[4].winner : by[5].team1;
+        by[5].team2 = by[3] ? by[3].winner : by[5].team2;
+      }
     }
-    if (by[5]) {
-      by[5].team1 = by[4] ? by[4].winner : by[5].team1;
-      by[5].team2 = by[3] ? by[3].winner : by[5].team2;
-    }
-    // Чистим результаты, которые потеряли смысл после правок
+
+    // Чистим результаты, которые потеряли смысл после правок.
+    // Матчи с BYE — исключение: там победитель есть, хотя второго слота нет.
     D.matches.forEach(function (m) {
+      if (m.bye) return;
       if (m.winner && m.winner !== m.team1 && m.winner !== m.team2) {
         m.winner = null; m.score1 = null; m.score2 = null;
       }
@@ -225,6 +244,39 @@
       }
     });
     return D;
+  }
+
+  /**
+   * Универсальная сетка: проходим матчи по порядку и раскладываем команды
+   * из источников (победитель/проигравший другого матча). Матчи с одним
+   * участником (BYE) отдают победу автоматически, чтобы команда шла дальше.
+   */
+  function linkGeneratedBracket(D, by) {
+    var order = D.matches.slice().sort(function (a, b) { return a.id - b.id; });
+
+    function fromSource(src) {
+      if (!src) return null;
+      var m = by[src.m];
+      if (!m || !m.winner) return null;
+      if (src.as === 'l') {
+        if (!m.team1 || !m.team2) return null;
+        return m.winner === m.team1 ? m.team2 : m.team1;
+      }
+      return m.winner;
+    }
+
+    order.forEach(function (m) {
+      if (m.from1) m.team1 = fromSource(m.from1);
+      if (m.from2) m.team2 = fromSource(m.from2);
+      /* BYE: соперника нет и не будет — команда проходит без игры */
+      if (!m.from1 && !m.from2) {
+        if (m.team1 && !m.team2) { m.winner = m.team1; m.bye = true; }
+        else if (m.team2 && !m.team1) { m.winner = m.team2; m.bye = true; }
+        else if (m.winner && !m.team1 && !m.team2) { m.winner = null; m.score1 = null; m.score2 = null; }
+      } else if (m.idle) {
+        m.winner = null;
+      }
+    });
   }
 
   /* ---------- Готовый набор + вычисленные поля ---------- */
@@ -246,7 +298,18 @@
     });
 
     var now = Date.now();
-    var grand = D.byId[5];
+    /* Гранд-финал: в старой сетке это жёстко M5, в универсальной — последний матч
+       сетки (а при гранд-финале «до двух поражений» — матч сброса, если он сыгран). */
+    var grand = null;
+    if (D.bracket && D.bracket.format) {
+      var finals = D.matches.filter(function (m) { return m.bracket === 'grand'; });
+      grand = finals.filter(function (m) { return m.resetFor && m.winner; })[0]
+        || finals.filter(function (m) { return m.winner; })[0]
+        || finals[0]
+        || null;
+    } else {
+      grand = D.byId[5] || null;
+    }
     D.grandFinal = grand || null;
     /* Чемпионом считается только реально существующая команда: если после сброса сезона
        в сетке остался старый winner, а команда удалена (или подставлена заглушка «Слот N»),

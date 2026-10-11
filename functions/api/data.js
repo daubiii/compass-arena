@@ -93,28 +93,8 @@ export async function onRequestGet(context) {
   const light = new URL(context.request ? context.request.url : 'https://x/').searchParams.get('light') === '1';
   if (!light) history = await hydratePhotos(env, history);
 
-  // Универсальная сетка (генератор на brackets-manager) — свои ключи.
-  // Пока сетку не сгенерировали, отдаём null: страница покажет заглушку.
-  let brackets = null;
-  try {
-    brackets = await env.COMPASS_KV.get('brackets_data', { type: 'json' });
-  } catch {
-    brackets = null;
-  }
-  if (!brackets || typeof brackets !== 'object' || !Array.isArray(brackets.matches)) {
-    brackets = null;
-  }
-
-  let bracketsMeta = null;
-  try {
-    bracketsMeta = await env.COMPASS_KV.get('brackets_meta', { type: 'json' });
-  } catch {
-    bracketsMeta = null;
-  }
-  if (!bracketsMeta || typeof bracketsMeta !== 'object') bracketsMeta = null;
-
-  // Отдаём объединённый объект: текущие данные + history + сетка
-  const response = Object.assign({}, data, { history, brackets, bracketsMeta });
+  // Отдаём объединённый объект: текущие данные + history
+  const response = Object.assign({}, data, { history });
 
   return new Response(JSON.stringify(response), {
     headers: {

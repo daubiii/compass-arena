@@ -472,14 +472,17 @@ body[data-phase="live"] .head-live { display: inline-flex; }
 .bracket {
   --card-h: 116px;
   --gap: 28px;
-  --u: calc((var(--card-h) + var(--gap)) / 2);
+  --u: 52px;
+  /* Колонок и рядов столько, сколько нужно сетке: их считает ca-bracket.js
+     и передаёт в переменные --b-cols / --b-rows */
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(238px, 1fr));
-  /* строка 1 — заголовки колонок, строки 2..7 — «полушаги» сетки */
-  grid-template-rows: auto repeat(6, var(--u));
+  grid-template-columns: repeat(var(--b-cols, 3), minmax(238px, 1fr));
+  grid-template-rows: auto repeat(var(--b-rows, 6), var(--u));
   column-gap: clamp(44px, 6vw, 96px);
-  min-width: 880px;
+  row-gap: 0;
+  min-width: calc(var(--b-cols, 3) * 280px);
+  align-items: start;
 }
 .b-col { display: contents; }
 .b-col-head {
@@ -497,6 +500,7 @@ body[data-phase="live"] .head-live { display: inline-flex; }
 .b-lines { position: absolute; inset: 0; pointer-events: none; overflow: visible; z-index: 0; }
 .b-lines path { fill: none; stroke: rgba(255, 255, 255, .16); stroke-width: 1; }
 .b-lines path.on { stroke: var(--gold); stroke-opacity: .8; }
+.b-lines path.is-loser { stroke-dasharray: 4 4; stroke-opacity: .55; }
 .b-lines path.live { stroke: var(--blood); stroke-opacity: .9; }
 
 .match {
@@ -525,6 +529,11 @@ body[data-phase="live"] .head-live { display: inline-flex; }
 .match.is-done { background: linear-gradient(180deg, #10131a, #0c0e13); }
 .match.is-grand { border-color: rgba(201, 163, 90, .42); }
 .match.is-grand .match-head { color: var(--gold); }
+.match.is-lower { border-style: dashed; border-color: var(--line-2); }
+.match.is-lower .match-head { color: var(--text-3); }
+.match.is-third { border-color: rgba(201, 163, 90, .25); }
+.match.is-idle { opacity: .45; border-style: dotted; background: transparent; }
+.match.is-idle .match-head { color: var(--text-3); }
 .match.is-champion { border-color: var(--gold); box-shadow: 0 0 70px -18px rgba(201, 163, 90, .6); }
 .match.is-next { border-color: var(--line-3); }
 .match.is-next::after {

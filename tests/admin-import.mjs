@@ -216,13 +216,21 @@ console.log('\n3. Проверка содержимого файла коман�
 
   const fourPlayers = [botTeam('Мало игроков', { players: DOTA_PLAYERS.slice(0, 4) })];
   await chooseFile(w, JSON.stringify(teamsDoc(fourPlayers, [])));
-  ok(/4 игрока вместо 5/.test(statusText(w)), 'команда с 4 игроками → «4 игрока вместо 5»', statusText(w).slice(0, 120));
-  ok(/Мало игроков/.test(statusText(w)), 'в ошибке указано название команды');
-  ok(!modalOpen(w), 'импорт с ошибкой не открывает подтверждение');
+  /* Неполный состав больше не блокирует импорт: команда из бота может прийти
+     без пятого игрока. Показываем предупреждение и открываем подтверждение. */
+  ok(/неполный состав/.test(statusText(w)), 'команда с 4 игроками → предупреждение о неполном составе', statusText(w).slice(0, 120));
+  ok(modalOpen(w) || !!w.BOT_PENDING, 'неполный состав не блокирует импорт');
+  w.botImportCancel();
+
+  const noPlayers = [botTeam('Совсем без состава', { players: [] })];
+  await chooseFile(w, JSON.stringify(teamsDoc(noPlayers, [])));
+  ok(/неполный состав/.test(statusText(w)), 'команда без состава → то же предупреждение', statusText(w).slice(0, 120));
+  w.botImportCancel();
 
   const badNick = [botTeam('Плохой ник', { players: [{ nick: 'X', role: 1 }, { nick: 'Larl', role: 2 }, { nick: 'Collapse', role: 3 }, { nick: 'Mira', role: 4 }, { nick: 'Miposhka', role: 5 }] })];
   await chooseFile(w, JSON.stringify(teamsDoc(badNick, [])));
   ok(/ник должен быть от 2 до 30 символов/.test(statusText(w)), 'короткий ник → ошибка с пояснением', statusText(w).slice(0, 140));
+  ok(!modalOpen(w), 'импорт с ошибкой не открывает подтверждение');
 
   const badRole = [botTeam('Плохая роль', { players: [{ nick: 'Yatoro', role: 7 }, { nick: 'Larl', role: 2 }, { nick: 'Collapse', role: 3 }, { nick: 'Mira', role: 4 }, { nick: 'Miposhka', role: 5 }] })];
   await chooseFile(w, JSON.stringify(teamsDoc(badRole, [])));

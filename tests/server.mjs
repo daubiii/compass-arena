@@ -1,8 +1,11 @@
 /* Локальный статический сервер для ручной проверки и скриншотов.
-   Запуск: node tests/server.mjs           (состояние post по умолчанию)
+   Запуск: node tests/server.mjs                    (состояние post по умолчанию)
            $env:CA_FIXTURE='live'; node tests/server.mjs
-           $env:CA_FIXTURE='brackets'; node tests/server.mjs   (с примером новой сетки)
-   Порт: 4173 (или $env:CA_PORT). */
+   Порт: 4173 (или $env:CA_PORT).
+
+   /api/save здесь по-настоящему сохраняет состояние в память процесса:
+   сгенерированная в админке сетка сразу видна на главной и в расписании
+   (до перезапуска сервера). Пароль не проверяем — это локальная песочница. */
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,14 +15,9 @@ const ROOT = process.cwd();
 const PORT = Number(process.env.CA_PORT || 4173);
 const PHASE = process.env.CA_FIXTURE || 'post';
 
-/** Пример сетки, сгенерированный настоящей библиотекой (scripts/make-bracket-fixture.mjs) */
-function bracketFixture() {
-  try {
-    return JSON.parse(fs.readFileSync(path.join(ROOT, 'tests/bracket-fixture.json'), 'utf8'));
-  } catch {
-    return { brackets: null, bracketsMeta: null };
-  }
-}
+/* Текущее состояние «KV» в памяти: стартуем с фикстуры */
+const STATE = { data: JSON.parse(JSON.stringify(FIXTURES[PHASE] || FIXTURES.post)) };
+if (!Array.isArray(STATE.data.history)) STATE.data.history = [];
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -38,23 +36,43 @@ const MIME = {
   '.ico': 'image/x-icon'
 };
 
-const server = http.createServer((req, res) => {
+function sendJson(res, body, status = 200) {
+  const text = JSON.stringify(body);
+  res.writeHead(status, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+  res.end(text);
+}
+
+function readBody(req) {
+  return new Promise((resolve) => {
+    let raw = '';
+    req.on('data', (chunk) => { raw += chunk; });
+    req.on('end', () => {
+      try { resolve(JSON.parse(raw)); } catch { resolve(null); }
+    });
+  });
+}
+
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   let pathname = decodeURIComponent(url.pathname);
 
   if (pathname === '/api/data') {
-    const data = JSON.parse(JSON.stringify(FIXTURES[PHASE] || FIXTURES.post));
-    // Кладём пример сетки: либо всегда, либо когда попросили фикстуру 'brackets'
-    const sample = PHASE === 'brackets' ? bracketFixture() : { brackets: null, bracketsMeta: null };
-    data.brackets = data.brackets || sample.brackets;
-    data.bracketsMeta = data.bracketsMeta || sample.bracketsMeta;
-    res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
-    res.end(JSON.stringify(data));
+    sendJson(res, STATE.data);
     return;
   }
-  if (pathname === '/api/save') {
-    res.writeHead(200, { 'Content-Type': MIME['.json'] });
-    res.end(JSON.stringify({ ok: true, bracketsSaved: 'saved' }));
+
+  if (pathname === '/api/save' && req.method === 'POST') {
+    const body = await readBody(req);
+    if (!body || !body.data || typeof body.data !== 'object') {
+      res.writeHead(400).end('bad request');
+      return;
+    }
+    /* Состояние заменяем целиком — как делает реальный /api/save */
+    STATE.data = JSON.parse(JSON.stringify(body.data));
+    console.log('[server] сохранено: команд ' + (STATE.data.teams || []).length +
+      ', матчей ' + (STATE.data.matches || []).length +
+      (STATE.data.bracket ? ', сетка ' + STATE.data.bracket.format + ' на ' + STATE.data.bracket.teamCount : ''));
+    sendJson(res, { ok: true });
     return;
   }
 
@@ -79,4 +97,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, '127.0.0.1', () => {
   console.log('Compass Arena test server: http://127.0.0.1:' + PORT + '/  (state: ' + PHASE + ')');
+  console.log('Админка: http://127.0.0.1:' + PORT + '/poasalj1.z23.html (пароль любой, сохранение — в память)');
 });
