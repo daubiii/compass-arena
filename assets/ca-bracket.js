@@ -129,30 +129,44 @@
     }
 
     /**
-     * Сдвиг нижнего блока: финал нижней сетки должен встать на одну высоту с
-     * финалом верхней. Тогда гранд-финал садится ровно между ними, а между
-     * блоками не остаётся лишней пустой полосы.
+     * Сдвиг нижнего блока. Идеально — поставить его так, чтобы финал нижней
+     * сетки встал на одну высоту с финалом верхней: тогда гранд-финал садится
+     * между ними. Но при 16 командах блоки становятся почти одной высоты, и
+     * такое выравнивание заставило бы их налезть друг на друга. Поэтому берём
+     * максимум из «красивого» варианта и «безопасного» (строго ниже верхней).
      */
-    function alignLowerOffset() {
-      if (!upper.length || !lower.length) return upperHeight + 4;
+    function lowerOffsetFor() {
+      var safe = upperHeight + PAD_BETWEEN_BLOCKS;
+      if (!upper.length || !lower.length) return ROW_OFFSET + safe;
+
       var upperFinal = upper.filter(function (m) { return m.round === upperRounds; })[0];
       var lowerFinal = lower.filter(function (m) { return m.round === lowerRounds; })[0];
-      if (!upperFinal || !lowerFinal) return upperHeight + 4;
+      if (!upperFinal || !lowerFinal) return ROW_OFFSET + safe;
 
       var upperPos = sectionPositions(sectionColumns('upper', upper));
       var lowerPos = sectionPositions(sectionColumns('lower', lower));
-      var upperRow = Math.round((upperPos.items[upperFinal.id].center - 1) * 2) + 1;
-      var lowerRow = Math.round((lowerPos.items[lowerFinal.id].center - 1) * 2) + 1;
-      /* Разница рядов внутри блоков: столько нужно, чтобы финалы совпали */
-      return (upperRow - lowerRow) + PAD_BETWEEN_BLOCKS;
+      var upperFinalRow = Math.round((upperPos.items[upperFinal.id].center - 1) * 2) + 1;
+      var lowerFinalRow = Math.round((lowerPos.items[lowerFinal.id].center - 1) * 2) + 1;
+      var lowerTopRow = Math.round((lowerPos.items[lower[0].id] ? 0 : 0)) + 1;
+      /* Первый ряд нижнего блока в его локальных координатах */
+      var minLocal = Infinity;
+      Object.keys(lowerPos.items).forEach(function (id) {
+        minLocal = Math.min(minLocal, Math.round((lowerPos.items[id].center - 1) * 2) + 1);
+      });
+      if (!isFinite(minLocal)) minLocal = lowerTopRow;
+
+      /* Красиво: финалы на одной высоте */
+      var pretty = ROW_OFFSET + (upperFinalRow - lowerFinalRow) + PAD_BETWEEN_BLOCKS;
+      /* Безопасно: первый матч нижней идёт ниже последнего матча верхней */
+      var mustStartAfter = ROW_OFFSET + upperHeight + PAD_BETWEEN_BLOCKS - minLocal + 1;
+      return Math.max(pretty, mustStartAfter);
     }
 
     var upperInfo = placeSection('upper', upper, ROW_OFFSET);
     var upperHeight = Math.max(upperInfo.height, 2);
     var upperRounds = sectionColumns('upper', upper).length;
     var lowerRounds = sectionColumns('lower', lower).length;
-    var lowerOffset = ROW_OFFSET + alignLowerOffset();
-    if (lowerOffset < ROW_OFFSET + 4) lowerOffset = ROW_OFFSET + 4;
+    var lowerOffset = lowerOffsetFor();
     var lowerInfo = placeSection('lower', lower, lowerOffset);
 
     /* Матч за третье место — отдельной колонкой в полосе нижней сетки */
