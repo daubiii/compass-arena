@@ -18,13 +18,22 @@ const versionOf = (env) => {
 
 const ASSET_RE = /(\s(?:src|href)=")(\/?(?:assets\/[^"?]+\.(?:js|css)|site\.css))(\?v=[^"]*)?(")/g;
 
+/** Наши HTML-страницы: их и переписываем, всё остальное отдаём как есть */
+const PAGES = ['/', '/index', '/schedule', '/history', '/rules', '/404', '/poasalj1.z23'];
+
+function isPage(pathname) {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  if (PAGES.indexOf(path) >= 0) return true;
+  if (/\.html?$/.test(path)) return true;
+  return false;
+}
+
 export async function onRequest(context) {
   const { request, next, env } = context;
   const url = new URL(request.url);
-  const looksLikePage = url.pathname === '/' || /\.html?$/.test(url.pathname);
 
   const response = await next();
-  if (!looksLikePage) return response;
+  if (!isPage(url.pathname)) return response;
 
   const type = response.headers.get('content-type') || '';
   if (!type.includes('text/html')) return response;

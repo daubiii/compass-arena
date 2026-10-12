@@ -45,6 +45,12 @@ console.log('\n1. Middleware: подстановка версии');
   ok(/try\s*\{/.test(middleware) && /catch/.test(middleware), 'при ошибке возвращает страницу как есть');
   ok(/Cache-Control', 'no-store/.test(middleware), 'HTML отдаётся без кеша');
   ok(/CF_PAGES_COMMIT_SHA/.test(middleware), 'версия берётся из окружения Pages');
+
+  /* Middleware должен трогать все наши страницы, а не только главную:
+     иначе на /schedule и /poasalj1.z23 останутся старые адреса ассетов. */
+  const pages = ['/', '/index', '/schedule', '/history', '/rules', '/404', '/poasalj1.z23'];
+  const missing = pages.filter((p) => !new RegExp("'" + p.replace('/', '\\/') + "'").test(middleware));
+  ok(missing.length === 0, 'в списке страниц middleware есть все разделы', missing.join(', '));
 }
 
 console.log('\n2. Скрипт версионирования: все страницы');
