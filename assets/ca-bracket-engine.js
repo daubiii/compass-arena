@@ -81,66 +81,128 @@
    * Кто из команд попадает в каждый слот первого раунда, когда команд меньше
    * размера сетки.
    *
-   * Раскладываем команды по позициям в порядке сеяных: 1-я команда встаёт в
-   * первый слот порядка, 2-я — во второй и так далее. Последние (size − teamCount)
-   * позиций остаются пустыми — это BYE, и они всегда достаются слотам, соседним
-   * с сильнейшими. Для 6 команд в сетке на 8 порядок [1,8,4,5,2,7,3,6] даёт:
+   * Команды занимают слоты первого раунда по порядку (номер команды = её посев),
+   * а лишние слоты остаются пустыми — это BYE. Порядок сеяных
+   * [1,8,4,5,2,7,3,6,…] устроен так, что сильные команды стоят рядом со слабыми,
+   * поэтому BYE достаются в основном сильнейшим:
    *
-   *   [[1,BYE],[4,5],[2,BYE],[3,6]]
+   *   6 команд, сетка на 8   → [[1,BYE],[2,3],[4,5],[6,BYE]]
+   *   10 команд, сетка на 16 → [[1,BYE],[2,3],[4,5],[6,7],[8,9],[10,BYE],…
    *
-   * то есть без игры проходят 1 и 2, а играют 4–5 и 3–6. Пар из двух BYE не
-   * бывает ни при каком размере: пустые позиции всегда предпоследняя и последняя.
+   * Пары «пусто vs пусто» движок помечает idle и не играет; такие слоты в
+   * интерфейсе можно не показывать.
    */
   function seedAssignment(teamCount) {
     var size = sizeFor(teamCount);
     var count = Math.max(2, Number(teamCount) || 0);
     var order = seedingOrder(size);        /* слот → номер сеяного */
-    var position = {};                     /* номер сеяного → позиция в порядке */
-    order.forEach(function (seedNumber, index) { position[seedNumber] = index + 1; });
-
     var map = {};                          /* номер сеяного → команда или null */
-    var team = 1;
+    var next = 1;
+
     order.forEach(function (seedNumber) {
-      /* Первые (size − BYE) слотов заполняем по порядку, остальные — BYE */
-      if (team <= count) {
-        map[seedNumber] = team;
-        team++;
-      } else {
-        map[seedNumber] = null;
-      }
+      map[seedNumber] = next <= count ? next : null;
+      next++;
     });
 
-    return { size: size, order: order, byes: Math.max(0, size - count), map: map, position: position };
+    return { size: size, order: order, byes: Math.max(0, size - count), map: map };
   }
 
   /**
-   * Автопроход по BYE. Матч первого раунда, где пришла одна команда (соперник —
-   * пустой слот), не играется: команда сразу идёт дальше. Здесь мы проставляем
-   * ей победу, а матчи, в которые некому прийти (обе ветки пустые), помечаем
-   * idle — они держат структуру сетки, но счёт в них не вводят.
+   * Автопроход по BYE и «мёртвые» матчи.
    *
-   * Вызывается после сборки, поэтому просто идём по матчам по порядку id:
-   * к моменту обработки матча все его источники уже разрешены.
+   * Работает многопроходно, потому что связи образуют дерево: матч нельзя
+   * разрешить, пока не сыграны (или не пройдены по BYE) все его источники.
+   * Повторяем проходы, пока есть изменения — для сетки на 16 команд это
+   * максимум 5-6 проходов.
+   *
+   * На каждом проходе:
+   *   • подставляем команду из источника (победителя или проигравшего);
+   *   • если в матче только одна команда — она проходит без игры, ей ставится
+   *     победа, и дальше по сетке идёт уже она;
+   *   • матч, куда не пришла ни одна команда и источники уже сыграны, помечаем
+   *     idle: он держит структуру, но не играется.
+   *
+   * Победы, проставленные автоматически (bye), пересчитываются заново; реальные
+   * результаты и счёт, введённые организатором, сохраняются.
    */
   function resolveByes(matches) {
+    var list = matches || [];
     var byId = {};
-    (matches || []).forEach(function (m) { byId[m.id] = m; });
+    list.forEach(function (m) { byId[m.id] = m; });
 
-    (matches || []).forEach(function (m) {
-      if (m.idle) return;
-      /* Матчи первого раунда уже расставлены по посеву — их не трогаем */
-      if (!m.from1 && !m.from2) return;
-      m.team1 = m.from1 ? fromSource(byId, m.from1) : m.team1;
-      m.team2 = m.from2 ? fromSource(byId, m.from2) : m.team2;
-
-      var filled = (m.team1 != null ? 1 : 0) + (m.team2 != null ? 1 : 0);
-      if (filled === 0) { m.idle = true; return; }   /* сюда некому прийти */
-      if (filled === 1 && !m.winner) {
-        m.winner = m.team1 != null ? m.team1 : m.team2;
-        m.bye = true;
+    /* Оставляем только «настоящие» победы: автоматические проходы снимаем */
+    list.forEach(function (m) {
+      if (m.bye) {
+        m.winner = null;
+        m.bye = false;
       }
     });
-    return matches;
+
+    var guard = list.length + 2;
+    var changed = true;
+    while (changed && guard-- > 0) {
+      changed = false;
+      list.forEach(function (m) {
+        /* Первый раунд расставлен по посеву — оттуда команды и берутся */
+        var hasSources = !!(m.from1 || m.from2);
+        if (hasSources) {
+          var t1 = m.from1 ? fromSource(byId, m.from1) : m.team1;
+          var t2 = m.from2 ? fromSource(byId, m.from2) : m.team2;
+          if (t1 !== m.team1) { m.team1 = t1; changed = true; }
+          if (t2 !== m.team2) { m.team2 = t2; changed = true; }
+        }
+
+        var filled = (m.team1 != null ? 1 : 0) + (m.team2 != null ? 1 : 0);
+        if (filled === 0) return;
+
+        if (filled === 1 && !m.winner) {
+          m.winner = m.team1 != null ? m.team1 : m.team2;
+          m.bye = true;
+          changed = true;
+          return;
+        }
+        if (filled === 1) m.bye = true;
+      });
+    }
+
+    /* «Мёртвый» матч — это пустой слот первого раунда (источников нет, команд
+       тоже) и всё, что от него зависит: играть там некому. Матчи, которые просто
+       ждут результатов предыдущих, остаются живыми и показываются как ожидание. */
+    var idleIds = {};
+    list.forEach(function (m) {
+      if (!m.from1 && !m.from2 && m.team1 == null && m.team2 == null) idleIds[m.id] = true;
+    });
+    var grew = true;
+    while (grew) {
+      grew = false;
+      list.forEach(function (m) {
+        if (idleIds[m.id]) return;
+        var srcs = [m.from1, m.from2].filter(Boolean);
+        if (!srcs.length || m.team1 != null || m.team2 != null) return;
+        if (srcs.every(function (src) { return idleIds[src.m]; })) {
+          idleIds[m.id] = true;
+          grew = true;
+        }
+      });
+    }
+
+    list.forEach(function (m) {
+      m.idle = !!idleIds[m.id];
+      if (m.idle) { m.winner = null; m.bye = false; }
+    });
+    return list;
+  }
+
+  /** Может ли источник когда-нибудь дать команду */
+  function sourcePlayable(byId, src) {
+    var source = byId[src.m];
+    if (!source) return false;
+    if (source.idle) return false;
+    if (src.as === 'l') {
+      /* Проигравший есть, только если в матче играют двое */
+      return source.team1 != null && source.team2 != null && !source.bye;
+    }
+    return source.team1 != null || source.team2 != null;
   }
 
   /** Кто приходит в слот: победитель или проигравший указанного матча */
@@ -549,6 +611,7 @@
     seedAssignment: seedAssignment,
     byeSeeds: byeSeeds,
     generate: generate,
+    resolveByes: resolveByes,
     destinations: destinations,
     describe: describe,
     upperLabel: upperLabel,

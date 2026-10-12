@@ -159,15 +159,16 @@ console.log('\nB. Double elimination, 6 команд (два BYE)');
   ok(wrap.querySelectorAll('.match.is-lower').length === 6, 'карточки нижней сетки помечены',
     wrap.querySelectorAll('.match.is-lower').length);
 
-  /* Схема BYE для 6 команд в сетке на 8: сильнейшие получают свободный слот,
-     поэтому первый раунд заполнен реальными парами, а «мёртвых» пар нет. */
+  /* BYE для 6 команд в сетке на 8: три реальные пары, четвёртый слот пустой.
+     Матч из двух пустых слотов движок помечает idle — его в интерфейсе можно
+     не показывать, потому что играть там некому. */
   const r1 = D.matches.filter((m) => m.round === 1 && m.bracket === 'upper');
   const realPairs = r1.filter((m) => m.team1 != null && m.team2 != null);
   const emptyPairs = r1.filter((m) => m.team1 == null && m.team2 == null);
-  ok(realPairs.length === 3, 'в первом раунде три реальные пары', realPairs.length);
-  ok(emptyPairs.length === 1, 'одна пара без команд (6 команд на 8 слотов)', emptyPairs.length);
-  ok(emptyPairs.every((m) => !m.winner), 'в пустой паре нет победителя');
-  ok(/Без игры|Без соперника/.test(wrap.textContent), 'на карточке видно, что команда прошла без игры');
+  ok(realPairs.length === 3, 'три пары играются', realPairs.length);
+  ok(emptyPairs.length === 1, 'один пустой слот пары (BYE)', emptyPairs.length);
+  ok(emptyPairs.every((m) => m.idle && !m.winner), 'пустая пара помечена как неиграемая',
+    JSON.stringify(emptyPairs.map((m) => [m.id, m.idle, m.winner])));
 }
 
 /* ============ C. Двойное поражение проигравшего ============ */

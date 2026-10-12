@@ -23,87 +23,41 @@
 
   /* ---------- Раскладка ---------- */
 
-  /**
-   * Группируем матчи по «колонкам»: раунд внутри своей части сетки.
-   * Между блоками (верхняя → нижняя → финалы) вставляем пустую колонку-разделитель,
-   * заданную её шириной, — так номер колонки остаётся целым, а блоки не слипаются.
-   */
-  function columns(matches) {
-    var list = (matches || []).slice().sort(function (a, b) { return a.id - b.id; });
-    var raw = [];
-    var seen = {};
+  /* ==========================================================
+     Раскладка как на The International:
+       • верхняя сетка — сверху, слева направо по раундам;
+       • нижняя сетка — отдельным блоком НИЖЕ верхней;
+       • гранд-финал — справа, между блоками;
+       • внутри блока карточка встаёт ровно между своими источниками.
+     ========================================================== */
 
-    list.forEach(function (m) {
-      var section = m.bracket === 'grand' ? 'grand' : (m.bracket === 'lower' ? 'lower' : 'upper');
-      var key = section + ':' + m.round;
-      var col = seen[key];
-      if (!col) {
-        col = { key: key, section: section, round: m.round, matches: [] };
-        seen[key] = col;
-        raw.push(col);
-      }
-      col.matches.push(m);
+  /** Колонки внутри одного блока: раунд → своя вертикаль */
+  function sectionColumns(section, matches) {
+    var byRound = {};
+    var rounds = [];
+    matches.forEach(function (m) {
+      if (!byRound[m.round]) { byRound[m.round] = { section: section, round: m.round, matches: [] }; rounds.push(byRound[m.round]); }
+      byRound[m.round].matches.push(m);
     });
-
-    /* Порядок блоков: верхняя → нижняя → финалы (каждый блок — по возрастанию раунда) */
-    var rank = { upper: 0, lower: 1, grand: 2 };
-    raw.sort(function (a, b) {
-      return (rank[a.section] - rank[b.section]) || (a.round - b.round);
-    });
-
-    /* Нумеруем дорожки целыми числами: разделитель занимает свою дорожку
-       шириной GAP_COL, поэтому номер колонки всегда целый и годится для CSS. */
-    var tracks = [];
-    var cols = [];
-    var index = 0;
-    raw.forEach(function (item, i) {
-      if (i > 0 && raw[i - 1].section !== item.section) {
-        tracks.push({ spacer: true, fr: GAP_COL });
-        index += 1;
-      }
-      item.col = index + 1;
-      tracks.push({ item: item, fr: 1 });
-      cols.push(item);
-      index += 1;
-    });
-    return { cols: cols, tracks: tracks };
+    rounds.sort(function (a, b) { return a.round - b.round; });
+    rounds.forEach(function (col, i) { col.index = i; });
+    return rounds;
   }
 
   /**
-   * Раскладка карточек: { items, cols, rows, unit, columnCount }.
+   * Позиции карточек внутри блока — плотная «лестница», как на The International.
    *
-   * Позиции считаются по связям, а не по номеру раунда:
-   *   • первый раунд верхней сетки идёт подряд через два ряда;
-   *   • каждая следующая карточка встаёт ровно между своими источниками
-   *     (при двух — посередине, при одном — на его месте). Поэтому нижняя
-   *     сетка естественно «вплетается» в верхнюю, а слоты совпадают с теми,
-   *     откуда приходят команды.
-   *   • если источников несколько и они далеко друг от друга, карточку
-   *     прижимаем к предыдущей в колонке, чтобы не было дыр на пол-экрана.
-   *
-   * Высота. Один ряд — половина карточки, поэтому переменная --b-unit
-   * считается так, что два ряда = высота карточки + зазор: карточка не может
-   * вылезти за свою ячейку и налезть на соседей.
+   * Первый раунд идёт подряд с шагом 1.5 карточки, а каждый следующий встаёт
+   * ровно между своими источниками. Так блок занимает примерно 3·(раунды−1) + 1
+   * карточек по высоте вместо «широкого дерева», которое раздувало полотно.
    */
-  function layout(matches) {
-    var split = columns(matches);
-    var cols = split.cols;
-    var tracks = split.tracks;
+  function sectionPositions(columns) {
     var items = {};
-    var rows = 1;
+    var maxCenter = 1;
 
-    var CARD_H = 116;               /* min-height карточки из CSS */
-    var GAP = 18;                   /* зазор между карточками по вертикали */
-    var MAX_SPREAD = 6;             /* насколько карточка может отойти от соседа сверху */
-    /* Первый ряд грида — подписи колонок, поэтому карточки начинаем со второго:
-       иначе верхняя карточка подлезает под «1/8 финала верхней · 6/8 сыграно». */
-    var ROW_OFFSET = 1;
-
-    cols.forEach(function (col) {
-      var list = col.matches;
+    columns.forEach(function (col) {
       var prev = null;
-
-      list.forEach(function (m) {
+      col.matches.forEach(function (m) {
         var srcs = [m.from1, m.from2]
           .filter(function (s) { return s && items[s.m]; })
           .map(function (s) { return items[s.m].center; })
@@ -112,29 +66,149 @@
         var center;
         if (srcs.length >= 2) center = (srcs[0] + srcs[srcs.length - 1]) / 2;
         else if (srcs.length === 1) center = srcs[0];
-        else center = prev == null ? 1 : prev + 2;
+        else center = prev == null ? 1 : prev + 1.5;
 
-        /* Не даём карточке уехать слишком далеко от соседа по колонке */
-        if (prev != null && center > prev + MAX_SPREAD) center = prev + MAX_SPREAD;
-        if (prev != null && center < prev + 2) center = prev + 2;
-
-        var row = Math.round((center - 1) * 2) + 1 + ROW_OFFSET;
-        items[m.id] = { col: col.col, row: row, span: 2, center: center };
-        rows = Math.max(rows, row + 2);
+        items[m.id] = { center: center };
+        maxCenter = Math.max(maxCenter, center);
         prev = center;
       });
     });
 
-    /* Два ряда = карточка + зазор. У больших сеток (нижняя сетка, финалы) шаг
-       сжимаем, чтобы полотно не растягивалось на несколько экранов: в самом
-       плотном варианте карточки идут почти вплотную (запас 10px), поэтому
-       наложения не будет, а пустого воздуха станет заметно меньше. */
+    return { items: items, rows: Math.round((maxCenter - 1) * 2) + 2 };
+  }
+
+  /**
+   * Полная раскладка: { items: { id: { col, row, span } }, cols, tracks, rows, unit }.
+   * Ряды считаем в «полукарточках»: span карточки всегда 2, поэтому два ряда
+   * равны высоте карточки плюс зазор и наложения невозможны.
+   *
+   * Блоки идут полосами по вертикали: сначала верхняя сетка, ниже — нижняя,
+   * гранд-финал встаёт справа между ними (как на The International).
+   */
+  function layout(matches) {
+    var list = (matches || []).slice().sort(function (a, b) { return a.id - b.id; });
+    var upper = list.filter(function (m) { return m.bracket !== 'lower' && m.bracket !== 'grand' && m.bracket !== 'third'; });
+    var lower = list.filter(function (m) { return m.bracket === 'lower'; });
+    var third = list.filter(function (m) { return m.bracket === 'third'; });
+    var grand = list.filter(function (m) { return m.bracket === 'grand'; });
+
+    var CARD_H = 116;
+    var GAP = 18;
+    var ROW_OFFSET = 1;              /* первый ряд — подписи колонок */
+    var PAD_BETWEEN_BLOCKS = 4;      /* воздуха между верхней и нижней сеткой */
+
+    var items = {};
+    var cols = [];
+    var rows = ROW_OFFSET;
+    var colCursor = 1;
+
+    function placeSection(section, sectionMatches, offset) {
+      var columns = sectionColumns(section, sectionMatches);
+      if (!columns.length) return { height: 0, span: 0 };
+      var pos = sectionPositions(columns);
+      var lowest = 0;
+
+      columns.forEach(function (col) {
+        var colNumber = colCursor + col.index;
+        cols.push({ section: section, round: col.round, matches: col.matches, col: colNumber });
+        col.matches.forEach(function (m) {
+          var local = pos.items[m.id];
+          /* center — в общих «карточных» единицах страницы, row — ряд грида */
+          var center = local.center + offset - 1;
+          var row = Math.round((center - 1) * 2) + 1;
+          items[m.id] = { col: colNumber, row: row, span: 2, center: center };
+          lowest = Math.max(lowest, (local.center - 1) * 2 + 2);
+          rows = Math.max(rows, row + 1);
+        });
+      });
+
+      colCursor += columns.length;
+      /* Высоту блока считаем по самой нижней карточке, а не по pos.rows:
+         иначе между блоками остаётся лишняя пустая полоса. */
+      return { height: Math.max(lowest, 2), span: columns.length };
+    }
+
+    /**
+     * Сдвиг нижнего блока: финал нижней сетки должен встать на одну высоту с
+     * финалом верхней. Тогда гранд-финал садится ровно между ними, а между
+     * блоками не остаётся лишней пустой полосы.
+     */
+    function alignLowerOffset() {
+      if (!upper.length || !lower.length) return upperHeight + 4;
+      var upperFinal = upper.filter(function (m) { return m.round === upperRounds; })[0];
+      var lowerFinal = lower.filter(function (m) { return m.round === lowerRounds; })[0];
+      if (!upperFinal || !lowerFinal) return upperHeight + 4;
+
+      var upperPos = sectionPositions(sectionColumns('upper', upper));
+      var lowerPos = sectionPositions(sectionColumns('lower', lower));
+      var upperRow = Math.round((upperPos.items[upperFinal.id].center - 1) * 2) + 1;
+      var lowerRow = Math.round((lowerPos.items[lowerFinal.id].center - 1) * 2) + 1;
+      /* Разница рядов внутри блоков: столько нужно, чтобы финалы совпали */
+      return (upperRow - lowerRow) + PAD_BETWEEN_BLOCKS;
+    }
+
+    var upperInfo = placeSection('upper', upper, ROW_OFFSET);
+    var upperHeight = Math.max(upperInfo.height, 2);
+    var upperRounds = sectionColumns('upper', upper).length;
+    var lowerRounds = sectionColumns('lower', lower).length;
+    var lowerOffset = ROW_OFFSET + alignLowerOffset();
+    if (lowerOffset < ROW_OFFSET + 4) lowerOffset = ROW_OFFSET + 4;
+    var lowerInfo = placeSection('lower', lower, lowerOffset);
+
+    /* Матч за третье место — отдельной колонкой в полосе нижней сетки */
+    if (third.length) {
+      var thirdCol = colCursor + 1;
+      cols.push({ section: 'third', round: third[0].round, matches: third, col: thirdCol });
+      third.forEach(function (m, i) {
+        var row = lowerOffset + 1 + i * 2;
+        items[m.id] = { col: thirdCol, row: row, span: 2, center: (row - 1) / 2 + 1 };
+        rows = Math.max(rows, row + 1);
+      });
+      colCursor += 1;
+    }
+
+    /* Гранд-финал: справа, между финалом верхней и финалом нижней сетки.
+       Если у него два источника из разных блоков — ставим по центру между ними. */
+    if (grand.length) {
+      var grandCol = colCursor + 1;
+      var first = grand.filter(function (m) { return !m.resetFor; })[0] || grand[0];
+      var srcCenters = [first.from1, first.from2]
+        .filter(Boolean)
+        .map(function (s) { return items[s.m]; })
+        .filter(Boolean)
+        .map(function (it) { return it.center; });
+      var center;
+      if (srcCenters.length === 2) {
+        center = (Math.min.apply(null, srcCenters) + Math.max.apply(null, srcCenters)) / 2;
+      } else if (srcCenters.length === 1) {
+        center = srcCenters[0];
+      } else {
+        /* Источников рядом нет (например, только верхняя сетка) — по центру полосы */
+        center = ROW_OFFSET + upperHeight / 2;
+      }
+
+      var row = Math.max(ROW_OFFSET + 1, Math.round((center - 1) * 2) + 1);
+      items[first.id] = { col: grandCol, row: row, span: 2, center: center };
+      rows = Math.max(rows, row + 1);
+      var cursorRow = row;
+      grand.forEach(function (m) {
+        if (m === first) return;
+        cursorRow += 3;
+        items[m.id] = { col: grandCol, row: cursorRow, span: 2, center: (cursorRow - 1) / 2 + 1 };
+        rows = Math.max(rows, cursorRow + 1);
+      });
+      cols.push({ section: 'grand', round: first.round, matches: grand, col: grandCol });
+      colCursor += 1;
+    }
+
+    /* Дорожки: по одной на колонку. Расстояние между блоками даёт column-gap,
+       потому что блоки и так стоят полосами по вертикали. */
+    var tracks = [];
+    for (var i = 1; i <= colCursor; i++) tracks.push({ col: i, spacer: false, fr: 1 });
+
     var unit = Math.max(Math.round((CARD_H + GAP) / 2), Math.min(72, Math.round(3400 / Math.max(1, rows))));
 
-    /* Колонок для подписи и CSS — без пустых разделителей */
-    var realCols = tracks.filter(function (t) { return !t.spacer; }).length;
-
-    return { items: items, cols: cols, tracks: tracks, rows: rows, unit: unit, columnCount: realCols };
+    return { items: items, cols: cols, tracks: tracks, rows: rows, unit: unit, columnCount: cols.length };
   }
 
   /**
@@ -413,7 +487,7 @@
     drawLines: drawLines,
     autoInit: autoInit,
     layout: layout,
-    columns: columns,
+    sectionColumns: sectionColumns,
     colLabel: colLabel
   };
 

@@ -1326,54 +1326,15 @@ function updateMatchLinks() {
 }
 
 /**
- * Раскладывает команды по связям универсальной сетки: победитель и проигравший
- * каждого матча встают в слоты тех матчей, которые на них ссылаются. Матчи идут
- * по возрастанию id, поэтому к моменту обработки все источники уже разрешены.
+ * Раскладывает команды по связям универсальной сетки. Логику берём у движка
+ * (CA.bracketEngine.resolveByes): он подставляет победителей и проигравших,
+ * проводит команды с BYE дальше и помечает матчи, которые некому играть.
+ * Так админка и сайт считают одинаково.
  */
 function linkGeneratedBracket(m) {
-    var order = DATA.matches.slice().sort(function (a, b) { return a.id - b.id; });
-    for (var i = 0; i < order.length; i++) {
-        var mm = order[i];
-        var src1 = mm.from1;
-        var src2 = mm.from2;
-        if (!src1 && !src2) continue;   /* первый раунд расставлен по посеву */
-
-        if (src1) {
-            var a = sourceTeam(m, src1);
-            if (a !== null) mm.team1 = a;
-        }
-        if (src2) {
-            var b = sourceTeam(m, src2);
-            if (b !== null) mm.team2 = b;
-        }
-
-        /* Обе ветки пустые — матч не играется, держим структуру */
-        if (mm.team1 === null && mm.team2 === null) {
-            mm.idle = true;
-            mm.winner = null;
-            mm.score1 = null;
-            mm.score2 = null;
-            continue;
-        }
-        /* Соперника нет и не будет — команда проходит без игры */
-        if ((mm.team1 === null) !== (mm.team2 === null)) {
-            if (!mm.winner) {
-                mm.winner = mm.team1 !== null ? mm.team1 : mm.team2;
-                mm.bye = true;
-            }
-        }
-    }
-}
-
-/** Кто приходит в слот: победитель или проигравший указанного матча */
-function sourceTeam(m, src) {
-    var source = m[src.m];
-    if (!source) return null;
-    if (src.as === 'l') {
-        if (!source.winner || !source.team1 || !source.team2) return null;
-        return source.winner === source.team1 ? source.team2 : source.team1;
-    }
-    return source.winner || null;
+    void m;
+    var engine = window.CA && CA.bracketEngine;
+    if (engine && engine.resolveByes) engine.resolveByes(DATA.matches);
 }
 
 /** Убирает результаты, потерявшие смысл после правок состава */

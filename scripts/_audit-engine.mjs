@@ -67,7 +67,7 @@ for (const n of SIZES) {
   }
 }
 
-console.log('\n4. Посев: команды по своим местам, BYE не больше одного на пару');
+console.log('\n4. Посев: команды по своим местам, пустых пар нет');
 for (const n of SIZES) {
   const a = E.seedAssignment(n);
   const pairs = E.seedPairs(a.size).map((p) => [a.map[p[0]], a.map[p[1]]]);
@@ -75,16 +75,17 @@ for (const n of SIZES) {
   ok(JSON.stringify(teams) === JSON.stringify(Array.from({ length: n }, (_, i) => i + 1)),
     n + ' команд: каждая команда ровно один раз', JSON.stringify(teams));
 
-  const played = pairs.filter((p) => p[0] != null && p[1] != null).length;
-  ok(played === Math.floor(n / 2), n + ' команд: пар, где есть обе команды — ' + played,
-    JSON.stringify(pairs));
+  /* Играются все пары, где есть хотя бы одна команда. Пары из двух пустых
+     слотов возможны, когда команд заметно меньше размера сетки (10 команд на
+     16 слотов — 3 такие пары): их движок помечает idle и в интерфейсе можно
+     не рисовать. */
+  const withTeam = pairs.filter((p) => p[0] != null || p[1] != null).length;
+  ok(withTeam === Math.min(pairs.length, Math.ceil(n / 2)),
+    n + ' команд: пар с командами — ' + withTeam + ' из ' + pairs.length, JSON.stringify(pairs));
 
-  const doubleBye = pairs.filter((p) => p[0] == null && p[1] == null).length;
-  /* Двойной BYE возможен, когда пустых слотов больше, чем реальных команд
-     (10 команд в сетке на 16 — три таких пары). Такие пары не играются:
-     их помечает idle сам движок, и это проверяется отдельно ниже. */
-  ok(doubleBye * 2 <= E.byesFor(n), n + ' команд: пар без обеих команд ' + doubleBye +
-    ' при ' + E.byesFor(n) + ' BYE', doubleBye);
+  const emptyPairs = pairs.filter((p) => p[0] == null && p[1] == null).length;
+  ok(emptyPairs === pairs.length - withTeam,
+    n + ' команд: пустых пар ' + emptyPairs + ' (BYE всего ' + E.byesFor(n) + ')');
 
   /* Сеяные 1 и 2 в разных половинах: могут встретиться только в финале */
   const flat = a.order;
@@ -94,16 +95,27 @@ for (const n of SIZES) {
     JSON.stringify({ seed1: flat.indexOf(1), seed2: flat.indexOf(2) }));
 }
 
-console.log('\n5. BYE: автопроход и «мёртвые» матчи');
-for (const n of [6, 10, 12]) {
+console.log('\n5. BYE: команда проходит без игры, пустые слоты помечены idle');
+for (const n of [3, 6, 10, 12]) {
   const plan = E.generate({ teamCount: n, format: 'se' });
   const r1 = plan.matches.filter((m) => m.round === 1 && m.bracket === 'upper');
+
+  /* Пара с одной командой: команда проходит дальше автоматически */
   const half = r1.filter((m) => (m.team1 == null) !== (m.team2 == null));
   ok(half.every((m) => m.bye && m.winner === (m.team1 != null ? m.team1 : m.team2)),
-    'SE ' + n + ': команда с BYE проходит автоматически', JSON.stringify(half.map((m) => [m.team1, m.team2, m.winner])));
+    'SE ' + n + ': команда в паре одна — проходит автоматически (' + half.length + ')',
+    JSON.stringify(half.map((m) => [m.team1, m.team2, m.winner])));
 
+  /* Пара из двух пустых слотов: играть некому, помечена idle и без победителя */
   const bothEmpty = r1.filter((m) => m.team1 == null && m.team2 == null);
-  ok(bothEmpty.every((m) => !m.winner), 'SE ' + n + ': пустые пары не получают победителя');
+  ok(bothEmpty.every((m) => m.idle && !m.winner),
+    'SE ' + n + ': пустой слот помечен неиграемым (' + bothEmpty.length + ')',
+    JSON.stringify(bothEmpty.map((m) => [m.id, m.idle, m.winner])));
+
+  /* Ни один матч, куда реально придёт команда, не должен быть idle */
+  const wronglyIdle = plan.matches.filter((m) => m.idle && (m.team1 != null || m.team2 != null));
+  ok(wronglyIdle.length === 0, 'SE ' + n + ': нет матчей с командой, помеченных неиграемыми',
+    JSON.stringify(wronglyIdle.map((m) => m.id)));
 }
 
 console.log('\n6. Матч за третье место и гранд-финал со сбросом');

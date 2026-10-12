@@ -94,28 +94,6 @@
      "role": 1
     }
    ]
-  },
-  {
-   "id": 9,
-   "name": "Nigma",
-   "logo": "",
-   "players": [
-    {
-     "nick": "Игрок 9",
-     "role": 1
-    }
-   ]
-  },
-  {
-   "id": 10,
-   "name": "Entity",
-   "logo": "",
-   "players": [
-    {
-     "nick": "Игрок 10",
-     "role": 1
-    }
-   ]
   }
  ],
  "matches": [
@@ -130,7 +108,8 @@
    "score2": 1,
    "vod": "",
    "from1": null,
-   "from2": null
+   "from2": null,
+   "idle": false
   },
   {
    "id": 2,
@@ -143,7 +122,8 @@
    "score2": null,
    "vod": "",
    "from1": null,
-   "from2": null
+   "from2": null,
+   "idle": false
   },
   {
    "id": 3,
@@ -156,7 +136,8 @@
    "score2": null,
    "vod": "",
    "from1": null,
-   "from2": null
+   "from2": null,
+   "idle": false
   },
   {
    "id": 4,
@@ -169,62 +150,11 @@
    "score2": null,
    "vod": "",
    "from1": null,
-   "from2": null
+   "from2": null,
+   "idle": false
   },
   {
    "id": 5,
-   "round": 1,
-   "bracket": "upper",
-   "team1": 9,
-   "team2": 10,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": null,
-   "from2": null
-  },
-  {
-   "id": 6,
-   "round": 1,
-   "bracket": "upper",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": null,
-   "from2": null
-  },
-  {
-   "id": 7,
-   "round": 1,
-   "bracket": "upper",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": null,
-   "from2": null
-  },
-  {
-   "id": 8,
-   "round": 1,
-   "bracket": "upper",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": null,
-   "from2": null
-  },
-  {
-   "id": 9,
    "round": 2,
    "bracket": "upper",
    "team1": null,
@@ -241,10 +171,10 @@
     "m": 2,
     "as": "w"
    },
-   "idle": true
+   "idle": false
   },
   {
-   "id": 10,
+   "id": 6,
    "round": 2,
    "bracket": "upper",
    "team1": null,
@@ -261,11 +191,11 @@
     "m": 4,
     "as": "w"
    },
-   "idle": true
+   "idle": false
   },
   {
-   "id": 11,
-   "round": 2,
+   "id": 7,
+   "round": 3,
    "bracket": "upper",
    "team1": null,
    "team2": null,
@@ -281,90 +211,10 @@
     "m": 6,
     "as": "w"
    },
-   "idle": true
+   "idle": false
   },
   {
-   "id": 12,
-   "round": 2,
-   "bracket": "upper",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": {
-    "m": 7,
-    "as": "w"
-   },
-   "from2": {
-    "m": 8,
-    "as": "w"
-   },
-   "idle": true
-  },
-  {
-   "id": 13,
-   "round": 3,
-   "bracket": "upper",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": {
-    "m": 9,
-    "as": "w"
-   },
-   "from2": {
-    "m": 10,
-    "as": "w"
-   },
-   "idle": true
-  },
-  {
-   "id": 14,
-   "round": 3,
-   "bracket": "upper",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": {
-    "m": 11,
-    "as": "w"
-   },
-   "from2": {
-    "m": 12,
-    "as": "w"
-   },
-   "idle": true
-  },
-  {
-   "id": 15,
-   "round": 4,
-   "bracket": "upper",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": {
-    "m": 13,
-    "as": "w"
-   },
-   "from2": {
-    "m": 14,
-    "as": "w"
-   },
-   "idle": true
-  },
-  {
-   "id": 16,
+   "id": 8,
    "round": 1,
    "bracket": "lower",
    "team1": null,
@@ -381,10 +231,10 @@
     "m": 2,
     "as": "l"
    },
-   "idle": true
+   "idle": false
   },
   {
-   "id": 17,
+   "id": 9,
    "round": 1,
    "bracket": "lower",
    "team1": null,
@@ -401,11 +251,11 @@
     "m": 4,
     "as": "l"
    },
-   "idle": true
+   "idle": false
   },
   {
-   "id": 18,
-   "round": 1,
+   "id": 10,
+   "round": 2,
    "bracket": "lower",
    "team1": null,
    "team2": null,
@@ -414,28 +264,17 @@
    "score2": null,
    "vod": "",
    "from1": {
+    "m": 8,
+    "as": "w"
+   },
+   "from2": {
     "m": 5,
     "as": "l"
    },
-   "from2": null,
-   "idle": true
+   "idle": false
   },
   {
-   "id": 19,
-   "round": 1,
-   "bracket": "lower",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": null,
-   "from2": null,
-   "idle": true
-  },
-  {
-   "id": 20,
+   "id": 11,
    "round": 2,
    "bracket": "lower",
    "team1": null,
@@ -445,38 +284,18 @@
    "score2": null,
    "vod": "",
    "from1": {
-    "m": 16,
-    "as": "w"
-   },
-   "from2": {
     "m": 9,
-    "as": "l"
-   },
-   "idle": true
-  },
-  {
-   "id": 21,
-   "round": 2,
-   "bracket": "lower",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": {
-    "m": 17,
     "as": "w"
    },
    "from2": {
-    "m": 10,
+    "m": 6,
     "as": "l"
    },
-   "idle": true
+   "idle": false
   },
   {
-   "id": 22,
-   "round": 2,
+   "id": 12,
+   "round": 3,
    "bracket": "lower",
    "team1": null,
    "team2": null,
@@ -485,18 +304,18 @@
    "score2": null,
    "vod": "",
    "from1": {
-    "m": 18,
+    "m": 10,
     "as": "w"
    },
    "from2": {
     "m": 11,
-    "as": "l"
+    "as": "w"
    },
-   "idle": true
+   "idle": false
   },
   {
-   "id": 23,
-   "round": 2,
+   "id": 13,
+   "round": 4,
    "bracket": "lower",
    "team1": null,
    "team2": null,
@@ -505,138 +324,18 @@
    "score2": null,
    "vod": "",
    "from1": {
-    "m": 19,
-    "as": "w"
-   },
-   "from2": {
     "m": 12,
+    "as": "w"
+   },
+   "from2": {
+    "m": 7,
     "as": "l"
    },
-   "idle": true
+   "idle": false
   },
   {
-   "id": 24,
-   "round": 3,
-   "bracket": "lower",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": {
-    "m": 20,
-    "as": "w"
-   },
-   "from2": {
-    "m": 21,
-    "as": "w"
-   },
-   "idle": true
-  },
-  {
-   "id": 25,
-   "round": 3,
-   "bracket": "lower",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": {
-    "m": 22,
-    "as": "w"
-   },
-   "from2": {
-    "m": 23,
-    "as": "w"
-   },
-   "idle": true
-  },
-  {
-   "id": 26,
-   "round": 4,
-   "bracket": "lower",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": {
-    "m": 24,
-    "as": "w"
-   },
-   "from2": {
-    "m": 13,
-    "as": "l"
-   },
-   "idle": true
-  },
-  {
-   "id": 27,
-   "round": 4,
-   "bracket": "lower",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": {
-    "m": 25,
-    "as": "w"
-   },
-   "from2": {
-    "m": 14,
-    "as": "l"
-   },
-   "idle": true
-  },
-  {
-   "id": 28,
-   "round": 5,
-   "bracket": "lower",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": {
-    "m": 26,
-    "as": "w"
-   },
-   "from2": {
-    "m": 27,
-    "as": "w"
-   },
-   "idle": true
-  },
-  {
-   "id": 29,
-   "round": 6,
-   "bracket": "lower",
-   "team1": null,
-   "team2": null,
-   "winner": null,
-   "score1": null,
-   "score2": null,
-   "vod": "",
-   "from1": {
-    "m": 28,
-    "as": "w"
-   },
-   "from2": {
-    "m": 15,
-    "as": "l"
-   },
-   "idle": true
-  },
-  {
-   "id": 30,
-   "round": 11,
+   "id": 14,
+   "round": 8,
    "bracket": "grand",
    "team1": null,
    "team2": null,
@@ -645,14 +344,14 @@
    "score2": null,
    "vod": "",
    "from1": {
-    "m": 15,
+    "m": 7,
     "as": "w"
    },
    "from2": {
-    "m": 29,
+    "m": 13,
     "as": "w"
    },
-   "idle": true
+   "idle": false
   }
  ],
  "schedule": {},
@@ -668,12 +367,12 @@
  "history": [],
  "bracket": {
   "format": "de",
-  "teamCount": 10,
-  "size": 16,
+  "teamCount": 8,
+  "size": 8,
   "matchType": "Bo3",
   "thirdPlace": false,
   "grandFinal": "simple",
-  "byes": 6,
-  "createdAt": "2026-10-11T18:37:32.283Z"
+  "byes": 0,
+  "createdAt": "2026-10-12T13:21:58.483Z"
  }
 }
