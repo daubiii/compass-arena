@@ -519,16 +519,14 @@ body[data-phase="live"] .head-live { display: inline-flex; }
 .b-expand:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 
 /* ==========================================================
-   Просмотр сетки: отдельное окно во весь экран.
-   Внутри — полотно, которое свободно листается вбок и вниз:
-   ползунки живут на одном контейнере, поэтому они всегда рядом
-   и не надо сначала прокрутить вниз, чтобы дотянуться до
-   горизонтального ползунка.
+   Просмотр сетки: окно во весь экран.
+   Полотно листается перетаскиванием, колесом и жестами, масштабируется
+   кнопками, Ctrl + колесо и щипком. Всё считает ca-bracket-viewer.js,
+   здесь — только внешний вид.
    ========================================================== */
 .bview {
-  position: fixed; inset: 0; z-index: 90;
-  background: rgba(3, 4, 7, .96);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  position: fixed; inset: 0; z-index: 120;
+  background: rgba(3, 4, 7, .98);
   animation: bview-in .22s var(--ease);
 }
 .bview[hidden] { display: none; }
@@ -536,103 +534,125 @@ body[data-phase="live"] .head-live { display: inline-flex; }
 body.bview-open { overflow: hidden; }
 
 .bview-panel {
-  position: absolute; inset: 14px;
+  position: absolute; inset: 0;
   display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
-  border: 1px solid var(--line-2); border-radius: var(--r-lg, 20px);
-  background: linear-gradient(180deg, var(--card-2), var(--bg));
-  box-shadow: 0 40px 120px -40px rgba(0, 0, 0, .9);
+  background: linear-gradient(180deg, var(--card-2), var(--bg) 220px);
   overflow: hidden;
 }
 .bview-bar {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-  padding: 12px 16px; border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(201, 163, 90, .06), transparent);
+  display: flex; align-items: center; gap: 12px 22px; flex-wrap: wrap;
+  padding: 10px 16px; border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(201, 163, 90, .07), transparent);
 }
-.bview-title { display: flex; align-items: center; gap: 10px; font-size: 15px; }
-.bview-title .ic { font-size: 18px; color: var(--gold); }
-.bview-title b { font-weight: 500; letter-spacing: .01em; }
+.bview-title { display: flex; align-items: center; gap: 10px; font-size: 15px; min-width: 0; }
+.bview-title .ic { font-size: 18px; color: var(--gold); flex: none; }
+.bview-title b { font-weight: 500; letter-spacing: .01em; white-space: nowrap; }
 .bview-title span { color: var(--text-3); font-size: 13px; }
-.bview-actions { display: flex; align-items: center; gap: 14px; }
-.bview-hint { color: var(--text-3); font-size: 12.5px; }
-.bview-actions .btn .ic { font-size: 14px; margin-right: 6px; }
+.bview-tools { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.bv-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  height: 34px; min-width: 34px; padding: 0 12px; border-radius: 10px;
+  border: 1px solid var(--line-2); background: rgba(255, 255, 255, .03);
+  color: var(--text); font: 500 13px/1 var(--ui); cursor: pointer;
+  transition: border-color .2s, color .2s, background .2s;
+}
+.bv-btn:hover { border-color: var(--gold); color: var(--gold-hi); background: rgba(201, 163, 90, .08); }
+.bv-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.bv-btn[hidden] { display: none; }
+.bv-btn .ic { font-size: 14px; }
+.bv-ico { font-size: 18px; line-height: 1; font-weight: 400; }
+.bv-zoom { min-width: 66px; font-variant-numeric: tabular-nums; color: var(--text-2); }
+.bv-sep { width: 1px; height: 20px; background: var(--line-2); margin: 0 6px; }
+.bv-close { border-color: rgba(201, 163, 90, .4); color: var(--gold-hi); }
 
-/* Полотно: оба скролла на одном элементе — ползунки всегда под рукой */
+/* Полотно: окно, в котором двигается сама сетка */
 .bview-canvas {
-  overflow: auto; overscroll-behavior: contain;
-  padding: 26px 22px 30px;
-  scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
+  position: relative; overflow: hidden; outline: none;
+  cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
   background:
-    radial-gradient(120% 80% at 50% 0%, rgba(201, 163, 90, .05), transparent 70%),
+    radial-gradient(120% 80% at 50% 0%, rgba(201, 163, 90, .06), transparent 70%),
     var(--bg);
 }
-.bview-canvas::-webkit-scrollbar { width: 10px; height: 10px; }
-.bview-canvas::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 6px; }
-.bview-canvas::-webkit-scrollbar-thumb:hover { background: var(--line-3); }
-.bview-canvas::-webkit-scrollbar-track { background: transparent; }
-.bview-inner { display: inline-block; min-width: 100%; }
-.bview .bracket { min-width: 0; }
+.bview-canvas.is-dragging { cursor: grabbing; }
+.bview-canvas:focus-visible { box-shadow: inset 0 0 0 2px rgba(201, 163, 90, .5); }
+.bview-inner { position: absolute; left: 0; top: 0; }
+.bview .bracket { will-change: transform; }
+.bview .bracket.is-anim { transition: transform .32s var(--ease); }
+.bview-canvas.is-dragging .slot, .bview-canvas.is-dragging .match { pointer-events: none; }
 .bview-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px 24px; flex-wrap: wrap;
   border-top: 1px solid var(--line); padding: 10px 16px;
   font-size: 12.5px; color: var(--text-3);
 }
 .bview-foot .b-legend { margin-top: 0; }
-.bview-foot .b-legend .tz { margin-left: auto; }
+.bview-foot .b-legend .tz { margin-left: 24px; }
+.bview-hint { color: var(--text-3); font-size: 12.5px; }
 
 .bracket-scroll {
-  overflow-x: auto; overflow-y: hidden; padding: 4px 2px 20px;
+  overflow-x: auto; overflow-y: hidden; padding: 22px 22px 20px;
   scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
 }
 .bracket-scroll::-webkit-scrollbar { height: 6px; }
 .bracket-scroll::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
 .bracket-scroll::-webkit-scrollbar-track { background: transparent; }
 
+/* Полотно сетки: готовые координаты (left/top/width/height) задаёт ca-bracket.js.
+   Масштаб — transform: scale(--s), сдвиг в окне просмотра — --tx/--ty. */
+.b-stage { position: relative; }
 .bracket {
-  --card-h: 116px;
-  /* Высота одного «ряда» сетки. Карточка занимает минимум два ряда, поэтому
-     --b-unit считает ca-bracket.js: он знает и высоту карточки, и число рядов. */
-  --u: var(--b-unit, 58px);
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(var(--b-cols, 3), minmax(232px, 1fr));
-  grid-template-rows: auto repeat(var(--b-rows, 8), var(--u));
-  grid-auto-rows: var(--u);
-  column-gap: clamp(36px, 4.5vw, 76px);
-  row-gap: 0;
-  min-width: calc(var(--b-cols, 3) * 264px);
-  align-items: center;
+  position: absolute; left: 0; top: 0;
+  transform-origin: 0 0;
+  transform: translate(var(--tx, 0px), var(--ty, 0px)) scale(var(--s, 1));
 }
-.b-col-gap { align-self: stretch; }
-.b-col { display: contents; }
-.b-col-head {
-  z-index: 4;
-  grid-row: 1; align-self: start;
-  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
-  padding: 8px 2px; margin-bottom: 10px;
-  border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, var(--bg) 68%, rgba(8, 9, 12, 0));
-  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
-  font-size: 12.5px; color: var(--text-3); letter-spacing: .02em;
+
+/* Название секции: «ВЕРХНЯЯ СЕТКА» — золотая линия — подписи колонок над ней */
+.b-sec {
+  position: absolute; left: 0; height: 46px;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
 }
-.b-col-head b { font-weight: 500; color: var(--text-2); }
-.b-col-head .ic { font-size: 14px; }
+.b-sec-title {
+  margin: 0; display: flex; align-items: center; gap: 16px;
+  font: 300 28px/1 var(--display); letter-spacing: .07em; text-transform: uppercase;
+  color: var(--text);
+}
+.b-sec-title::before {
+  content: ''; flex: none; width: 9px; height: 9px; transform: rotate(45deg);
+  background: var(--gold); box-shadow: 0 0 18px rgba(201, 163, 90, .75);
+}
+.b-sec-meta { font: 400 12.5px/1 var(--ui); letter-spacing: .04em; color: var(--text-3); padding-bottom: 5px; white-space: nowrap; }
+.b-rule {
+  position: absolute; left: 0; height: 1px;
+  background: linear-gradient(90deg, var(--gold) 0%, rgba(201, 163, 90, .5) 38%, rgba(201, 163, 90, .1) 100%);
+  box-shadow: 0 0 14px rgba(201, 163, 90, .22);
+}
+.b-col-head { position: absolute; height: 20px; display: flex; align-items: flex-end; }
+.b-col-head b {
+  font: 500 11.5px/1 var(--ui); letter-spacing: .17em; text-transform: uppercase;
+  color: var(--text-2); white-space: nowrap;
+}
+.b-col-head.is-final b { color: var(--gold-hi); }
+.b-col-head.is-grand { border-bottom: 1px solid rgba(201, 163, 90, .35); padding-bottom: 7px; height: 27px; }
+
+/* Линии: только «победитель идёт дальше». Сыгранные — золотом, ждущие — точками. */
 .b-lines {
   position: absolute; left: 0; top: 0; pointer-events: none; z-index: 0;
   overflow: visible;
 }
-.b-lines path { fill: none; stroke: rgba(255, 255, 255, .16); stroke-width: 1; }
-.b-lines path.on { stroke: var(--gold); stroke-opacity: .8; }
-.b-lines path.is-loser { stroke-dasharray: 4 4; stroke-opacity: .55; }
-.b-lines path.live { stroke: var(--blood); stroke-opacity: .9; }
+.b-lines path {
+  fill: none; stroke: rgba(255, 255, 255, .22); stroke-width: 1; stroke-dasharray: 3 4;
+  transition: stroke .2s;
+}
+.b-lines path.on { stroke: var(--gold); stroke-opacity: .85; stroke-dasharray: none; }
+.b-lines path.live { stroke: var(--blood); stroke-opacity: .9; stroke-dasharray: none; }
+.b-lines path.hl { stroke: var(--gold-hi); stroke-opacity: 1; stroke-dasharray: none; stroke-width: 1.5; }
 
 .match {
-  grid-column: var(--col, 1);
-  grid-row: var(--row, 1 / span 2);
-  align-self: center;
+  /* left/top/width/height — инлайном из ca-bracket.js */
+  position: absolute; z-index: 1; box-sizing: border-box;
   display: grid; grid-template-rows: auto auto auto;
-  min-height: var(--card-h);
   border: 1px solid var(--line); border-radius: var(--r-md);
   background: linear-gradient(180deg, var(--card-2), var(--card));
-  overflow: hidden; position: relative;
+  overflow: hidden;
   transition: border-color .3s, box-shadow .5s, transform .3s var(--ease);
 }
 .match:hover { transform: translateY(-2px); }
@@ -662,6 +682,11 @@ body.bview-open { overflow: hidden; }
 .match.is-idle .match-head { color: var(--text-3); }
 .match.is-champion { border-color: var(--gold); box-shadow: 0 0 70px -18px rgba(201, 163, 90, .6); }
 .match.is-next { border-color: var(--line-3); }
+/* Наведение: куда пойдёт победитель (сплошная рамка) и куда упадёт проигравший (пунктир) */
+.match.is-hl { border-color: rgba(201, 163, 90, .7); z-index: 3; }
+.match.is-hl-win { outline: 1px solid var(--gold); outline-offset: 3px; z-index: 2; }
+.match.is-hl-lose { outline: 1px dashed var(--gold); outline-offset: 3px; z-index: 2; }
+.match.is-hl-src { border-color: var(--line-3); }
 .match.is-next::after {
   content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
   background: linear-gradient(105deg, transparent 35%, rgba(236, 214, 163, .12) 50%, transparent 65%);
@@ -703,6 +728,7 @@ body.bview-open { overflow: hidden; }
 .slot.is-loser .slot-name, .slot.is-loser .slot-seed, .slot.is-loser .slot-score { color: var(--text-3); }
 .slot.is-tbd .slot-name { color: var(--text-3); font-weight: 400; }
 .slot.is-tbd { cursor: default; }
+.slot.is-note { grid-template-columns: 1fr; }
 .slot .vod { color: var(--text-3); display: inline-flex; }
 .slot .vod:hover { color: var(--gold-hi); }
 .match-foot {
@@ -1048,23 +1074,26 @@ body.bview-open { overflow: hidden; }
 
   /* Сетка на телефоне — вертикальная лента вместо горизонтального скролла:
      ограничитель по высоте и кнопка разворота тут не нужны */
-  .bracket-scroll { overflow: visible; padding: 0; }
+  .bracket-scroll { overflow: visible; padding: 0; max-height: none !important; }
   .bracket-wrap { --b-cap: none; border-color: transparent; cursor: auto; }
   .bracket-wrap.is-compact { border-color: transparent; cursor: auto; }
   .bracket-wrap.is-compact:hover { border-color: transparent; box-shadow: none; }
   .bracket-wrap .b-fade, .bracket-wrap .b-expand { display: none !important; }
+  .b-stage { width: auto !important; height: auto !important; }
   .bracket {
+    position: static !important; transform: none !important;
+    width: auto !important; height: auto !important;
     display: flex; flex-direction: column; gap: 12px;
-    min-width: 0;
-    --card-h: auto;
   }
-  .bracket .b-lines { display: none; }
-  .b-col-head { position: static; margin: 26px 0 12px; backdrop-filter: none; -webkit-backdrop-filter: none; background: none; }
-  .bracket .b-col-head:first-child { margin-top: 0; }
-  .bracket .match { margin-bottom: 12px; }
+  .bracket > * { position: static !important; width: auto !important; height: auto !important; }
+  .bracket .b-lines, .bracket .b-rule { display: none !important; }
+  .b-sec { display: flex; margin: 30px 0 4px; }
+  .bracket > .b-sec:first-child { margin-top: 0; }
+  .b-sec-title { font-size: 19px; letter-spacing: .06em; }
+  .b-sec-title::before { width: 7px; height: 7px; }
+  .b-col-head, .b-col-head.is-grand { margin: 14px 0 0; height: auto; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  .b-col-head.is-grand { border-bottom-color: rgba(201, 163, 90, .35); }
   .match {
-    position: static;
-    grid-area: auto !important;
     min-height: 0; transform: none !important;
     animation: none !important;
   }
@@ -1115,7 +1144,7 @@ body.bview-open { overflow: hidden; }
   .hero, body[data-phase] .hero { min-height: 0; padding: 24px 0 8px; }
   .sec { padding: 24px 0; }
   .arena::before { display: none; }
-  .bracket { min-width: 0; grid-template-columns: repeat(3, 1fr); column-gap: 20px; }
+  .bracket-scroll { max-height: none !important; overflow: visible; }
   .b-lines path { stroke: #b4b4b4; }
   .b-lines path.on { stroke: #7d5f21; }
   .match, .panel, .plate, .season-card, .team-card { break-inside: avoid; box-shadow: none !important; }

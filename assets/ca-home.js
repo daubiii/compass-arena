@@ -285,7 +285,8 @@
     var root = document.getElementById('bracketWrap');
     if (!root) return;
     bracketHead(d);
-    CA.bracket.render(root, { data: d });
+    /* onFit: при смене ширины окна масштаб превью меняется — пересчитываем и обрезку */
+    CA.bracket.render(root, { data: d, onFit: function () { syncBracketHeight(D.get()); } });
     syncBracketHeight(d);
     var legend = document.getElementById('bLegend');
     if (legend) {
@@ -297,41 +298,23 @@
     }
   }
 
-  /* Компактная сетка: сверху видно начало плей-офф, остальное — по кнопке.
-
-     Ограничитель считаем в пикселях, а не в vh: сетка — это грид из рядов
-     фиксированной высоты, и нам важно показать целое число раундов, а не
-     «сколько влезет в окно». Берём два первых раунда (включая старт нижней
-     сетки) и обрезаем сразу под ними — так у любого размера видно ровно
-     начало турнира, а внизу остаётся место расписанию и остальным блокам. */
+  /* Компактная сетка: сверху видно верхнюю сетку целиком (у одиночной — всю),
+     ниже затемнение и кнопка «Развернуть». Превью вписано по ширине страницы,
+     поэтому высоту считаем с учётом масштаба — в пикселях, а не в vh: так
+     обрезка всегда падает под нижним краем верхней сетки, а не посреди карточки. */
   function bracketCapHeight(d) {
-    var MAX = 560;                  /* предел: выше расписание уезжает с экрана */
-    var PAD = 26;                   /* нижний отступ самого .bracket-scroll */
+    var MAX = 700;                  /* предел: выше расписание уезжает с экрана */
+    var PAD = 30;                   /* нижний отступ самого .bracket-scroll */
     var matches = (d && d.matches) || [];
     var engine = global.CA && CA.bracket;
     if (!matches.length || !engine || !engine.layout) return MAX;
 
-    var first = null;
-    matches.forEach(function (m) {
-      if (m.bracket === 'grand' || m.bracket === 'third') return;
-      if (first === null || m.round < first) first = m.round;
-    });
-    if (first === null) return MAX;
-    var keep = [first, first + 1];
-
-    /* Позиции берём у того же раскладчика, что рисует сетку, — расхождений не будет */
     var lay = engine.layout(matches);
-    var unit = lay.unit || 67;
-    var bottom = 0;
-    matches.forEach(function (m) {
-      var item = lay.items[m.id];
-      if (!item) return;
-      if (keep.indexOf(m.round) < 0) return;
-      bottom = Math.max(bottom, (item.row + item.span) * unit);
-    });
-    if (!bottom) return MAX;
-
-    return Math.min(MAX, Math.round(bottom + PAD));
+    if (!lay.height) return MAX;
+    var root = document.getElementById('bracketWrap');
+    var scale = (root && root._caScale) || 1;
+    var visible = lay.de ? lay.upperBottom + 70 : lay.height;
+    return Math.min(MAX, Math.max(240, Math.round(visible * scale + PAD)));
   }
 
   /** Показываем кнопку «Развернуть», если сетка не влезла в ограничитель */
@@ -348,7 +331,7 @@
     /* В jsdom геометрии нет (все высоты нулевые) — считаем, что сетка не влезла,
        и оставляем кнопку доступной: так её видно в проверках и в «тонком» браузере. */
     var natural = wrap.getBoundingClientRect().height;
-    var tooTall = !natural || natural > cap;
+    var tooTall = !natural || natural + 30 > cap + 1;
     box.setAttribute('data-bracket-overflow', tooTall ? '1' : '0');
     if (!tooTall) box.classList.remove('is-compact');
 
@@ -360,6 +343,21 @@
 
   var bracketViewerOpen = false;
   var bracketViewerReturn = null;
+  var bracketViewerCtl = null;
+
+  /** Контроллер перетаскивания и масштаба (ca-bracket-viewer.js), создаётся один раз */
+  function viewerCtl() {
+    if (bracketViewerCtl || !CA.bracketViewer) return bracketViewerCtl;
+    var canvas = document.getElementById('bracketViewerCanvas');
+    if (!canvas) return null;
+    bracketViewerCtl = CA.bracketViewer.create(canvas, {
+      onChange: function (scale) {
+        var pct = Math.round(scale * 100) + '%';
+        Array.prototype.forEach.call(document.querySelectorAll('[data-bv-zoom]'), function (el) { el.textContent = pct; });
+      }
+    });
+    return bracketViewerCtl;
+  }
 
   function openBracketViewer() {
     var viewer = document.getElementById('bracketViewer');
@@ -370,15 +368,12 @@
     bracketViewerOpen = true;
     viewer.hidden = false;
     document.body.classList.add('bview-open');
+    var ctl = viewerCtl();
+    if (ctl) ctl.reset();
     renderBracketViewer(D.get());
 
-    /* Ставим полотно в начало и пересчитываем линии после показа */
-    if (canvas) canvas.scrollTop = 0, canvas.scrollLeft = 0;
     global.requestAnimationFrame(function () {
-      var target = document.getElementById('bracketViewerBracket');
-      if (target && CA.bracket) CA.bracket.drawLines(target.parentNode);
-      var close = document.getElementById('bracketViewerClose');
-      if (close) close.focus();
+      if (canvas && canvas.focus) canvas.focus({ preventScroll: true });
     });
   }
 
@@ -398,7 +393,8 @@
     var host = document.getElementById('bracketViewerBracket');
     if (!viewer || viewer.hidden || !host) return;
 
-    CA.bracket.render(host, { data: d });
+    /* fit: false — в окне полотно не вписывается само, им управляет просмотрщик */
+    CA.bracket.render(host, { data: d, fit: false });
 
     var info = bracketInfo(d);
     var sub = document.getElementById('bracketViewerSub');
@@ -411,14 +407,19 @@
 
     var legend = document.getElementById('bracketViewerLegend');
     var source = document.getElementById('bLegend');
-    if (legend) legend.innerHTML = source ? source.innerHTML : '';
+    if (legend) {
+      var legendHtml = source ? source.innerHTML : '';
+      legend.innerHTML = '<div class="b-legend">' + legendHtml + '</div>' +
+        '<span class="bview-hint">Тяните мышью · колесо — прокрутка · Ctrl + колесо — масштаб</span>';
+    }
 
-    global.requestAnimationFrame(function () {
-      if (CA.bracket) CA.bracket.drawLines(host.parentNode);
-    });
+    var ctl = viewerCtl();
+    if (ctl) ctl.sync();
+    var focusBtn = document.querySelector('[data-bv="focus"]');
+    if (focusBtn) focusBtn.hidden = !host.querySelector('.match.is-live, .match.is-next');
   }
 
-  /** Открытие/закрытие окна: кнопка, клик по превью, Esc, клик по фону */
+  /** Открытие/закрытие окна: кнопка, клик по превью, Esc; кнопки масштаба */
   function initBracketExpand() {
     var box = document.getElementById('bracketWrapBox');
     var button = document.getElementById('bracketExpand');
@@ -433,35 +434,46 @@
         openBracketViewer();
       });
     }
-    /* Клик по самой сетке — тоже разворот, чтобы «тыкнуть» было проще */
-    box.addEventListener('click', function () {
+    /* Клик по самой сетке — тоже разворот, чтобы «тыкнуть» было проще.
+       Клик по команде при этом открывает её состав, а не окно. */
+    box.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('[data-team], a')) return;
       if (box.classList.contains('is-compact')) openBracketViewer();
     });
 
     if (close) close.addEventListener('click', closeBracketViewer);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && bracketViewerOpen) {
+        /* Диалог команды (если открыт поверх окна) закрывается своим Esc */
+        var dlg = document.getElementById('teamDialog');
+        if (e.defaultPrevented || (dlg && dlg.classList.contains('active'))) return;
+        closeBracketViewer();
+      }
+    });
+
+    /* Кнопки масштаба */
     if (viewer) {
-      /* Клик по тёмному фону вокруг панели закрывает окно */
       viewer.addEventListener('click', function (e) {
-        if (e.target === viewer) closeBracketViewer();
+        var btn = e.target.closest ? e.target.closest('[data-bv]') : null;
+        if (!btn) return;
+        var ctl = viewerCtl();
+        if (!ctl) return;
+        var act = btn.getAttribute('data-bv');
+        if (act === 'in') ctl.zoomIn();
+        else if (act === 'out') ctl.zoomOut();
+        else if (act === 'reset') ctl.actual();
+        else if (act === 'width') ctl.fit('width', true);
+        else if (act === 'all') ctl.fit('all', true);
+        else if (act === 'focus') {
+          var host = document.getElementById('bracketViewerBracket');
+          var target = host && host.querySelector('.match.is-live, .match.is-next');
+          if (target) ctl.focus(target);
+        }
       });
     }
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && bracketViewerOpen) closeBracketViewer();
-    });
-    /* Shift + колесо — привычный горизонтальный скролл вбок */
-    var canvas = document.getElementById('bracketViewerCanvas');
-    if (canvas) {
-      canvas.addEventListener('wheel', function (e) {
-        if (!e.shiftKey) return;
-        canvas.scrollLeft += (e.deltaY || e.deltaX);
-        e.preventDefault();
-      }, { passive: false });
-    }
+
     global.addEventListener('resize', function () {
-      if (bracketViewerOpen) {
-        var host = document.getElementById('bracketViewerBracket');
-        if (host && CA.bracket) CA.bracket.drawLines(host.parentNode);
-      }
+      if (bracketViewerOpen && bracketViewerCtl) bracketViewerCtl.resize();
     });
   }
 

@@ -154,7 +154,10 @@ console.log('\nB. Double elimination, 6 команд (два BYE)');
 
   const heads = Array.from(wrap.querySelectorAll('.b-col-head b')).map((b) => b.textContent);
   ok(heads.some((h) => /нижней/.test(h)), 'есть колонки нижней сетки', JSON.stringify(heads));
-  ok(heads[0] === 'Четвертьфинал верхней' || /верхней/.test(heads[0]), 'первая колонка — верхняя сетка', heads[0]);
+  ok(heads[0] === 'Раунд 1', 'первая колонка — раунд 1 верхней сетки', heads[0]);
+  ok(heads.indexOf('Финал верхней сетки') >= 0 && heads.indexOf('Финал нижней сетки') >= 0, 'есть финалы верхней и нижней сетки', heads.join(' | '));
+  const secs = Array.from(wrap.querySelectorAll('.b-sec-title')).map((h) => h.textContent);
+  ok(secs.join('|') === 'Верхняя сетка|Нижняя сетка', 'названия секций', secs.join('|'));
   ok(heads[heads.length - 1] === 'Гранд-финал', 'последняя колонка — гранд-финал', heads.join(' | '));
   ok(wrap.querySelectorAll('.match.is-lower').length === 6, 'карточки нижней сетки помечены',
     wrap.querySelectorAll('.match.is-lower').length);
@@ -202,27 +205,30 @@ console.log('\nD. 16 команд, DE');
 
   ok(D.matches.length === 31, 'DE на 16 команд с гранд-финалом «до двух поражений»: 31 матч', D.matches.length);
   const cols = Number(wrap.querySelector('.bracket').getAttribute('data-cols'));
-  ok(cols >= 8, 'колонок не меньше восьми (верхняя + нижняя + финалы)', cols);
+  ok(cols === 7, 'семь колонок: 6 раундов нижней + гранд-финал', cols);
   ok(wrap.querySelectorAll('.match').length === 31, 'все матчи отрисованы', wrap.querySelectorAll('.match').length);
-  ok(wrap.querySelectorAll('.b-col-head').length === cols, 'у каждой колонки есть заголовок');
+  ok(wrap.querySelectorAll('.b-col-head').length === 4 + 6 + 2, 'подписи: 4 у верхней, 6 у нижней, гранд-финал и сброс',
+    wrap.querySelectorAll('.b-col-head').length);
 
-  /* Карточки не накладываются и у всех есть место в сетке */
-  const placed = Array.from(wrap.querySelectorAll('.match')).map((el) => {
-    const style = el.getAttribute('style') || '';
-    const col = /grid-column:([^;]+)/.exec(style);
-    const row = /grid-row:([^;]+)/.exec(style);
-    return { id: el.getAttribute('data-match'), col: col && col[1], row: row && row[1] };
-  });
-  const bad = placed.filter((p) => !p.col || !p.row);
-  ok(bad.length === 0, 'у всех карточек заданы колонка и ряд', JSON.stringify(bad.slice(0, 3)));
-  const seen = {};
+  /* Карточки не накладываются, финалы стоят друг над другом, гранд-финал — между ними */
+  const lay = w.CA.bracket.layout(D.matches);
+  const its = Object.values(lay.items);
   let overlap = null;
-  placed.forEach((p) => {
-    const key = p.col + '|' + p.row;
-    if (seen[key]) overlap = key;
-    seen[key] = true;
-  });
-  ok(!overlap, 'две карточки не стоят в одной позиции', overlap);
+  its.forEach((a, i) => its.slice(i + 1).forEach((b) => {
+    if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) overlap = a.id + '×' + b.id;
+  }));
+  ok(!overlap, 'карточки не накладываются', overlap);
+  const up = D.matches.filter((m) => m.bracket === 'upper');
+  const lo = D.matches.filter((m) => m.bracket === 'lower');
+  const upF = lay.items[up[up.length - 1].id];
+  const loF = lay.items[lo[lo.length - 1].id];
+  const gr = lay.items[D.matches.filter((m) => m.bracket === 'grand' && !m.resetFor)[0].id];
+  ok(upF.x === loF.x, 'финал верхней стоит над финалом нижней', upF.x + ' / ' + loF.x);
+  ok(loF.cy > upF.cy && Math.abs(gr.cy - (upF.cy + loF.cy) / 2) < 2, 'гранд-финал по центру между финалами');
+  ok(gr.x > upF.x, 'гранд-финал правее финалов');
+  /* Линии: только победители, у цели не больше двух источников */
+  const paths = wrap.querySelectorAll('.b-lines path').length;
+  ok(paths > 0 && !wrap.querySelector('.b-lines .is-loser'), 'линии построены, линий проигравших нет', paths);
 }
 
 /* ============ E. Старая сетка (6 команд, M1–M5) ============ */
@@ -286,7 +292,7 @@ console.log('\nF. Компактная сетка и окно просмотра
   const w = dom.window;
   /* Скрытое окно: в разметке страницы это атрибут hidden */
   w.document.getElementById('bracketViewer').setAttribute('hidden', '');
-  for (const f of ['assets/ca-ui.js', 'assets/ca-bracket-engine.js', 'assets/ca-data.js', 'assets/ca-views.js', 'assets/ca-bracket.js', 'assets/ca-home.js']) {
+  for (const f of ['assets/ca-ui.js', 'assets/ca-bracket-engine.js', 'assets/ca-data.js', 'assets/ca-views.js', 'assets/ca-bracket.js', 'assets/ca-bracket-viewer.js', 'assets/ca-home.js']) {
     w.eval(read(f));
   }
   await sleep(80);
@@ -304,7 +310,7 @@ console.log('\nF. Компактная сетка и окно просмотра
   ok(!!box && !!button && !!viewer, 'есть превью, кнопка и окно просмотра');
 
   const cap = Number(box.getAttribute('data-cap'));
-  ok(cap > 0 && cap <= 560, 'ограничитель по высоте посчитан', cap);
+  ok(cap > 0 && cap <= 700, 'ограничитель по высоте посчитан', cap);
   ok(box.classList.contains('is-compact'), 'в превью сетка компактная');
   ok(viewer.hidden === true, 'окно просмотра по умолчанию закрыто');
   ok(/Развернуть/.test(button.textContent), 'на кнопке написано «Развернуть»', button.textContent.trim());
@@ -324,12 +330,6 @@ console.log('\nF. Компактная сетка и окно просмотра
   w.document.getElementById('bracketViewerClose').dispatchEvent(new w.Event('click', { bubbles: true }));
   await sleep(40);
   ok(viewer.hidden === true, 'кнопка «Свернуть» закрывает окно');
-
-  button.dispatchEvent(new w.Event('click', { bubbles: true }));
-  await sleep(60);
-  viewer.dispatchEvent(new w.Event('click', { bubbles: true }));
-  await sleep(40);
-  ok(viewer.hidden === true, 'клик по фону закрывает окно');
 
   button.dispatchEvent(new w.Event('click', { bubbles: true }));
   await sleep(60);

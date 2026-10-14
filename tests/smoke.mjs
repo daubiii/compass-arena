@@ -31,7 +31,7 @@ function makeDom(file, fixture, scripts) {
   return dom;
 }
 
-const HOME = ['ca-data.js', 'ca-ui.js', 'ca-views.js', 'ca-bracket.js', 'ca-home.js'];
+const HOME = ['ca-data.js', 'ca-ui.js', 'ca-views.js', 'ca-bracket.js', 'ca-bracket-viewer.js', 'ca-home.js'];
 const SCHED = ['ca-data.js', 'ca-ui.js', 'ca-views.js', 'ca-schedule.js'];
 const HIST = ['ca-data.js', 'ca-ui.js', 'ca-views.js', 'ca-history.js'];
 
@@ -45,7 +45,7 @@ console.log('\nindex.html — состояние pre');
   ok(!!d.querySelector('#heroStatus .cd'), 'отсчёт отрисован');
   ok(d.querySelector('#cdDays') && d.querySelector('#cdDays').textContent !== '--', 'дни заполнены');
   ok(d.querySelectorAll('#bracketWrap .match').length === 5, 'пять карточек в сетке');
-  ok((d.querySelector('#bracketWrap .match').getAttribute('style') || '').includes('grid-column'), 'карточка расставлена по колонкам сетки');
+  ok((d.querySelector('#bracketWrap .match').getAttribute('style') || '').includes('left:'), 'карточка расставлена по координатам полотна');
   ok(!!d.querySelector('#bracketWrap .bracket'), 'сетка собрана в контейнер .bracket');
   ok(d.querySelectorAll('#teamsGrid .team-card').length === 6, 'шесть карточек команд');
   ok(!d.querySelector('#schedulePreviewList').textContent.includes('Загрузка'), 'превью расписания отрисовано');

@@ -265,17 +265,57 @@
       return m.winner;
     }
 
+    /* Состояние матчей, у которых «нет исхода»:
+         void — играть некому (оба источника мертвы), победителя и проигравшего не будет;
+         pass — один источник мёртв, команда другого слота проходит без игры (проигравшего нет).
+       Мёртвый источник — пустой матч (void) или проигравший матча-прохода (pass). */
+    var status = {};
+    function srcDead(src) {
+      var st = src && status[src.m];
+      if (!st) return false;
+      if (st.void) return true;
+      return src.as === 'l' && st.pass;
+    }
+
     order.forEach(function (m) {
-      if (m.from1) m.team1 = fromSource(m.from1);
-      if (m.from2) m.team2 = fromSource(m.from2);
-      /* BYE: соперника нет и не будет — команда проходит без игры */
+      var st = { void: false, pass: false };
+      m.dead1 = false; m.dead2 = false;
+
       if (!m.from1 && !m.from2) {
-        if (m.team1 && !m.team2) { m.winner = m.team1; m.bye = true; }
-        else if (m.team2 && !m.team1) { m.winner = m.team2; m.bye = true; }
-        else if (m.winner && !m.team1 && !m.team2) { m.winner = null; m.score1 = null; m.score2 = null; }
+        /* Первый раунд: команды расставлены по посеву */
+        if (m.team1 && !m.team2) { m.winner = m.team1; m.bye = true; st.pass = true; }
+        else if (m.team2 && !m.team1) { m.winner = m.team2; m.bye = true; st.pass = true; }
+        else if (!m.team1 && !m.team2) {
+          if (m.winner) { m.winner = null; m.score1 = null; m.score2 = null; }
+          if (m.idle) st.void = true;
+        }
       } else if (m.idle) {
-        m.winner = null;
+        m.winner = null; st.void = true;
+      } else if (m.resetFor && by[m.resetFor] && by[m.resetFor].winner &&
+                 by[m.resetFor].winner === by[m.resetFor].team1) {
+        /* Матч сброса: первый гранд-финал выиграл выходец верхней сетки — играть нечего */
+        m.team1 = null; m.team2 = null; m.winner = null; m.score1 = null; m.score2 = null;
+        m.bye = false; m.idle = true; m.dead1 = true; m.dead2 = true;
+        st.void = true;
+      } else {
+        var d1 = m.from1 ? srcDead(m.from1) : true;
+        var d2 = m.from2 ? srcDead(m.from2) : true;
+        m.team1 = (m.from1 && !d1) ? fromSource(m.from1) : null;
+        m.team2 = (m.from2 && !d2) ? fromSource(m.from2) : null;
+        m.dead1 = d1; m.dead2 = d2;
+        if (d1 && d2) {
+          m.winner = null; m.score1 = null; m.score2 = null; m.bye = false; m.idle = true;
+          st.void = true;
+        } else if (d1 || d2) {
+          /* Соперника не будет: команда пройдёт, как только появится */
+          var only = d1 ? m.team2 : m.team1;
+          m.bye = true; st.pass = true;
+          m.winner = only || null;
+        } else if (m.bye) {
+          m.bye = false;
+        }
       }
+      status[m.id] = st;
     });
   }
 
@@ -303,7 +343,12 @@
     var grand = null;
     if (D.bracket && D.bracket.format) {
       var finals = D.matches.filter(function (m) { return m.bracket === 'grand'; });
-      grand = finals.filter(function (m) { return m.resetFor && m.winner; })[0]
+      /* Если первый финал взял выходец нижней сетки, главным становится матч сброса */
+      var resetNeeded = finals.filter(function (m) {
+        var gf = m.resetFor && D.byId[m.resetFor];
+        return gf && gf.winner && gf.winner === gf.team2 && !m.idle;
+      })[0];
+      grand = resetNeeded
         || finals.filter(function (m) { return m.winner; })[0]
         || finals[0]
         || null;
@@ -483,6 +528,7 @@
     if (src) hint = (src.as === 'l' ? 'Проигравший M' : 'Победитель M') + src.m;
     else if (m.idle) hint = 'Не играется';
     else if (!src && m.id > 5) hint = 'Проходит без игры';
+    if (m['dead' + slot]) hint = 'Без соперника';
     /* Заглушка («Слот 3») — это не участник: показываем подсказку, откуда придёт команда */
     if (!isRealTeam(t)) return { text: hint, team: null, known: false };
     return { text: t.name, team: t, known: true };

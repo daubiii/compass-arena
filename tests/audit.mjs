@@ -33,7 +33,7 @@ const DYNAMIC = new Set([
 ]);
 
 const PAGES = {
-  'index.html': ['assets/ca-home.js', 'assets/ca-ui.js', 'assets/ca-bracket.js', 'assets/ca-views.js'],
+  'index.html': ['assets/ca-home.js', 'assets/ca-ui.js', 'assets/ca-bracket.js', 'assets/ca-bracket-viewer.js', 'assets/ca-views.js'],
   'schedule.html': ['assets/ca-schedule.js', 'assets/ca-ui.js', 'assets/ca-views.js'],
   'history.html': ['assets/ca-history.js', 'assets/ca-ui.js', 'assets/ca-views.js'],
   'rules.html': ['assets/ca-rules.js', 'assets/ca-ui.js'],

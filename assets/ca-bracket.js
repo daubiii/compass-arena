@@ -1,14 +1,21 @@
 /* ==========================================================
    Compass Arena — компонент турнирной сетки
    ----------------------------------------------------------
-   Работает с любой сеткой: 4…16 команд, SE и DE. Раскладка
-   считается из данных (раунды и источники слотов), а не из
-   жёсткой карты M1–M5:
-     • колонка — раунд (сначала верхняя сетка, потом нижняя, в конце финалы);
-     • внутри колонки карточки разнесены по вертикали так, чтобы
-       получатели стояли ровно между своими источниками;
-     • линии связей рисует SVG по реальным координатам карточек.
-   Старая сетка (6 команд, M1–M5) рисуется той же логикой.
+   Раскладка как на The International. Всё считается в пикселях
+   по данным матчей (раунды и источники слотов), поэтому подходит
+   любой сетке: 4…16 команд, SE и DE, старая сетка M1–M5.
+
+     • «Верхняя сетка» — полосой сверху, раунды слева направо;
+     • «Нижняя сетка» — отдельной полосой ниже, на той же сетке колонок:
+       финал верхней стоит над финалом нижней;
+     • гранд-финал — справа, по вертикали ровно между двумя финалами;
+     • у каждой секции своё название и подписи колонок над линией;
+     • линии связей — только «победитель идёт дальше». Куда падает
+       проигравший, написано в самом слоте («Проигравший M5»), а при
+       наведении на матч подсвечиваются оба его пункта назначения.
+
+   Координаты карточек и линий считаются из данных (а не снимаются
+   с DOM), поэтому линии не «плывут» при масштабировании и перерисовке.
    ========================================================== */
 (function (global) {
   'use strict';
@@ -16,236 +23,249 @@
   var CA = global.CA = global.CA || {};
   var D = CA.data;
 
-  var GAP_COL = 0.55;         /* ширина пустой колонки-разделителя между блоками, в колонках */
+  /* Геометрия полотна, px. Сама карточка матча не менялась. */
+  var G = {
+    CARD_W: 236,
+    CARD_H: 116,
+    FOOT_H: 39,        /* добавочная высота карточки с кнопкой VOD */
+    COL_GAP: 60,       /* между колонками: здесь идут линии связей */
+    PITCH: 158,        /* шаг карточек первого раунда по вертикали */
+    MIN_SEP: 132,      /* меньше этого две карточки одной колонки не сближаются */
+    HEAD_H: 86,        /* название секции + подписи колонок, до золотой линии */
+    TOP_PAD: 40,       /* от линии до первой карточки */
+    SEC_GAP: 60,       /* между верхней и нижней сеткой */
+    STACK: 200,        /* шаг стопки в колонке гранд-финала (сброс, матч за 3-е) */
+    LABEL_GAP: 36,     /* подпись над карточкой гранд-финала */
+    LABELS_Y: 56       /* ряд подписей колонок от верха секции */
+  };
 
   function esc(s) { return D.esc(s); }
   function ic(name, cls) { return CA.ui.icon(name, cls); }
+  function byId(a, b) { return a.id - b.id; }
+  function each(list, fn) { Array.prototype.forEach.call(list, fn); }
 
   /* ---------- Раскладка ---------- */
 
-  /* ==========================================================
-     Раскладка как на The International:
-       • верхняя сетка — сверху, слева направо по раундам;
-       • нижняя сетка — отдельным блоком НИЖЕ верхней;
-       • гранд-финал — справа, между блоками;
-       • внутри блока карточка встаёт ровно между своими источниками.
-     ========================================================== */
-
-  /** Колонки внутри одного блока: раунд → своя вертикаль */
-  function sectionColumns(section, matches) {
-    var byRound = {};
+  /** Раунды секции: колонки по возрастанию номера раунда, внутри — по id */
+  function sectionColumns(list) {
+    var by = {};
     var rounds = [];
-    matches.forEach(function (m) {
-      if (!byRound[m.round]) { byRound[m.round] = { section: section, round: m.round, matches: [] }; rounds.push(byRound[m.round]); }
-      byRound[m.round].matches.push(m);
+    (list || []).forEach(function (m) {
+      var r = m.round || 1;
+      if (!by[r]) { by[r] = { round: r, matches: [] }; rounds.push(by[r]); }
+      by[r].matches.push(m);
     });
     rounds.sort(function (a, b) { return a.round - b.round; });
-    rounds.forEach(function (col, i) { col.index = i; });
+    rounds.forEach(function (col, i) { col.index = i; col.matches.sort(byId); });
     return rounds;
   }
 
   /**
-   * Позиции карточек внутри блока — плотная «лестница», как на The International.
-   *
-   * Первый раунд идёт подряд с шагом 1.5 карточки, а каждый следующий встаёт
-   * ровно между своими источниками. Так блок занимает примерно 3·(раунды−1) + 1
-   * карточек по высоте вместо «широкого дерева», которое раздувало полотно.
+   * Вертикальные центры карточек внутри секции (px от начала области карточек).
+   * Первый раунд — подряд с шагом PITCH. Матч с двумя источниками встаёт ровно
+   * между ними, с одним — на одной высоте с ним (так стоит нижняя сетка: матч,
+   * куда падает проигравший сверху, идёт строго напротив своего источника).
    */
-  function sectionPositions(columns) {
-    var items = {};
-    var maxCenter = 1;
-
+  function localCenters(columns) {
+    var cy = {};
     columns.forEach(function (col) {
       var prev = null;
       col.matches.forEach(function (m) {
-        var srcs = [m.from1, m.from2]
-          .filter(function (s) { return s && items[s.m]; })
-          .map(function (s) { return items[s.m].center; })
-          .sort(function (a, b) { return a - b; });
-
-        var center;
-        if (srcs.length >= 2) center = (srcs[0] + srcs[srcs.length - 1]) / 2;
-        else if (srcs.length === 1) center = srcs[0];
-        else center = prev == null ? 1 : prev + 1.5;
-
-        items[m.id] = { center: center };
-        maxCenter = Math.max(maxCenter, center);
-        prev = center;
+        var src = [m.from1, m.from2]
+          .filter(function (s) { return s && s.as === 'w' && cy[s.m] != null; })
+          .map(function (s) { return cy[s.m]; });
+        var c;
+        if (src.length >= 2) c = (Math.min.apply(null, src) + Math.max.apply(null, src)) / 2;
+        else if (src.length === 1) c = src[0];
+        else c = prev == null ? G.CARD_H / 2 : prev + G.PITCH;
+        /* Страховка от наложений при нестандартных данных */
+        if (prev != null && c < prev + G.MIN_SEP) c = prev + G.MIN_SEP;
+        cy[m.id] = c;
+        prev = c;
       });
     });
-
-    return { items: items, rows: Math.round((maxCenter - 1) * 2) + 2 };
+    return cy;
   }
 
   /**
-   * Полная раскладка: { items: { id: { col, row, span } }, cols, tracks, rows, unit }.
-   * Ряды считаем в «полукарточках»: span карточки всегда 2, поэтому два ряда
-   * равны высоте карточки плюс зазор и наложения невозможны.
-   *
-   * Блоки идут полосами по вертикали: сначала верхняя сетка, ниже — нижняя,
-   * гранд-финал встаёт справа между ними (как на The International).
+   * Номер колонки раунда верхней сетки. В двойной сетке финал верхней должен
+   * стоять над финалом нижней, а раунд k верхней — над тем раундом нижней, куда
+   * падают его проигравшие (раунд 2 нижней, затем каждый второй). Для обычной
+   * формы (нижних раундов вдвое больше) это 0, 1, 3, 5…; если форма нестандартна —
+   * раунды идут подряд, а финал уезжает в последнюю колонку.
+   */
+  function upperColIndex(i, U, L) {
+    if (!L) return i;
+    if (L === 2 * (U - 1)) return i === 0 ? 0 : 2 * i - 1;
+    return i === U - 1 ? Math.max(L, U) - 1 : i;
+  }
+
+  function cardHeight(m) {
+    return G.CARD_H + ((m.vod && m.state === 'done') ? G.FOOT_H : 0);
+  }
+
+  /** Подпись колонки раунда (на русском, регистр делает CSS) */
+  function roundTitle(key, i, n, col, ctx) {
+    if (ctx.de) {
+      if (i === n - 1) return key === 'lower' ? 'Финал нижней сетки' : 'Финал верхней сетки';
+      return 'Раунд ' + (i + 1);
+    }
+    /* Одиночная сетка: считаем от финала */
+    var total = n + (ctx.hasFinal ? 1 : 0);
+    var left = total - (i + 1);
+    if (left === 0) return 'Финал';
+    if (left === 1) return 'Полуфинал';
+    if (left === 2 && col.matches.length === 4) return 'Четвертьфинал';
+    return 'Раунд ' + (i + 1);
+  }
+
+  /**
+   * Полная раскладка.
+   * @returns {{width, height, items, cols, groups, columnCount, de}}
+   *   items[id] = { x, y, w, h, cx, cy, col, section }
    */
   function layout(matches) {
-    var list = (matches || []).slice().sort(function (a, b) { return a.id - b.id; });
-    var upper = list.filter(function (m) { return m.bracket !== 'lower' && m.bracket !== 'grand' && m.bracket !== 'third'; });
+    var list = (matches || []).slice().sort(byId);
     var lower = list.filter(function (m) { return m.bracket === 'lower'; });
     var third = list.filter(function (m) { return m.bracket === 'third'; });
     var grand = list.filter(function (m) { return m.bracket === 'grand'; });
+    var upper = list.filter(function (m) { return m.bracket !== 'lower' && m.bracket !== 'grand' && m.bracket !== 'third'; });
 
-    var CARD_H = 116;
-    var GAP = 18;
-    var ROW_OFFSET = 1;              /* первый ряд — подписи колонок */
-    var PAD_BETWEEN_BLOCKS = 4;      /* воздуха между верхней и нижней сеткой */
+    var de = lower.length > 0;
+    var upCols = sectionColumns(upper);
+    var loCols = sectionColumns(lower);
+    var U = upCols.length;
+    var L = loCols.length;
+    var ctx = { de: de, hasFinal: grand.length > 0 };
+
+    var upIdx = upCols.map(function (c, i) { return upperColIndex(i, U, L); });
+    var mainCols = Math.max(L, U ? Math.max.apply(null, upIdx) + 1 : 0);
+    var extra = (grand.length || third.length) ? 1 : 0;
+    var totalCols = mainCols + extra;
+    var step = G.CARD_W + G.COL_GAP;
+    function colX(i) { return i * step; }
+    var width = totalCols ? totalCols * G.CARD_W + (totalCols - 1) * G.COL_GAP : 0;
+    var ruleW = mainCols ? mainCols * G.CARD_W + (mainCols - 1) * G.COL_GAP : width;
+    if (!de) ruleW = width;
 
     var items = {};
     var cols = [];
-    var rows = ROW_OFFSET;
-    var colCursor = 1;
+    var groups = [];
 
-    function placeSection(section, sectionMatches, offset) {
-      var columns = sectionColumns(section, sectionMatches);
-      if (!columns.length) return { height: 0, span: 0 };
-      var pos = sectionPositions(columns);
-      var lowest = 0;
+    function placeSection(key, title, columns, colIndexOf, top, sectionMatches) {
+      var cy = localCenters(columns);
+      var originY = top + G.HEAD_H + G.TOP_PAD;
+      var bottom = top + G.HEAD_H + G.TOP_PAD;
+      var group = { kind: 'section', key: key, title: title, top: top, ruleW: ruleW, columns: [], matches: sectionMatches };
 
-      columns.forEach(function (col) {
-        var colNumber = colCursor + col.index;
-        cols.push({ section: section, round: col.round, matches: col.matches, col: colNumber });
+      columns.forEach(function (col, i) {
+        var ci = colIndexOf(i);
+        var label = roundTitle(key, i, columns.length, col, ctx);
+        var meta = { section: key, round: col.round, matches: col.matches, col: ci, x: colX(ci), label: label,
+          last: i === columns.length - 1 };
+        cols.push(meta);
+        var colGroup = {
+          head: { x: colX(ci), y: top + G.LABELS_Y, w: G.CARD_W, text: label, final: meta.last && (de || !grand.length) },
+          matches: col.matches
+        };
+        group.columns.push(colGroup);
         col.matches.forEach(function (m) {
-          var local = pos.items[m.id];
-          /* center — в общих «карточных» единицах страницы, row — ряд грида */
-          var center = local.center + offset - 1;
-          var row = Math.round((center - 1) * 2) + 1;
-          items[m.id] = { col: colNumber, row: row, span: 2, center: center };
-          lowest = Math.max(lowest, (local.center - 1) * 2 + 2);
-          rows = Math.max(rows, row + 1);
+          var h = cardHeight(m);
+          var y = Math.round(originY + cy[m.id] - h / 2);
+          items[m.id] = { id: m.id, col: ci, x: colX(ci), y: y, w: G.CARD_W, h: h,
+            cx: colX(ci) + G.CARD_W / 2, cy: y + h / 2, section: key };
+          bottom = Math.max(bottom, y + h);
         });
       });
-
-      colCursor += columns.length;
-      /* Высоту блока считаем по самой нижней карточке, а не по pos.rows:
-         иначе между блоками остаётся лишняя пустая полоса. */
-      return { height: Math.max(lowest, 2), span: columns.length };
+      group.bottom = bottom;
+      groups.push(group);
+      return group;
     }
 
-    /**
-     * Сдвиг нижнего блока. Идеально — поставить его так, чтобы финал нижней
-     * сетки встал на одну высоту с финалом верхней: тогда гранд-финал садится
-     * между ними. Но при 16 командах блоки становятся почти одной высоты, и
-     * такое выравнивание заставило бы их налезть друг на друга. Поэтому берём
-     * максимум из «красивого» варианта и «безопасного» (строго ниже верхней).
-     */
-    function lowerOffsetFor() {
-      var safe = upperHeight + PAD_BETWEEN_BLOCKS;
-      if (!upper.length || !lower.length) return ROW_OFFSET + safe;
+    var upperGroup = U ? placeSection('upper', de ? 'Верхняя сетка' : 'Плей-офф', upCols,
+      function (i) { return upIdx[i]; }, 0, upper) : null;
+    var lowerTop = upperGroup ? upperGroup.bottom + G.SEC_GAP : 0;
+    var lowerGroup = L ? placeSection('lower', 'Нижняя сетка', loCols,
+      function (i) { return i; }, lowerTop, lower) : null;
 
-      var upperFinal = upper.filter(function (m) { return m.round === upperRounds; })[0];
-      var lowerFinal = lower.filter(function (m) { return m.round === lowerRounds; })[0];
-      if (!upperFinal || !lowerFinal) return ROW_OFFSET + safe;
-
-      var upperPos = sectionPositions(sectionColumns('upper', upper));
-      var lowerPos = sectionPositions(sectionColumns('lower', lower));
-      var upperFinalRow = Math.round((upperPos.items[upperFinal.id].center - 1) * 2) + 1;
-      var lowerFinalRow = Math.round((lowerPos.items[lowerFinal.id].center - 1) * 2) + 1;
-      var lowerTopRow = Math.round((lowerPos.items[lower[0].id] ? 0 : 0)) + 1;
-      /* Первый ряд нижнего блока в его локальных координатах */
-      var minLocal = Infinity;
-      Object.keys(lowerPos.items).forEach(function (id) {
-        minLocal = Math.min(minLocal, Math.round((lowerPos.items[id].center - 1) * 2) + 1);
-      });
-      if (!isFinite(minLocal)) minLocal = lowerTopRow;
-
-      /* Красиво: финалы на одной высоте */
-      var pretty = ROW_OFFSET + (upperFinalRow - lowerFinalRow) + PAD_BETWEEN_BLOCKS;
-      /* Безопасно: первый матч нижней идёт ниже последнего матча верхней */
-      var mustStartAfter = ROW_OFFSET + upperHeight + PAD_BETWEEN_BLOCKS - minLocal + 1;
-      return Math.max(pretty, mustStartAfter);
-    }
-
-    var upperInfo = placeSection('upper', upper, ROW_OFFSET);
-    var upperHeight = Math.max(upperInfo.height, 2);
-    var upperRounds = sectionColumns('upper', upper).length;
-    var lowerRounds = sectionColumns('lower', lower).length;
-    var lowerOffset = lowerOffsetFor();
-    var lowerInfo = placeSection('lower', lower, lowerOffset);
-
-    /* Матч за третье место — отдельной колонкой в полосе нижней сетки */
-    if (third.length) {
-      var thirdCol = colCursor + 1;
-      cols.push({ section: 'third', round: third[0].round, matches: third, col: thirdCol });
-      third.forEach(function (m, i) {
-        var row = lowerOffset + 1 + i * 2;
-        items[m.id] = { col: thirdCol, row: row, span: 2, center: (row - 1) / 2 + 1 };
-        rows = Math.max(rows, row + 1);
-      });
-      colCursor += 1;
-    }
-
-    /* Гранд-финал: справа, между финалом верхней и финалом нижней сетки.
-       Если у него два источника из разных блоков — ставим по центру между ними. */
-    if (grand.length) {
-      var grandCol = colCursor + 1;
+    /* Колонка гранд-финала: по вертикали ровно между своими источниками */
+    var bottomAll = Math.max(upperGroup ? upperGroup.bottom : 0, lowerGroup ? lowerGroup.bottom : 0);
+    if (extra) {
+      var gx = colX(mainCols);
+      var stack = { kind: 'stack', blocks: [] };
       var first = grand.filter(function (m) { return !m.resetFor; })[0] || grand[0];
-      var srcCenters = [first.from1, first.from2]
-        .filter(Boolean)
-        .map(function (s) { return items[s.m]; })
-        .filter(Boolean)
-        .map(function (it) { return it.center; });
-      var center;
-      if (srcCenters.length === 2) {
-        center = (Math.min.apply(null, srcCenters) + Math.max.apply(null, srcCenters)) / 2;
-      } else if (srcCenters.length === 1) {
-        center = srcCenters[0];
-      } else {
-        /* Источников рядом нет (например, только верхняя сетка) — по центру полосы */
-        center = ROW_OFFSET + upperHeight / 2;
-      }
+      var base;
+      var srcs = first ? [first.from1, first.from2]
+        .filter(function (s) { return s && items[s.m]; })
+        .map(function (s) { return items[s.m].cy; }) : [];
+      if (srcs.length >= 2) base = (Math.min.apply(null, srcs) + Math.max.apply(null, srcs)) / 2;
+      else if (srcs.length === 1) base = srcs[0];
+      else if (upperGroup) base = (G.HEAD_H + G.TOP_PAD + upperGroup.bottom) / 2;
+      else base = G.HEAD_H + G.TOP_PAD + G.CARD_H / 2;
+      /* Подпись не должна залезать на заголовок секции */
+      base = Math.max(base, G.HEAD_H + G.TOP_PAD + G.CARD_H / 2);
 
-      var row = Math.max(ROW_OFFSET + 1, Math.round((center - 1) * 2) + 1);
-      items[first.id] = { col: grandCol, row: row, span: 2, center: center };
-      rows = Math.max(rows, row + 1);
-      var cursorRow = row;
-      grand.forEach(function (m) {
-        if (m === first) return;
-        cursorRow += 3;
-        items[m.id] = { col: grandCol, row: cursorRow, span: 2, center: (cursorRow - 1) / 2 + 1 };
-        rows = Math.max(rows, cursorRow + 1);
+      var k = 0;
+      var stackList = grand.slice().sort(function (a, b) {
+        return (a.resetFor ? 1 : 0) - (b.resetFor ? 1 : 0) || a.id - b.id;
+      }).concat(third);
+      stackList.forEach(function (m) {
+        var h = cardHeight(m);
+        var c = base + k * G.STACK;
+        var y = Math.round(c - h / 2);
+        items[m.id] = { id: m.id, col: mainCols, x: gx, y: y, w: G.CARD_W, h: h, cx: gx + G.CARD_W / 2,
+          cy: y + h / 2, section: m.bracket === 'third' ? 'third' : 'grand' };
+        var text;
+        if (m.bracket === 'third') text = 'Матч за 3-е место';
+        else if (m.resetFor) text = 'Гранд-финал · сброс';
+        else text = de ? 'Гранд-финал' : 'Финал';
+        /* В одиночной сетке подпись финала стоит в общем ряду подписей, как у остальных колонок */
+        var headY = (!de && k === 0) ? G.LABELS_Y : y - G.LABEL_GAP;
+        /* В одиночной сетке подпись «Финал» — обычная колонка в ряду подписей, без отдельного подчёркивания */
+        var inRow = !de && k === 0;
+        stack.blocks.push({ head: { x: gx, y: headY, w: G.CARD_W, text: text, final: m.bracket !== 'third', grand: !inRow }, match: m });
+        bottomAll = Math.max(bottomAll, y + h);
+        k++;
       });
-      cols.push({ section: 'grand', round: first.round, matches: grand, col: grandCol });
-      colCursor += 1;
+      cols.push({ section: 'grand', round: first ? first.round : 0, matches: grand.concat(third), col: mainCols,
+        x: gx, label: de ? 'Гранд-финал' : 'Финал', last: true });
+      groups.push(stack);
     }
 
-    /* Дорожки: по одной на колонку. Расстояние между блоками даёт column-gap,
-       потому что блоки и так стоят полосами по вертикали. */
-    var tracks = [];
-    for (var i = 1; i <= colCursor; i++) tracks.push({ col: i, spacer: false, fr: 1 });
+    /* Совместимость со служебными скриптами проверки: row/span — это y/h в пикселях */
+    Object.keys(items).forEach(function (id) { items[id].row = items[id].y; items[id].span = items[id].h; });
 
-    var unit = Math.max(Math.round((CARD_H + GAP) / 2), Math.min(72, Math.round(3400 / Math.max(1, rows))));
-
-    return { items: items, cols: cols, tracks: tracks, rows: rows, unit: unit, columnCount: cols.length };
+    return {
+      rows: bottomAll ? bottomAll + 6 : 0,
+      unit: 1,
+      tracks: cols,
+      width: width,
+      height: bottomAll ? bottomAll + 6 : 0,
+      items: items,
+      cols: cols,
+      groups: groups,
+      columnCount: totalCols,
+      mainCols: mainCols,
+      de: de,
+      upperBottom: upperGroup ? upperGroup.bottom : 0,
+      cardW: G.CARD_W,
+      cardH: G.CARD_H
+    };
   }
 
-  /**
-   * Подпись колонки. Считаем её от самих матчей (через D.stageLabel), а не от
-   * настроек сетки: настройки могут разойтись с данными, и тогда подписи
-   * «1/8 финала» оказывались над матчами совсем другого раунда.
-   */
+  /** Подпись колонки (для тестов и внешних вызовов) */
   function colLabel(col) {
-    var first = col.matches[0];
-    if (first) {
-      var label = D.stageLabel(first);
-      if (label) return label;
-    }
-    if (col.section === 'lower') return 'Нижняя · раунд ' + col.round;
-    if (col.section === 'grand') return 'Гранд-финал';
-    return 'Раунд ' + col.round;
+    if (col && col.label) return col.label;
+    if (col && col.section === 'lower') return 'Раунд ' + col.round;
+    if (col && col.section === 'grand') return 'Финал';
+    return 'Раунд ' + (col ? col.round : '');
   }
 
-  /* ---------- Карточка матча ---------- */
+  /* ---------- Карточка матча (внешний вид не менялся) ---------- */
 
   function statusHtml(m) {
     if (m.state === 'live') return '<span class="st st-live"><span class="dot-live"></span>В эфире</span>';
-    if (m.bye) return '<span class="st st-done">' + ic('check') + 'Без игры</span>';
+    if (m.bye && m.winner) return '<span class="st st-done">' + ic('check') + 'Без игры</span>';
     if (m.winner) {
       var score = (m.score1 != null && m.score2 != null) ? m.score1 + ' : ' + m.score2 : '';
       return '<span class="st st-done">' + ic('check') + (score ? esc(score) : 'Сыгран') + '</span>';
@@ -288,7 +308,7 @@
       '</span></div>';
   }
 
-  function matchHtml(m, lay) {
+  function matchHtml(m, lay, dest) {
     if (!m) return '';
     var cls = 'match m' + m.id;
     if (m.state === 'done') cls += ' is-done';
@@ -302,10 +322,11 @@
     if (m.idle) cls += ' is-idle';
 
     var pos = lay.items[m.id];
-    var style = pos ? 'grid-column:' + pos.col + ';grid-row:' + pos.row + ' / span ' + pos.span + ';' : '';
+    var style = pos ? 'left:' + pos.x + 'px;top:' + pos.y + 'px;width:' + pos.w + 'px;height:' + pos.h + 'px;' : '';
 
+    /* Название стадии стоит над колонкой, поэтому в шапке карточки — только номер матча */
     var head = '<div class="match-head">' +
-      '<span class="m-id">M' + m.id + ' · ' + esc(D.stageLabel(m)) + '</span>' +
+      '<span class="m-id">M' + m.id + '</span>' +
       statusHtml(m) +
       '</div>';
 
@@ -316,194 +337,272 @@
     }
 
     var body = m.idle
-      ? '<div class="slot is-tbd"><span class="slot-name">соперник прошёл без игры</span></div>'
+      ? '<div class="slot is-tbd is-note"><span class="slot-name">соперник прошёл без игры</span></div>'
       : (slotHtml(m, 1) + slotHtml(m, 2));
 
-    return '<div class="' + cls + '" data-match="' + m.id + '" style="' + style + '">' +
+    var d = dest[m.id] || {};
+    var srcIds = [m.from1, m.from2].filter(Boolean).map(function (s) { return s.m; });
+    var attrs = ' data-match="' + m.id + '"' +
+      (d.w ? ' data-w-to="' + d.w + '"' : '') +
+      (d.l ? ' data-l-to="' + d.l + '"' : '') +
+      (srcIds.length ? ' data-src="' + srcIds.join(',') + '"' : '');
+
+    return '<div class="' + cls + '"' + attrs + ' title="' + esc(D.stageLabel(m)) + '" style="' + style + '">' +
       head + body +
       (vod ? '<div class="match-foot">' + vod + '</div>' : '') +
       '</div>';
   }
 
-  function colHeadHtml(col) {
-    var done = col.matches.filter(function (m) { return !!m.winner; }).length;
-    var total = col.matches.filter(function (m) { return !m.idle; }).length;
-    return '<div class="b-col-head" style="grid-column:' + col.col + '">' +
-      '<b>' + esc(colLabel(col)) + '</b>' +
-      '<span>' + (total ? done + '/' + total + ' сыграно' : '') + '</span>' +
-      '</div>';
+  /* ---------- Заголовки ---------- */
+
+  function headHtml(h) {
+    var cls = 'b-col-head' + (h.final ? ' is-final' : '') + (h.grand ? ' is-grand' : '');
+    return '<div class="' + cls + '" style="left:' + h.x + 'px;top:' + h.y + 'px;width:' + h.w + 'px">' +
+      '<b>' + esc(h.text) + '</b></div>';
+  }
+
+  function sectionHeadHtml(g) {
+    var playable = g.matches.filter(function (m) { return !m.idle && !m.bye; });
+    var done = playable.filter(function (m) { return !!m.winner; }).length;
+    var meta = playable.length ? done + ' / ' + playable.length + ' сыграно' : '';
+    return '<div class="b-sec" data-sec="' + g.key + '" style="top:' + g.top + 'px;width:' + g.ruleW + 'px">' +
+      '<h3 class="b-sec-title">' + esc(g.title) + '</h3>' +
+      (meta ? '<span class="b-sec-meta">' + esc(meta) + '</span>' : '') +
+      '</div>' +
+      '<div class="b-rule" style="top:' + (g.top + G.HEAD_H) + 'px;width:' + g.ruleW + 'px"></div>';
+  }
+
+  /* ---------- Линии связей ---------- */
+
+  /**
+   * Только «победитель идёт дальше». У цели с двумя источниками — одна скобка:
+   * от каждого источника вправо до середины зазора, вертикаль к центру цели и
+   * общий отрезок в карточку. Проигравшего линиями не рисуем: они пересекали бы
+   * полотно, а в слоте и так написано «Проигравший M…».
+   */
+  function linesHtml(lay, matches) {
+    var map = {};
+    matches.forEach(function (m) { map[m.id] = m; });
+    var out = [];
+    function p(d, state, a, b) {
+      var cls = state ? ' class="' + state + '"' : '';
+      out.push('<path' + cls + ' data-a="' + a + '" data-b="' + b + '" d="' + d + '"/>');
+    }
+    function n(v) { return Math.round(v) + .5; }
+
+    matches.forEach(function (t) {
+      var tp = lay.items[t.id];
+      if (!tp) return;
+      var srcs = [t.from1, t.from2].filter(function (s) { return s && s.as === 'w' && lay.items[s.m]; });
+      if (!srcs.length) return;
+
+      var xm = n(tp.x - G.COL_GAP / 2);
+      var ty = n(tp.cy);
+      var tx = n(tp.x);
+      var anyDone = false;
+      var anyLive = false;
+      var needJoin = false;
+
+      srcs.forEach(function (s) {
+        var sp = lay.items[s.m];
+        var sm = map[s.m];
+        var done = !!(sm && sm.winner);
+        var live = !!(sm && sm.state === 'live');
+        anyDone = anyDone || done;
+        anyLive = anyLive || live;
+        var state = done ? 'on' : (live ? 'live' : '');
+        var x1 = n(sp.x + sp.w);
+        var y1 = n(sp.cy);
+        if (x1 > xm) return;
+        if (srcs.length === 1 && Math.abs(y1 - ty) < 1) {
+          p('M' + x1 + ' ' + y1 + ' H' + tx, state, s.m, t.id);
+        } else {
+          p('M' + x1 + ' ' + y1 + ' H' + xm + ' V' + ty, state, s.m, t.id);
+          needJoin = true;
+        }
+      });
+      if (needJoin) p('M' + xm + ' ' + ty + ' H' + tx, anyDone ? 'on' : (anyLive ? 'live' : ''), 'j', t.id);
+    });
+
+    return '<svg class="b-lines" width="' + lay.width + '" height="' + lay.height + '" viewBox="0 0 ' +
+      lay.width + ' ' + lay.height + '" aria-hidden="true">' + out.join('') + '</svg>';
+  }
+
+  /** Куда идут победитель и проигравший каждого матча (по связям from1/from2) */
+  function destinationsOf(matches) {
+    var dest = {};
+    matches.forEach(function (m) {
+      [m.from1, m.from2].forEach(function (s) {
+        if (!s) return;
+        dest[s.m] = dest[s.m] || {};
+        if (s.as === 'l') dest[s.m].l = m.id; else dest[s.m].w = m.id;
+      });
+    });
+    return dest;
   }
 
   /* ---------- Полная разметка ---------- */
 
   function html(data) {
     var D0 = data || D.get();
-    var matches = (D0.matches || []).slice().sort(function (a, b) { return a.id - b.id; });
+    var matches = (D0.matches || []).slice().sort(byId);
     var lay = layout(matches);
+    if (!matches.length || !lay.columnCount) {
+      return '<div class="b-stage"><div class="bracket" data-cols="0" data-w="0" data-h="0"></div></div>';
+    }
+    var dest = destinationsOf(matches);
     var parts = [];
 
-    /* Дорожки: обычная колонка — 1fr, разделитель между блоками — своя доля */
-    var columnsCss = lay.tracks.map(function (t) {
-      return t.spacer ? t.fr + 'fr' : '1fr';
-    }).join(' ');
-
-    lay.cols.forEach(function (col) { parts.push(colHeadHtml(col)); });
-
-    matches.forEach(function (m) {
-      if (!lay.items[m.id]) return;
-      parts.push(matchHtml(m, lay));
+    lay.groups.forEach(function (g) {
+      if (g.kind === 'section') {
+        parts.push(sectionHeadHtml(g));
+        g.columns.forEach(function (c) {
+          parts.push(headHtml(c.head));
+          c.matches.forEach(function (m) { parts.push(matchHtml(m, lay, dest)); });
+        });
+      } else {
+        g.blocks.forEach(function (b) {
+          parts.push(headHtml(b.head));
+          parts.push(matchHtml(b.match, lay, dest));
+        });
+      }
     });
+    parts.push(linesHtml(lay, matches));
 
-    parts.push('<svg class="b-lines" aria-hidden="true"></svg>');
-
-    return '<div class="bracket b-cols-' + lay.columnCount + '" data-cols="' + lay.columnCount + '"' +
-      ' data-rows="' + lay.rows + '"' +
-      ' style="--b-cols:' + lay.tracks.length + ';--b-rows:' + lay.rows + ';--b-unit:' + lay.unit + 'px;' +
-      'grid-template-columns:' + columnsCss + '">' +
-      parts.join('') + '</div>';
+    return '<div class="b-stage" style="width:' + lay.width + 'px;height:' + lay.height + 'px">' +
+      '<div class="bracket' + (lay.de ? ' is-de' : ' is-se') + '" data-cols="' + lay.columnCount + '"' +
+      ' data-w="' + lay.width + '" data-h="' + lay.height + '"' +
+      ' style="width:' + lay.width + 'px;height:' + lay.height + 'px">' +
+      parts.join('') + '</div></div>';
   }
 
-  /* ---------- Линии связей ---------- */
+  /* ---------- Подсветка связей при наведении ---------- */
 
-  function elbow(x1, y1, xm, y2, x2) {
-    var r = Math.min(12, Math.abs(y2 - y1) / 2, Math.max(0, xm - x1));
-    var d = y2 >= y1 ? 1 : -1;
-    if (Math.abs(y2 - y1) < 1) return 'M' + x1 + ' ' + y1 + ' H' + x2;
-    return 'M' + x1 + ' ' + y1 + ' H' + (xm - r) +
-      ' Q' + xm + ' ' + y1 + ' ' + xm + ' ' + (y1 + d * r) +
-      ' V' + (y2 - d * r) +
-      ' Q' + xm + ' ' + y2 + ' ' + (xm + r) + ' ' + y2 + ' H' + x2;
+  function clearHighlight(root) {
+    each(root.querySelectorAll('.is-hl, .is-hl-win, .is-hl-lose, .is-hl-src, .b-lines .hl'), function (el) {
+      el.classList.remove('is-hl', 'is-hl-win', 'is-hl-lose', 'is-hl-src', 'hl');
+    });
   }
+
+  function highlight(root, card) {
+    clearHighlight(root);
+    var id = card.getAttribute('data-match');
+    card.classList.add('is-hl');
+    function mark(matchId, cls) {
+      if (!matchId) return;
+      var el = root.querySelector('.match[data-match="' + matchId + '"]');
+      if (el) el.classList.add(cls);
+    }
+    mark(card.getAttribute('data-w-to'), 'is-hl-win');
+    mark(card.getAttribute('data-l-to'), 'is-hl-lose');
+    (card.getAttribute('data-src') || '').split(',').forEach(function (s) { mark(s, 'is-hl-src'); });
+    each(root.querySelectorAll('.b-lines path'), function (path) {
+      var a = path.getAttribute('data-a');
+      var b = path.getAttribute('data-b');
+      if (a === id || b === id) path.classList.add('hl');
+    });
+  }
+
+  function bindHover(root) {
+    if (root._caHoverBound) return;
+    root._caHoverBound = true;
+    root.addEventListener('mouseover', function (e) {
+      var card = e.target && e.target.closest ? e.target.closest('.match') : null;
+      if (card && root.contains(card)) highlight(root, card);
+    });
+    root.addEventListener('mouseout', function (e) {
+      var card = e.target && e.target.closest ? e.target.closest('.match') : null;
+      if (!card) return;
+      if (e.relatedTarget && card.contains(e.relatedTarget)) return;
+      clearHighlight(root);
+    });
+    root.addEventListener('focusin', function (e) {
+      var card = e.target && e.target.closest ? e.target.closest('.match') : null;
+      if (card) highlight(root, card);
+    });
+    root.addEventListener('focusout', function () { clearHighlight(root); });
+  }
+
+  /* ---------- Масштаб превью ---------- */
 
   /**
-   * Рисуем линии поверх сетки. Полотно у большой сетки выше окна, поэтому
-   * считаем координаты относительно самого полотна (а не окна) и задаём SVG
-   * такой же viewBox, как его собственный размер, — тогда путь «1 в 1» совпадает
-   * с пикселями и ничего не масштабируется.
+   * Вписывает полотно по ширине контейнера (превью на странице). Сетка — это
+   * готовое полотно W×H, поэтому масштаб — просто transform: scale. В узком
+   * окне (телефон) раскладку берёт на себя CSS (вертикальная лента).
    */
-  function drawLines(root) {
+  function fit(root, opts) {
+    opts = opts || {};
+    var stage = root.querySelector('.b-stage');
     var box = root.querySelector('.bracket');
-    if (!box) return;
-    var svg = box.querySelector('.b-lines');
-    if (!svg) return;
-    var rect = box.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    if (!stage || !box) return 1;
+    var W = Number(box.getAttribute('data-w')) || 0;
+    var H = Number(box.getAttribute('data-h')) || 0;
+    if (!W || !H) return 1;
 
-    svg.setAttribute('viewBox', '0 0 ' + rect.width + ' ' + rect.height);
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.style.width = rect.width + 'px';
-    svg.style.height = rect.height + 'px';
-
-    function card(id) { return box.querySelector('.match[data-match="' + id + '"]'); }
-    function geo(id) {
-      var el = card(id);
-      if (!el) return null;
-      var r = el.getBoundingClientRect();
-      return {
-        left: r.left - rect.left,
-        right: r.right - rect.left,
-        top: r.top - rect.top,
-        bottom: r.bottom - rect.top,
-        height: r.height
-      };
+    var s = 1;
+    if (opts.fit !== false) {
+      var avail = root.clientWidth || (root.parentNode && root.parentNode.clientWidth) || 0;
+      if (avail) s = Math.max(opts.minScale || 0.42, Math.min(1, avail / W));
     }
-    function slotCenter(id, slot) {
-      var el = card(id);
-      var slotEl = el ? el.querySelector('.slot[data-slot="' + slot + '"]') : null;
-      if (!slotEl) {
-        var g = geo(id);
-        return g ? g.top + g.height / 2 : 0;
-      }
-      var sr = slotEl.getBoundingClientRect();
-      return sr.top - rect.top + sr.height / 2;
+    box.style.setProperty('--s', String(s));
+    if (opts.fit !== false) {
+      stage.style.width = Math.round(W * s) + 'px';
+      stage.style.height = Math.round(H * s) + 'px';
     }
-
-    var D0 = D.get();
-    var matches = (D0.matches || []);
-    var paths = [];
-
-    matches.forEach(function (m) {
-      var target = geo(m.id);
-      if (!target) return;
-      [1, 2].forEach(function (slot) {
-        var src = slot === 1 ? m.from1 : m.from2;
-        if (!src) return;
-        var from = geo(src.m);
-        if (!from) return;
-        var source = matches.filter(function (x) { return x.id === src.m; })[0];
-        var cls = '';
-        if (source && source.winner) cls = ' class="on"';
-        else if (source && source.state === 'live') cls = ' class="live"';
-        /* Проигравший уходит вниз — рисуем пунктиром, чтобы не путать с победителем */
-        if (src.as === 'l') cls = cls ? ' class="on is-loser"' : ' class="is-loser"';
-        var xm = (from.right + target.left) / 2;
-        var y1 = slotCenter(src.m, src.as === 'l' ? loserSlot(source) : winnerSlot(source));
-        var y2 = slotCenter(m.id, slot);
-        paths.push('<path' + cls + ' d="' + elbow(from.right, y1, xm, y2, target.left) + '"/>');
-      });
-    });
-
-    svg.innerHTML = paths.join('');
+    root._caScale = s;
+    return s;
   }
 
-  /** Какой слот матча отдаёт победителя (для линии): обычно первый найденный */
-  function winnerSlot(m) {
-    if (!m) return 1;
-    if (m.winner && m.team2 === m.winner) return 2;
-    return 1;
-  }
-  function loserSlot(m) {
-    if (!m) return 2;
-    if (m.winner && m.team1 === m.winner) return 2;
-    return 1;
+  /** Размеры полотна и текущий масштаб — для компактного вида на главной */
+  function metrics(root) {
+    var box = root && root.querySelector ? root.querySelector('.bracket') : null;
+    var W = box ? Number(box.getAttribute('data-w')) || 0 : 0;
+    var H = box ? Number(box.getAttribute('data-h')) || 0 : 0;
+    var s = (root && root._caScale) || 1;
+    return { width: W, height: H, scale: s, scaledHeight: Math.round(H * s) };
   }
 
   /* ---------- Монтирование ---------- */
-  var instances = [];
 
   function render(root, opts) {
     if (!root) return;
     opts = opts || {};
     root.innerHTML = html(opts.data);
-    var box = root.querySelector('.bracket');
-    if (!box) return;
+    root._caOpts = opts;
+    bindHover(root);
+    fit(root, opts);
 
-    var frame = function () { drawLines(root); };
-    if (global.ResizeObserver) {
-      if (root._caRO) root._caRO.disconnect();
-      root._caRO = new ResizeObserver(function () { requestAnimationFrame(frame); });
-      root._caRO.observe(box);
+    if (opts.fit !== false && global.ResizeObserver) {
+      if (!root._caRO) {
+        root._caRO = new global.ResizeObserver(function () {
+          var before = root._caScale;
+          fit(root, root._caOpts);
+          /* Масштаб поменялся (окно сузили/расширили) — страница пересчитывает обрезку */
+          if (root._caScale !== before && root._caOpts && root._caOpts.onFit) root._caOpts.onFit(root._caScale);
+        });
+        root._caRO.observe(root);
+      }
+    } else if (root._caRO) {
+      root._caRO.disconnect();
+      root._caRO = null;
     }
-    requestAnimationFrame(frame);
-    setTimeout(frame, 120);
-    if (global.document && global.document.fonts && global.document.fonts.ready) {
-      global.document.fonts.ready.then(frame);
-    }
   }
 
-  function debounce(fn, ms) {
-    var t;
-    return function () { clearTimeout(t); t = setTimeout(fn, ms); };
-  }
+  function autoInit(root, opts) { render(root, opts); }
 
-  var onResize = debounce(function () {
-    instances.forEach(function (root) { drawLines(root); });
-  }, 120);
-
-  function autoInit(root, opts) {
-    if (instances.indexOf(root) < 0) instances.push(root);
-    render(root, opts);
-  }
+  /** Линии теперь строятся вместе с разметкой; функция оставлена для совместимости */
+  function drawLines() { return; }
 
   CA.bracket = {
     html: html,
     render: render,
+    fit: fit,
+    metrics: metrics,
     drawLines: drawLines,
     autoInit: autoInit,
     layout: layout,
     sectionColumns: sectionColumns,
-    colLabel: colLabel
+    colLabel: colLabel,
+    geometry: G
   };
-
-  if (global.addEventListener) global.addEventListener('resize', onResize);
 })(typeof window !== 'undefined' ? window : globalThis);
