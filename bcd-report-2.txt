@@ -1,0 +1,59 @@
+﻿### Elevated session: DESKTOP-OI48O4M\artem at 2026-10-09 12:24:11
+===== BEFORE: bcdedit /enum {bootmgr} =====
+
+Диспетчер загрузки Windows
+--------------------
+идентификатор           {bootmgr}
+device                  partition=C:
+description             Windows Boot Manager
+locale                  ru-RU
+inherit                 {globalsettings}
+flightsigning           Yes
+default                 {current}
+resumeobject            {5d13c19f-7d6d-11f1-aec6-e0d55e7d481a}
+displayorder            {current}
+toolsdisplayorder       {memdiag}
+timeout                 30
+
+===== APPLY: bcdedit /set {bootmgr} flightsigning off =====
+Операция успешно завершена.
+
+-- exit code: 0
+===== AFTER: bcdedit /enum {bootmgr} =====
+
+Диспетчер загрузки Windows
+--------------------
+идентификатор           {bootmgr}
+device                  partition=C:
+description             Windows Boot Manager
+locale                  ru-RU
+inherit                 {globalsettings}
+flightsigning           No
+default                 {current}
+resumeobject            {5d13c19f-7d6d-11f1-aec6-e0d55e7d481a}
+displayorder            {current}
+toolsdisplayorder       {memdiag}
+timeout                 30
+
+===== FINAL: bcdedit /enum {current} =====
+
+Загрузка Windows
+-------------------
+идентификатор           {current}
+device                  partition=C:
+path                    \WINDOWS\system32\winload.exe
+description             Windows 10
+locale                  ru-RU
+inherit                 {bootloadersettings}
+recoverysequence        {bfd4ffd3-7d6d-11f1-bdd9-c7ab3e22bc58}
+displaymessageoverride  Recovery
+recoveryenabled         Yes
+testsigning             No
+flightsigning           No
+allowedinmemorysettings 0x15000075
+osdevice                partition=C:
+systemroot              \WINDOWS
+resumeobject            {5d13c19f-7d6d-11f1-aec6-e0d55e7d481a}
+nx                      OptIn
+bootmenupolicy          Standard
+
