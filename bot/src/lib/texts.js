@@ -15,7 +15,7 @@ export const SITE_URL = 'https://compass-arena-test.pages.dev';
 export const CONTACTS = '@G0gg1a · @uuutt7';
 
 /** Те же контакты, но каждый на своей строке (для приветствия) */
-export const CONTACTS_LINES = '@G0gg1a\n@uuutt7';
+export const CONTACTS_LINES = 'G0gg1a\nuuutt7';
 
 /** Название турнира, если в настройках D1 пусто */
 export const DEFAULT_TOURNAMENT = 'Compass Arena Season 2';
@@ -40,7 +40,8 @@ export const problem = (text) => `⚠️ ${text}`;
 
 /** Первое сообщение пользователю (/start): что это за бот и как участвовать */
 export const welcomeText = () => [
-  '🏆 <b>Compass Arena — Регистрация открыта!</b> - Специально созданный бот для регистрации команд.',
+  '🏆 <b>Compass Arena — Регистрация открыта!</b> -',
+  'Специально созданный бот для регистрации команд.',
   '',
   '⚙️ <b>Как участвовать:</b>',
   '',
