@@ -9,7 +9,7 @@
    ============================================================ */
 
 /** Сайт турнира — показываем в справке и финальных сообщениях */
-export const SITE_URL = 'https://compass-arena-test.pages.dev';
+export const SITE_URL = 'https://compassarena.ru';
 
 /** Связь с организаторами */
 export const CONTACTS = '@G0gg1a · @uuutt7';
