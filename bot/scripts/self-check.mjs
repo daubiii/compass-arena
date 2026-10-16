@@ -324,7 +324,7 @@ console.log('\n5. Роутер бота (команды, права, кнопк�
   await say(env, ADMIN, '/help');
   ok(/Как проходит регистрация/.test(last()) && /\/leads/.test(last()) && /\/export/.test(last()), '/help для админа со всеми командами');
   ok(/Для организаторов:/.test(last()), 'у админа отдельный блок «Для организаторов»');
-  ok(/Сайт: https:\/\/compass-arena-test\.pages\.dev/.test(last()) && /Связь: @G0gg1a · @uuutt7/.test(last()),
+  ok(/Сайт: https:\/\/compassarena\.ru/.test(last()) && /Связь: @G0gg1a · @uuutt7/.test(last()),
     'в справке есть сайт и контакты');
   mockTelegram();
   await say(env, USER, '/help');
@@ -409,7 +409,7 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
 
   await tap(env, USER, 'reg:confirm');
   ok(/отправлена на модерацию/.test(lastTo(USER)), 'заявка отправлена на модерацию');
-  ok(/Сайт: https:\/\/compass-arena-test\.pages\.dev/.test(lastTo(USER)), 'в финальном сообщении есть сайт');
+  ok(/Сайт: https:\/\/compassarena\.ru/.test(lastTo(USER)), 'в финальном сообщении есть сайт');
 
   const lead = fake._db.lastLead();
   ok(lead.type === 'team' && lead.discipline === 'dota2' && lead.status === 'pending', 'заявка записана с типом, дисциплиной и статусом');
@@ -683,7 +683,7 @@ console.log('\n7. Поиск команды (ветка B)');
   await say(env, USER, 'Играю на AWP, свободен по вечерам');
   ok(/принята/.test(lastTo(USER)), 'ветка B: заявка принята');
   ok(/Дисциплина: CS:GO/.test(lastTo(USER)), 'ветка B: в ответе указана дисциплина');
-  ok(/Сайт: https:\/\/compass-arena-test\.pages\.dev/.test(lastTo(USER)), 'ветка B: в ответе есть сайт');
+  ok(/Сайт: https:\/\/compassarena\.ru/.test(lastTo(USER)), 'ветка B: в ответе есть сайт');
 
   const lead = fake._db.lastLead();
   ok(lead.type === 'free_agent' && lead.discipline === 'csgo', 'тип free_agent и дисциплина csgo');
@@ -886,7 +886,7 @@ const teamPayload = (name) => ({
   ok(fake._db.leadById(1).status === 'approved', 'заявка одобрена');
   ok(fake._db.leadById(1).moderated_by === ADMIN && fake._db.leadById(1).moderated_at !== null, 'модератор и время записаны');
   ok(/одобрена/.test(lastTo(USER)) && /Team Spirit/.test(lastTo(USER)), 'автор получил уведомление об одобрении', lastTo(USER).slice(0, 70));
-  ok(/Сайт: https:\/\/compass-arena-test\.pages\.dev/.test(lastTo(USER)), 'в уведомлении об одобрении есть сайт');
+  ok(/Сайт: https:\/\/compassarena\.ru/.test(lastTo(USER)), 'в уведомлении об одобрении есть сайт');
   ok(/#2|AWPer|s1mple/.test(lastTo(ADMIN)), 'админу сразу показали следующую заявку', lastTo(ADMIN).slice(0, 70));
 
   /* --- повторное одобрение --- */
