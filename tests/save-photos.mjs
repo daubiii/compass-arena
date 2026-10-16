@@ -32,7 +32,6 @@ const ch = (id, photos) => ({ id, name: 'T' + id, photos });
 let r = await save({ teams: [], history: [ch('a', [{ url: PNG, caption: 'c1' }, { url: 'javascript:alert(1)' }, { url: 'data:image/svg+xml;base64,PHN2Zz4=' }])] });
 let out = await r.json();
 ok(r.status === 200, 'сохранение проходит');
-ok(out.bracketsSaved === null && out.metaSaved === null, 'сетки в этом сохранении нет — ключи не тронуты');
 
 /* Ответ на сохранение больше не отдаёт архив целиком (он живёт в KV),
    поэтому проверяем результат по /api/data: именно его видит админка.

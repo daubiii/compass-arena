@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Compass Arena — Админ-панель</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        @font-face { font-family: 'Unbounded'; src: url('/fonts/unbounded-cyrillic-wght-normal.woff2') format('woff2'); font-weight: 200 900; font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+        @font-face { font-family: 'Manrope'; src: url('/fonts/onest-cyrillic-wght-normal.woff2') format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+        @font-face { font-family: 'Unbounded'; src: url('/fonts/unbounded-latin-wght-normal.woff2') format('woff2'); font-weight: 200 900; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+        @font-face { font-family: 'Manrope'; src: url('/fonts/onest-latin-wght-normal.woff2') format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+        .empty-state { padding: 28px 16px; text-align: center; color: #97a0ac; font-size: 13px; line-height: 1.6; border: 1px dashed #242b35; border-radius: 6px; }
+        .empty-state b { color: #eae6da; font-size: 14px; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #0a0d12; color: #eae6da; font-family: 'Manrope', sans-serif; padding: 16px 0 40px; }
         .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
@@ -143,34 +146,7 @@
         .logo-meta.ok { color: #4caf50; }
         .logo-meta.warn { color: #e3c48a; }
         .logo-meta.err { color: #e74c3c; }
-        .preview-wrap { display: flex; gap: 24px; overflow-x: auto; padding: 8px 0; }
-        .preview-group { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; min-width: 0; }
-        .preview-group + .preview-group { padding-left: 20px; border-left: 1px solid #242b35; }
-        .preview-group-title {
-            font-family: 'Unbounded', sans-serif; font-size: 10px; font-weight: 600;
-            letter-spacing: 0.18em; text-transform: uppercase;
-            padding-bottom: 6px; border-bottom: 1px solid; margin-bottom: 4px; white-space: nowrap;
         }
-        .preview-group-title.upper { color: #c9a35a; border-bottom-color: rgba(201,163,90,0.35); }
-        .preview-group-title.grand { color: #e3c48a; border-bottom-color: rgba(201,163,90,0.5); }
-        .preview-group-title.eliminated { color: #b3695f; border-bottom-color: rgba(179,105,95,0.35); }
-        .preview-rounds { display: flex; gap: 16px; }
-        .preview-round { display: flex; flex-direction: column; gap: 6px; min-width: 140px; }
-        .preview-round-label { font-size: 9px; color: #5f6773; text-align: center; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 2px; }
-        .preview-match { background: #0a0d12; border: 1px solid #242b35; border-radius: 3px; padding: 5px 8px; font-size: 11px; display: flex; flex-direction: column; gap: 2px; }
-        .preview-match.empty { opacity: 0.4; color: #5f6773; font-style: italic; }
-        .preview-team { display: flex; align-items: center; justify-content: space-between; gap: 6px; cursor: pointer; padding: 1px 0; border-radius: 2px; transition: background 0.15s; }
-        .preview-team:hover { background: rgba(201,163,90,0.08); }
-        .preview-team.winner { color: #e3c48a; font-weight: 600; }
-        .preview-team.loser { color: #7a8494; opacity: 0.7; }
-        .preview-team .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
-        .preview-team .badge { font-size: 8px; padding: 0px 5px; border-radius: 8px; font-weight: 700; }
-        .preview-team .badge.win { background: #4caf50; color: #fff; }
-        .preview-team .badge.loss { background: #e74c3c; color: #fff; }
-        .preview-score { font-family: 'Unbounded', sans-serif; font-size: 10px; color: #e3c48a; text-align: right; padding-top: 3px; margin-top: 3px; border-top: 1px solid #1a2029; }
-        .preview-eliminated-item { background: #0d1118; border: 1px solid #1a2029; border-radius: 3px; padding: 6px 10px; font-size: 11px; color: #7a8494; opacity: 0.65; }
-        .preview-eliminated-item .name { color: #97a0ac; font-weight: 500; }
-        .preview-eliminated-item .meta { font-size: 9px; color: #5f6773; }
         .toast { position: fixed; bottom: 24px; right: 24px; background: #10141b; border: 1px solid #c9a35a; padding: 10px 20px; border-radius: 6px; color: #eae6da; font-size: 13px; z-index: 2000; opacity: 0; transform: translateY(20px); transition: 0.3s; pointer-events: none; max-width: 360px; }
         .toast.show { opacity: 1; transform: translateY(0); }
         .password-section { background: #10141b; border: 1px solid #c9a35a; border-radius: 6px; padding: 16px 20px; margin-bottom: 14px; }
@@ -251,7 +227,7 @@
         }
     
 </style>
-<script src="/assets/ca-bracket-engine.js?v=90ca316"></script>
+<script src="/assets/ca-bracket-engine.js?v=2f657f8"></script>
 </head>
 <body>
 
@@ -312,13 +288,6 @@
             <p class="hint" style="margin-top:12px;">⚠️ Порядок команд = список в админке. Тащи за <b>⋮⋮</b> слева, чтобы переставить.</p>
             <div id="teamsArchiveStatus" class="archive-status"></div>
         </div>
-        <div class="card">
-            <div class="card-header">
-                <h3>👁 Превью сетки</h3>
-                <span style="color:#5f6773;font-size:12px;">Обновляется автоматически</span>
-            </div>
-            <div class="preview-wrap" id="previewWrap"></div>
-        </div>
     </div>
 
     <div class="tab-content" id="tab-import">
@@ -365,7 +334,7 @@
 
     <div class="tab-content" id="tab-matches">
         <div class="card">
-            <div class="card-header"><h3>🏆 Управление матчами</h3><span style="color:#5f6773;font-size:12px;">M1–M3 — выбираешь команды. M4–M5 — автомат</span></div>
+            <div class="card-header"><h3>🏆 Управление матчами</h3><span style="color:#5f6773;font-size:12px;">Команды расставляет сетка — здесь только счёт и победитель</span></div>
             <div class="match-list" id="matchList"></div>
         </div>
     </div>
@@ -634,21 +603,8 @@ var EDITING_HISTORY_PHOTOS = [];
 function getDefaultData() {
     return {
         tournament: { name: "Compass Arena", game: "Dota 2", format: "Custom Bracket", matches: "Bo3", dates: "26 сентября 2026" },
-        teams: [
-            { id: 1, name: "Слот 1", players: [], logo: "" },
-            { id: 2, name: "Слот 2", players: [], logo: "" },
-            { id: 3, name: "Слот 3", players: [], logo: "" },
-            { id: 4, name: "Слот 4", players: [], logo: "" },
-            { id: 5, name: "Слот 5", players: [], logo: "" },
-            { id: 6, name: "Слот 6", players: [], logo: "" }
-        ],
-        matches: [
-            { id: 1, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null, vod: '' },
-            { id: 2, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null, vod: '' },
-            { id: 3, round: 1, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null, vod: '' },
-            { id: 4, round: 2, team1: null, team2: null, winner: null, bracket: 'upper', score1: null, score2: null, vod: '' },
-            { id: 5, round: 3, team1: null, team2: null, winner: null, bracket: 'grand', score1: null, score2: null, vod: '' }
-        ],
+        teams: [],
+        matches: [],
         schedule: {},
         liveMatchId: null,
         freeAgents: [],
@@ -1216,7 +1172,6 @@ function renderEverything() {
     renderTeams();
     renderMatches();
     renderSchedule();
-    renderPreview();
     renderHistory();
     renderAgents();
     renderTeamsArchiveStatus();
@@ -1314,14 +1269,6 @@ function updateMatchLinks() {
         return;
     }
 
-    if (m[4]) {
-        m[4].team1 = m[1] ? m[1].winner : null;
-        m[4].team2 = m[2] ? m[2].winner : null;
-    }
-    if (m[5]) {
-        m[5].team1 = m[4] ? m[4].winner : null;
-        m[5].team2 = m[3] ? m[3].winner : null;
-    }
     cleanupStaleResults(m);
 }
 
@@ -1357,26 +1304,6 @@ function cleanupStaleResults(m) {
 }
 
 // ============================================================
-// РУЧНОЕ НАЗНАЧЕНИЕ КОМАНД
-// ============================================================
-function setMatchTeam(matchId, slot, teamId) {
-    var match = getMatch(matchId);
-    if (!match) return;
-    var id = teamId === '' ? null : parseInt(teamId, 10);
-    if (slot === 1) match.team1 = id;
-    else if (slot === 2) match.team2 = id;
-    if (match.winner && match.winner !== match.team1 && match.winner !== match.team2) {
-        match.winner = null;
-        match.score1 = null;
-        match.score2 = null;
-    }
-    saveData();
-    renderMatches();
-    renderPreview();
-    showToast('✅ M' + matchId + ': команда назначена');
-}
-
-// ============================================================
 // СЧЁТ
 // ============================================================
 function setScore(matchId) {
@@ -1391,7 +1318,6 @@ function setScore(matchId) {
     match.score2 = s2;
     saveData();
     renderMatches();
-    renderPreview();
     showToast('🔢 Счёт матча M' + matchId + ' сохранён: ' + (s1 != null ? s1 : '—') + ':' + (s2 != null ? s2 : '—'));
 }
 
@@ -1441,7 +1367,6 @@ function renderTeams() {
     }
     if (count) count.textContent = DATA.teams.length + ' команд';
     initDragAndDrop();
-    renderPreview();
 }
 
 // ============================================================
@@ -1667,97 +1592,6 @@ function moveTeam(index, direction) {
 }
 
 // ============================================================
-// ПРЕВЬЮ
-// ============================================================
-function renderPreview() {
-    var wrap = document.getElementById('previewWrap');
-    if (!wrap) return;
-    updateMatchLinks();
-
-    var m1 = getMatch(1), m2 = getMatch(2), m3 = getMatch(3), m4 = getMatch(4), m5 = getMatch(5);
-
-    function renderMiniMatch(m) {
-        if (!m) return '<div class="preview-match empty">—</div>';
-        var t1 = getTeam(m.team1);
-        var t2 = getTeam(m.team2);
-        if (!t1 && !t2) return '<div class="preview-match empty">ожидание</div>';
-
-        var name1 = t1 ? t1.name : '—';
-        var name2 = t2 ? t2.name : '—';
-        var w1 = (m.winner && m.winner === m.team1) ? 'win' : (m.winner ? 'loss' : null);
-        var w2 = (m.winner && m.winner === m.team2) ? 'win' : (m.winner ? 'loss' : null);
-        var cls1 = m.winner === m.team1 ? 'winner' : (m.winner ? 'loser' : '');
-        var cls2 = m.winner === m.team2 ? 'winner' : (m.winner ? 'loser' : '');
-
-        var html = '<div class="preview-match">';
-        html += '<div class="preview-team ' + cls1 + '" onclick="' + (t1 ? 'openEditModal(' + t1.id + ')' : '') + '">';
-        html += '<span class="name">' + name1 + '</span>';
-        if (w1) html += '<span class="badge ' + w1 + '">' + (w1 === 'win' ? 'W' : 'L') + '</span>';
-        html += '</div>';
-        html += '<div class="preview-team ' + cls2 + '" onclick="' + (t2 ? 'openEditModal(' + t2.id + ')' : '') + '">';
-        html += '<span class="name">' + name2 + '</span>';
-        if (w2) html += '<span class="badge ' + w2 + '">' + (w2 === 'win' ? 'W' : 'L') + '</span>';
-        html += '</div>';
-        if (m.winner && m.score1 != null && m.score2 != null) {
-            html += '<div class="preview-score">' + m.score1 + ' : ' + m.score2 + '</div>';
-        }
-        html += '</div>';
-        return html;
-    }
-
-    var html = '';
-
-    html += '<div class="preview-group">';
-    html += '<div class="preview-group-title upper">Раунд 1</div>';
-    html += '<div class="preview-rounds">';
-    html += '<div class="preview-round">';
-    html += '<div class="preview-round-label">M1</div>' + renderMiniMatch(m1);
-    html += '<div class="preview-round-label">M2</div>' + renderMiniMatch(m2);
-    html += '<div class="preview-round-label">M3</div>' + renderMiniMatch(m3);
-    html += '</div>';
-    html += '</div></div>';
-
-    html += '<div class="preview-group">';
-    html += '<div class="preview-group-title upper">Раунд 2</div>';
-    html += '<div class="preview-rounds">';
-    html += '<div class="preview-round">';
-    html += '<div class="preview-round-label">Полуфинал</div>' + renderMiniMatch(m4);
-    html += '</div>';
-    html += '</div></div>';
-
-    html += '<div class="preview-group">';
-    html += '<div class="preview-group-title grand">Финал</div>';
-    html += '<div class="preview-rounds">';
-    html += '<div class="preview-round">';
-    html += '<div class="preview-round-label">Гранд</div>' + renderMiniMatch(m5);
-    html += '</div>';
-    html += '</div></div>';
-
-    html += '<div class="preview-group">';
-    html += '<div class="preview-group-title eliminated">Выбывшие</div>';
-    html += '<div class="preview-rounds"><div class="preview-round">';
-    var eliminated = [];
-    for (var i = 0; i < DATA.matches.length; i++) {
-        var mm = DATA.matches[i];
-        if (!mm.winner) continue;
-        var loserId = getLoser(mm);
-        if (!loserId) continue;
-        var team = getTeam(loserId);
-        if (team) eliminated.push({ team: team, matchId: mm.id });
-    }
-    if (eliminated.length === 0) {
-        html += '<div class="preview-eliminated-item"><span class="meta">пока никого</span></div>';
-    } else {
-        for (var e = 0; e < eliminated.length; e++) {
-            html += '<div class="preview-eliminated-item"><span class="name">' + eliminated[e].team.name + '</span> <span class="meta">M' + eliminated[e].matchId + '</span></div>';
-        }
-    }
-    html += '</div></div></div>';
-
-    wrap.innerHTML = html;
-}
-
-// ============================================================
 // МАТЧИ
 // ============================================================
 function renderMatches() {
@@ -1772,87 +1606,17 @@ function renderMatches() {
        «кто прошёл дальше» — счёт и победитель. Старый режим (3 пары + авто) остаётся
        для турниров без сгенерированной сетки. */
     var bracketMode = !!(DATA.bracket && window.CA && CA.bracketEngine);
+    if (!sorted.length) {
+        container.innerHTML = '<div class="empty-state"><b>Сетки пока нет</b><br>Откройте «Настройки» → «Сетка турнира», выберите формат и нажмите «Сгенерировать». После этого здесь появятся матчи.</div>';
+        return;
+    }
 
     for (var i = 0; i < sorted.length; i++) {
         var m = sorted[i];
         var div = document.createElement('div');
-        var isManual = !bracketMode && (m.id <= 3);
-        div.className = 'match-item ' + (isManual ? 'manual' : 'auto');
-
+        div.className = 'match-item auto';
         var label = bracketMode ? bracketStageLabel(m) : ((m.bracket === 'grand') ? 'Финал' : ('Раунд ' + m.round));
-
-        var bodyHtml = '';
-        if (bracketMode) {
-            bodyHtml = bracketMatchBody(m, label);
-        } else if (isManual) {
-            var sel1 = '<select onchange="setMatchTeam(' + m.id + ', 1, this.value)">';
-            var sel2 = '<select onchange="setMatchTeam(' + m.id + ', 2, this.value)">';
-            var opts1 = '<option value="">— команда 1 —</option>';
-            var opts2 = '<option value="">— команда 2 —</option>';
-            for (var t1i = 0; t1i < DATA.teams.length; t1i++) {
-                var team1 = DATA.teams[t1i];
-                var selA = (m.team1 === team1.id) ? ' selected' : '';
-                var selB = (m.team2 === team1.id) ? ' selected' : '';
-                opts1 += '<option value="' + team1.id + '"' + selA + '>' + team1.name + '</option>';
-                opts2 += '<option value="' + team1.id + '"' + selB + '>' + team1.name + '</option>';
-            }
-            sel1 += opts1 + '</select>';
-            sel2 += opts2 + '</select>';
-
-            var winnerHtml = '';
-            if (m.team1 && m.team2) {
-                if (!m.winner) {
-                    winnerHtml = '<select onchange="setWinner(' + m.id + ', this.value)"><option value="">— победитель —</option>';
-                    winnerHtml += '<option value="' + m.team1 + '">' + getTeamName(m.team1) + '</option>';
-                    winnerHtml += '<option value="' + m.team2 + '">' + getTeamName(m.team2) + '</option>';
-                    winnerHtml += '</select>';
-                } else {
-                    winnerHtml = '<span class="winner">→ ' + getTeamName(m.winner) + '</span>';
-                    winnerHtml += '<div class="score-input-group">';
-                    winnerHtml += '<label>Счёт:</label>';
-                    winnerHtml += '<input type="number" min="0" max="9" id="admin-score1-' + m.id + '" class="score-input" value="' + (m.score1 != null ? m.score1 : '') + '" placeholder="0">';
-                    winnerHtml += '<span class="score-sep">:</span>';
-                    winnerHtml += '<input type="number" min="0" max="9" id="admin-score2-' + m.id + '" class="score-input" value="' + (m.score2 != null ? m.score2 : '') + '" placeholder="0">';
-                    winnerHtml += '<button class="btn btn-sm score-save" onclick="setScore(' + m.id + ')">✓</button>';
-                    winnerHtml += '<button class="btn btn-sm" onclick="resetMatch(' + m.id + ')">↩️ Сбросить</button>';
-                    winnerHtml += '</div>';
-                }
-            } else {
-                winnerHtml = '<span style="color:#5f6773;">— сначала выбери команды —</span>';
-            }
-
-            bodyHtml = '<div class="manual-selects">' + sel1 + '<span class="vs">vs</span>' + sel2 + '</div>' +
-                       '<div class="meta" style="margin-top:6px;">' + winnerHtml + '</div>';
-        } else {
-            var t1 = getTeamName(m.team1);
-            var t2 = getTeamName(m.team2);
-            var canPlay = !!(m.team1 && m.team2);
-
-            var winnerHtml = '';
-            if (canPlay) {
-                if (!m.winner) {
-                    winnerHtml = '<select onchange="setWinner(' + m.id + ', this.value)"><option value="">— победитель —</option>';
-                    winnerHtml += '<option value="' + m.team1 + '">' + getTeamName(m.team1) + '</option>';
-                    winnerHtml += '<option value="' + m.team2 + '">' + getTeamName(m.team2) + '</option>';
-                    winnerHtml += '</select>';
-                } else {
-                    winnerHtml = '<span class="winner">→ ' + getTeamName(m.winner) + '</span>';
-                    winnerHtml += '<div class="score-input-group">';
-                    winnerHtml += '<label>Счёт:</label>';
-                    winnerHtml += '<input type="number" min="0" max="9" id="admin-score1-' + m.id + '" class="score-input" value="' + (m.score1 != null ? m.score1 : '') + '" placeholder="0">';
-                    winnerHtml += '<span class="score-sep">:</span>';
-                    winnerHtml += '<input type="number" min="0" max="9" id="admin-score2-' + m.id + '" class="score-input" value="' + (m.score2 != null ? m.score2 : '') + '" placeholder="0">';
-                    winnerHtml += '<button class="btn btn-sm score-save" onclick="setScore(' + m.id + ')">✓</button>';
-                    winnerHtml += '<button class="btn btn-sm" onclick="resetMatch(' + m.id + ')">↩️ Сбросить</button>';
-                    winnerHtml += '</div>';
-                }
-            } else {
-                winnerHtml = '<span style="color:#5f6773;">ожидание (автоматически)</span>';
-            }
-
-            bodyHtml = '<div class="teams"><span>' + t1 + '</span><span class="vs">vs</span><span>' + t2 + '</span></div>' +
-                       '<div class="meta" style="margin-top:6px;"><span class="tag ' + m.bracket + '">' + label + '</span>' + winnerHtml + '</div>';
-        }
+        var bodyHtml = bracketMode ? bracketMatchBody(m, label) : legacyMatchBody(m, label);
 
         bodyHtml += '<div class="meta vod-row" style="margin-top:6px;">' +
             '<label>🎬 VOD:</label>' +
@@ -1862,7 +1626,30 @@ function renderMatches() {
         div.innerHTML = bodyHtml;
         container.appendChild(div);
     }
-    renderPreview();
+}
+
+/** Матч без сгенерированной сетки (данные прошлых версий): только победитель и счёт */
+function legacyMatchBody(m, label) {
+    var winnerHtml;
+    if (m.team1 && m.team2) {
+        if (!m.winner) {
+            winnerHtml = '<select onchange="setWinner(' + m.id + ', this.value)"><option value="">— победитель —</option>' +
+                '<option value="' + m.team1 + '">' + escapeHtml(getTeamName(m.team1)) + '</option>' +
+                '<option value="' + m.team2 + '">' + escapeHtml(getTeamName(m.team2)) + '</option></select>';
+        } else {
+            winnerHtml = '<span class="winner">→ ' + escapeHtml(getTeamName(m.winner)) + '</span>' +
+                '<div class="score-input-group"><label>Счёт:</label>' +
+                '<input type="number" min="0" max="9" id="admin-score1-' + m.id + '" class="score-input" value="' + (m.score1 != null ? m.score1 : '') + '" placeholder="0">' +
+                '<span class="score-sep">:</span>' +
+                '<input type="number" min="0" max="9" id="admin-score2-' + m.id + '" class="score-input" value="' + (m.score2 != null ? m.score2 : '') + '" placeholder="0">' +
+                '<button class="btn btn-sm score-save" onclick="setScore(' + m.id + ')">✓</button>' +
+                '<button class="btn btn-sm" onclick="resetMatch(' + m.id + ')">↩️ Сбросить</button></div>';
+        }
+    } else {
+        winnerHtml = '<span style="color:#7a8494;">ожидание</span>';
+    }
+    return '<div class="teams"><span>' + escapeHtml(getTeamName(m.team1)) + '</span><span class="vs">vs</span><span>' + escapeHtml(getTeamName(m.team2)) + '</span></div>' +
+        '<div class="meta" style="margin-top:6px;"><span class="tag ' + m.bracket + '">' + label + '</span>' + winnerHtml + '</div>';
 }
 
 /* ---------- Карточка матча универсальной сетки ---------- */
@@ -3534,7 +3321,6 @@ window.closeEditModal = closeEditModal;
 window.saveEditTeam = saveEditTeam;
 window.moveTeam = moveTeam;
 window.shuffleTeams = shuffleTeams;
-window.setMatchTeam = setMatchTeam;
 window.setWinner = setWinner;
 window.setScore = setScore;
 window.resetMatch = resetMatch;
