@@ -103,5 +103,15 @@ export function leadStatusLabel(status) {
   if (status === 'pending') return 'на модерации';
   if (status === 'approved') return 'одобрена';
   if (status === 'rejected') return 'отклонена';
+  if (status === 'withdrawn') return 'отозвана';
   return String(status || '—');
+}
+
+/** Значок статуса заявки */
+export function leadStatusIcon(status) {
+  if (status === 'pending') return '⏳';
+  if (status === 'approved') return '✅';
+  if (status === 'rejected') return '❌';
+  if (status === 'withdrawn') return '↩️';
+  return '•';
 }

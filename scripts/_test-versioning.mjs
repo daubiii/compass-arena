@@ -1,5 +1,4 @@
-/* Проверка логики версионирования: middleware и скрипт должны одинаково
-   подставлять ?v= в ссылки на ассеты и не трогать картинки.
+/* Проверка логики версионирования: скрипт должен подставлять ?v= в ссылки на ассеты и не трогать картинки.
    Запуск: node scripts/_test-versioning.mjs */
 import fs from 'node:fs';
 
@@ -9,51 +8,9 @@ const ok = (cond, label, extra) => {
   else { fails++; console.log('  FAIL ' + label + (extra !== undefined ? ' → ' + extra : '')); }
 };
 
-const middleware = fs.readFileSync('functions/_middleware.js', 'utf8');
 const script = fs.readFileSync('scripts/version-assets.mjs', 'utf8');
 
-console.log('\n1. Middleware: подстановка версии');
-{
-  const reMatch = /const ASSET_RE = (\/.*\/g);/.exec(middleware);
-  ok(!!reMatch, 'в middleware есть регулярка для ссылок');
-  const re = eval(reMatch[1]);
-  const version = 'abc123';
-
-  const cases = [
-    ['<link rel="stylesheet" href="/site.css">', '/site.css?v=abc123'],
-    ['<script src="/assets/ca-home.js" defer></script>', '/assets/ca-home.js?v=abc123'],
-    ['<script src="/assets/ca-bracket-engine.js"></script>', '/assets/ca-bracket-engine.js?v=abc123'],
-    ['<script src="/assets/ca-data.js?v=old" defer></script>', '/assets/ca-data.js?v=abc123']
-  ];
-  cases.forEach(([input, expected]) => {
-    const out = input.replace(re, (all, pre, path, old, post) => pre + path + '?v=' + version + post);
-    ok(out.includes(expected), 'правит: ' + input.slice(0, 42), out);
-  });
-
-  const untouched = [
-    '<img src="/img/photo.png">',
-    '<a href="/schedule.html">Расписание</a>',
-    '<link rel="icon" href="/favicon.png">',
-    '<script src="https://example.com/x.js"></script>',
-    '<a href="/assets/logo.svg">логотип</a>'
-  ];
-  untouched.forEach((input) => {
-    const out = input.replace(re, (all, pre, path, old, post) => pre + path + '?v=' + version + post);
-    ok(out === input, 'не трогает: ' + input.slice(0, 42), out);
-  });
-
-  ok(/try\s*\{/.test(middleware) && /catch/.test(middleware), 'при ошибке возвращает страницу как есть');
-  ok(/Cache-Control', 'no-store/.test(middleware), 'HTML отдаётся без кеша');
-  ok(/CF_PAGES_COMMIT_SHA/.test(middleware), 'версия берётся из окружения Pages');
-
-  /* Middleware должен трогать все наши страницы, а не только главную:
-     иначе на /schedule и /poasalj1.z23 останутся старые адреса ассетов. */
-  const pages = ['/', '/index', '/schedule', '/history', '/rules', '/404', '/poasalj1.z23'];
-  const missing = pages.filter((p) => !new RegExp("'" + p.replace('/', '\\/') + "'").test(middleware));
-  ok(missing.length === 0, 'в списке страниц middleware есть все разделы', missing.join(', '));
-}
-
-console.log('\n2. Скрипт версионирования: все страницы');
+console.log('\n1. Скрипт версионирования: все страницы');
 {
   const pages = ['index.html', 'schedule.html', 'history.html', 'rules.html', '404.html', 'poasalj1.z23.html'];
   pages.forEach((page) => {
@@ -76,7 +33,7 @@ console.log('\n2. Скрипт версионирования: все стран
   ok(/-check/.test(script), 'у скрипта есть режим проверки --check');
 }
 
-console.log('\n3. Кеш-политика');
+console.log('\n2. Кеш-политика');
 {
   const headers = fs.readFileSync('_headers', 'utf8');
   ok(/\/assets\/\*/.test(headers) && /immutable/.test(headers),

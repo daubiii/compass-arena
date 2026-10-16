@@ -23,15 +23,16 @@ import * as startHandler from './handlers/start.js';
 import * as registrationHandler from './handlers/registration.js';
 import * as moderationHandler from './handlers/moderation.js';
 import * as exportHandler from './handlers/export.js';
+import * as myHandler from './handlers/my.js';
 
 /** Порядок важен: /start и /cancel перехватываются первыми */
-const HANDLERS = [startHandler, registrationHandler, moderationHandler, exportHandler];
+const HANDLERS = [startHandler, registrationHandler, moderationHandler, exportHandler, myHandler];
 
 /**
  * Версия сборки. Видна в ответе GET / — по ней сразу понятно,
  * доехал ли до Cloudflare последний деплой (меняется вручную при выкладке).
  */
-export const BUILD_VERSION = '1.1.0';
+export const BUILD_VERSION = '1.2.0';
 
 export default {
   async fetch(request, env, ctx) {
@@ -156,7 +157,10 @@ async function onMessage(env, message) {
   }
 
   // Ничего не ждём от пользователя — показываем меню
-  await startHandler.showMainMenu(env, chatId, from.id, 'Не понял сообщение. Вот меню:');
+  await startHandler.showMainMenu(env, chatId, from.id,
+    'Не нашёл, что с этим сделать 🤔\n' +
+    'Я отвечаю на частые вопросы (/faq), показываю статус заявок (/my) и принимаю заявки.\n' +
+    'Выбери действие ниже или напиши организаторам.');
 }
 
 async function onCallbackQuery(env, query) {
@@ -193,7 +197,7 @@ async function sendUnknownCommand(env, chatId, cmd, admin) {
     `Команда /${esc(cmd)} не поддерживается.`,
     '',
     'Доступные:',
-    '/start · /help · /cancel'
+    '/start · /my · /faq · /help · /cancel'
   ];
   if (admin) {
     lines.push('', 'Для организаторов:', '/leads · /export');

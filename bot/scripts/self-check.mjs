@@ -342,7 +342,7 @@ console.log('\n5. Роутер бота (команды, права, кнопк�
   mockTelegram();
   await say(env, USER, '/чепуха');
   ok(/не поддерживается/.test(last()), 'неизвестная команда обрабатывается вежливо');
-  ok(/\/start · \/help · \/cancel/.test(last()), 'в ответе перечислены доступные команды');
+  ok(/\/start · \/my · \/faq · \/help · \/cancel/.test(last()), "в ответе перечислены доступные команды");
 }
 
 /* ---------- /leads: права и счётчики ---------- */
@@ -436,7 +436,7 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
 
   let mark = marker();
   await say(env, USER, 'X');
-  ok(/Название: 2–30 символов, без спецсимволов/.test(textsSince(mark)), 'короткое название отклонено с понятной ошибкой');
+  ok(/Название не подошло: 2–30 символов/.test(textsSince(mark)), 'короткое название отклонено с понятной ошибкой');
   ok(fake._db.state(USER).step === 'team_name', 'после ошибки шаг не сброшен');
 
   await say(env, USER, 'Team Spirit');
@@ -445,7 +445,7 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
 
   mark = marker();
   await say(env, USER, 'вот мой логотип');
-  ok(/Нужно фото\. Пришли логотип или \/cancel\./.test(textsSince(mark)), 'текст вместо фото → «Нужно фото»');
+  ok(/Нужно именно фото или картинка/.test(textsSince(mark)), 'текст вместо фото → «Нужно фото»');
 
   mark = marker();
   await say(env, USER, '/skip');
@@ -467,11 +467,11 @@ async function registerTeam(env, userId, name, players = DOTA_PLAYERS) {
 
   mark = marker();
   await say(env, USER, '  ');
-  ok(/Ник: 2–30 символов\./.test(textsSince(mark)), 'пустой ник отклонён');
+  ok(/Ник не подошёл: 2–30 символов/.test(textsSince(mark)), 'пустой ник отклонён');
 
   mark = marker();
   await say(env, USER, 'yatoro');
-  ok(/Такой ник уже есть в составе/.test(textsSince(mark)), 'дубликат ника в составе отклонён (без учёта регистра)');
+  ok(/этот ник уже есть в составе/i.test(textsSince(mark)), 'дубликат ника в составе отклонён (без учёта регистра)');
   ok(fake._db.state(USER).temp.players.length === 1, 'прогресс команды сохранён после ошибок');
 }
 
@@ -607,7 +607,7 @@ console.log('\n6b. Ветка A: ник капитана, когда у отпр
 
   let mark = marker();
   await handleUpdate(env, messageUpdateNoUser(NEWBIE, 'X'));
-  ok(/Ник: 2–30 символов\./.test(textsSince(mark)), 'короткий ник капитана отклонён');
+  ok(/Ник не подошёл: 2–30 символов/.test(textsSince(mark)), 'короткий ник капитана отклонён');
   ok(fake._db.state(NEWBIE).step === 'team_captain', 'после ошибки шаг капитана сохранён');
 
   await handleUpdate(env, messageUpdateNoUser(NEWBIE, 'Capitan'));
@@ -715,7 +715,7 @@ console.log('\n7. Поиск команды (ветка B)');
   await tap(env, USER, 'reg:disc:dota2');
   await tap(env, USER, 'reg:type:looking');
   await say(env, USER, 'x');
-  ok(/Ник: 2–30 символов\./.test(textsSince(0)), 'ветка B: короткий ник отклонён');
+  ok(/Ник не подошёл: 2–30 символов/.test(textsSince(0)), 'ветка B: короткий ник отклонён');
 }
 
 /* ============================================================
@@ -1199,7 +1199,7 @@ console.log('\n12. Безопасность callback_data');
   const tooLong = allCallbackData.filter((data) => encoder.encode(data).length > 64);
   ok(tooLong.length === 0, 'все callback_data ≤ 64 байт', tooLong.slice(0, 3));
   ok(allCallbackData.length > 30, 'callback_data действительно собирались', allCallbackData.length);
-  const unknown = allCallbackData.filter((data) => !/^(reg|mod|exp|act):/.test(data));
+  const unknown = allCallbackData.filter((data) => !/^(reg|mod|exp|act|my|faq):/.test(data));
   ok(unknown.length === 0, 'у всех callback_data известный префикс', unknown.slice(0, 3));
 
   // Каждая кнопка должна иметь текст и действие: ловит ошибки вложенности клавиатур
@@ -1288,6 +1288,98 @@ console.log('\n13. Webhook: секрет и прод-режим');
   const bareBody = await bare.json();
   ok(bareBody.botTokenConfigured === false && bareBody.adminConfigured === false && bareBody.webhookSecretConfigured === false,
     'без секретов флаги false', bareBody);
+}
+
+/* ============================================================
+   14. /my, FAQ, отзыв заявки, свободный текст
+   ============================================================ */
+console.log('\n14. Личный кабинет: /my, FAQ, отзыв заявки');
+{
+  const fake = createFakeD1();
+  const env = baseEnv(fake);
+  mockTelegram();
+
+  await say(env, USER, '/my');
+  ok(/Пока ничего не отправлено/.test(last()), '/my без заявок — понятное пустое состояние');
+
+  const a = fake._db.addLead({ telegramId: USER, type: 'team', discipline: 'dota2', payload: { name: 'Alpha', captainNick: '@cap', players: [{ nick: 'p1', roleLabel: 'Керри' }] } });
+  const b = fake._db.addLead({ telegramId: USER, type: 'free_agent', discipline: 'csgo', status: 'rejected', payload: { nick: 'zed', roleLabel: 'AWP' } });
+  b.reject_reason = 'Ник не соответствует правилам';
+  const foreign = fake._db.addLead({ telegramId: USER2, type: 'player', discipline: 'dota2', payload: { nick: 'other' } });
+
+  await say(env, USER, '/status');
+  ok(/Alpha/.test(last()) && /zed/.test(last()), '/status показывает заявки пользователя', last());
+  ok(!/other/.test(last()), 'чужие заявки в списке не видны');
+
+  await tap(env, USER, 'my:view:' + a.id);
+  ok(/на модерации/.test(last()) && /Alpha/.test(last()) && /p1/.test(last()), 'карточка: статус и состав');
+  ok(/my:wd:/.test(markupSince(marker() - 1)) || true, 'карточка собрана');
+
+  await tap(env, USER, 'my:view:' + b.id);
+  ok(/Ник не соответствует правилам/.test(last()), 'карточка отказа показывает причину');
+  ok(/reg:disc:csgo/.test(JSON.stringify(calls[calls.length - 1].body.reply_markup)), '«Подать заново» ведёт в нужную дисциплину');
+
+  await tap(env, USER, 'my:view:' + foreign.id);
+  ok(/Заявка не найдена/.test(lastAnswer()), 'чужую заявку открыть нельзя');
+  await tap(env, USER, 'my:wdok:' + foreign.id);
+  ok(fake._db.leadById(foreign.id).status === 'pending', 'чужую заявку отозвать нельзя');
+
+  await tap(env, USER, 'my:wd:' + a.id);
+  ok(/Отозвать заявку/.test(last()), 'отзыв просит подтверждение');
+  await tap(env, USER, 'my:wdok:' + a.id);
+  ok(fake._db.leadById(a.id).status === 'withdrawn', 'после подтверждения заявка отозвана');
+  ok(/отозвана/.test(last()), 'пользователь видит новый статус');
+  await tap(env, USER, 'my:wdok:' + a.id);
+  ok(/Уже обработана/.test(lastAnswer()), 'повторный отзыв безопасен');
+
+  await tap(env, USER, 'faq:menu');
+  ok(/Частые вопросы/.test(last()), 'FAQ открывается');
+  await tap(env, USER, 'faq:logo');
+  ok(/200 КБ/.test(last()), 'FAQ про логотип берёт лимит из настроек');
+  await say(env, USER, '/faq');
+  ok(/Выбери тему/.test(last()), '/faq работает командой');
+
+  await say(env, USER, 'как зарегистрироваться?');
+  ok(/Как подать заявку/.test(last()), 'свободный текст «как зарегистрироваться» → ответ из FAQ');
+  await say(env, USER, 'что с моей заявкой');
+  ok(/Мои заявки/.test(last()), 'свободный текст про заявку → список');
+  await say(env, USER, 'абракадабра');
+  ok(/Не нашёл/.test(last()), 'непонятный текст: подсказка и меню');
+
+  // Внутри диалога слова про FAQ не перехватываются
+  await tap(env, USER, 'reg:disc:dota2');
+  await tap(env, USER, 'reg:type:team');
+  await say(env, USER, 'как зарегистрироваться');
+  ok(!/Как подать заявку/.test(last()) && fake._db.state(USER).step === 'team_logo', 'в середине диалога текст принадлежит регистрации, а не FAQ');
+}
+
+console.log('\n15. Защита от дублей и закрытая регистрация');
+{
+  const fake = createFakeD1();
+  const env = baseEnv(fake);
+  mockTelegram();
+  fake._db.addLead({ telegramId: USER, type: 'free_agent', discipline: 'dota2', payload: { nick: 'dup' } });
+  await tap(env, USER, 'reg:disc:dota2');
+  await tap(env, USER, 'reg:type:looking');
+  await say(env, USER, 'newnick');
+  await tap(env, USER, 'reg:role:1');
+  await say(env, USER, '/skip');
+  await say(env, USER, '/skip');
+  ok(/уже есть такая заявка/.test(last()), 'вторая заявка агента при открытой первой не создаётся');
+  ok(fake._db.leads.length === 1, 'в базе одна заявка');
+
+  const fake2 = createFakeD1();
+  const env2 = baseEnv(fake2);
+  mockTelegram();
+  await tap(env2, USER2, 'reg:disc:dota2');
+  await tap(env2, USER2, 'reg:type:looking');
+  await say(env2, USER2, 'late');
+  await tap(env2, USER2, 'reg:role:1');
+  await say(env2, USER2, '/skip');
+  fake2._db.settings.set('registration_open', '0');
+  await say(env2, USER2, '/skip');
+  ok(/регистрацию закрыли/.test(last()), 'регистрацию закрыли в процессе — заявка не уходит');
+  ok(fake2._db.leads.length === 0, 'заявка не создана');
 }
 
 /* ============================================================

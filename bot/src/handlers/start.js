@@ -26,7 +26,10 @@ export async function showMainMenu(env, chatId, userId, intro = '') {
   if (!open) {
     const text = [intro, registrationClosedText()].filter(Boolean).join('\n\n');
     await sendMessage(env, chatId, text, {
-      keyboard: inlineKeyboard([[{ text: 'ℹ️ Справка', data: 'act:help' }]])
+      keyboard: inlineKeyboard([
+        [{ text: '📋 Мои заявки', data: 'my:list' }, { text: '❓ FAQ', data: 'faq:menu' }],
+        [{ text: 'ℹ️ Справка', data: 'act:help' }]
+      ])
     });
     return;
   }
@@ -35,7 +38,7 @@ export async function showMainMenu(env, chatId, userId, intro = '') {
     text: `${DISCIPLINES[key].emoji} ${DISCIPLINES[key].label}`,
     data: `reg:disc:${key}`
   }]));
-  rows.push([{ text: 'ℹ️ Справка', data: 'act:help' }]);
+  rows.push([{ text: '📋 Мои заявки', data: 'my:list' }, { text: '❓ FAQ', data: 'faq:menu' }]);
 
   // Полный текст приветствия живёт в texts.js — здесь только подстановка
   const text = [intro, welcomeText()].filter(Boolean).join('\n\n');
@@ -122,10 +125,13 @@ async function sendHelp(env, chatId, admin) {
     '   • Свободный агент — ник, роль, ранг, описание',
     '   • Заявка игрока — ник, команда, роль',
     '3. Заявка уходит на ручную модерацию.',
-    '4. После решения придёт уведомление.',
+    '4. После решения придёт уведомление, а статус всегда виден в /my.',
+    '5. Пока заявка на модерации, её можно отозвать и подать заново.',
     '',
     '<b>Команды</b>',
-    '/start — меню',
+    '/start — меню и выбор дисциплины',
+    '/my — мои заявки и их статус',
+    '/faq — частые вопросы',
     '/help — эта справка',
     '/cancel — сбросить текущий шаг'
   ];
@@ -142,6 +148,9 @@ async function sendHelp(env, chatId, admin) {
   lines.push('', contactsBlock());
 
   await sendMessage(env, chatId, lines.join('\n'), {
-    keyboard: inlineKeyboard([[{ text: '🏠 В меню', data: 'act:menu' }]])
+    keyboard: inlineKeyboard([
+      [{ text: '📋 Мои заявки', data: 'my:list' }, { text: '❓ FAQ', data: 'faq:menu' }],
+      [{ text: '🏠 В меню', data: 'act:menu' }]
+    ])
   });
 }

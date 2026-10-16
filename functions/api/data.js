@@ -1,4 +1,3 @@
-import { applyChallonge } from '../_lib/challonge.js';
 
 // ============================================================
 // DEFAULT_DATA — сид для первого запуска.
@@ -75,13 +74,6 @@ export async function onRequestGet(context) {
   if (!data) {
     data = DEFAULT_DATA;
     await env.COMPASS_KV.put('tournament', JSON.stringify(data));
-  }
-
-  // Если турнир подключён к Challonge — подтягиваем сетку оттуда.
-  // Ошибка сети или кривая ссылка не должны ронять страницу: тогда отдаём
-  // сохранённые матчи и причину в bracketSource.
-  if (data.challonge && data.challonge.enabled) {
-    data = await applyChallonge(env, data);
   }
 
   // История турниров — отдельный ключ. Если нет — пустой массив.

@@ -202,7 +202,7 @@ console.log('\nE. Сброс сезона не трогает архив, нов
 
   ok(w.HISTORY.length === 1, 'архив пережил сброс сезона', w.HISTORY.length);
   ok(w.DATA.archivedSnapshotId === null, 'привязка «сезон зафиксирован» сброшена');
-  ok(w.DATA.teams.length === 6 && w.DATA.teams[0].name === 'Слот 1', 'команды обнулены к слотам', w.DATA.teams[0].name);
+  ok(w.DATA.teams.length === 0 && w.DATA.matches.length === 0, 'команды и матчи обнулены', w.DATA.teams.length);
 
   // новый сезон: играем финал и фиксируем — должна появиться вторая глава
   w.DATA.teams = JSON.parse(JSON.stringify(TEAMS));

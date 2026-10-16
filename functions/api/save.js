@@ -2,22 +2,11 @@ const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 10 * 60 * 1000; // 10 минут блокировки после превышения лимита
 
 /* Лимиты KV: 25 МБ на значение. Держим запас и отдаём понятную ошибку. */
-const MAX_BRACKETS_BYTES = 20 * 1024 * 1024;
-const MAX_META_BYTES = 512 * 1024;
 const MAX_HISTORY_BYTES = 20 * 1024 * 1024;
 
 /** Размер значения в байтах (UTF-8) */
 function byteLength(value) {
   return new TextEncoder().encode(typeof value === 'string' ? value : JSON.stringify(value)).length;
-}
-
-/** Проверка структуры сетки от brackets-manager: без неё рендер упадёт */
-function isBracketsData(value) {
-  return Boolean(value)
-    && typeof value === 'object'
-    && Array.isArray(value.stages)
-    && Array.isArray(value.matches)
-    && Array.isArray(value.participants);
 }
 
 /* ============================================================
@@ -169,48 +158,10 @@ export async function onRequestPost(context) {
   }
 
   // ---- Сохраняем основное состояние турнира ----
-  // history, сетка и метаданные сетки живут в отдельных ключах.
-  const { history, clearHistory, brackets, bracketsMeta, clearBrackets, ...tournamentData } = data;
+  // history живёт в отдельном ключе.
+  const { history, clearHistory, ...tournamentData } = data;
 
   await env.COMPASS_KV.put('tournament', JSON.stringify(tournamentData));
-
-  // ---- Универсальная сетка (brackets-manager) ----
-  // Ключи пишем только когда они реально переданы: обычное сохранение
-  // из админки не должно затирать уже сгенерированную сетку.
-  let bracketsSaved = null;
-  if (brackets !== undefined) {
-    if (clearBrackets === true || brackets === null) {
-      await env.COMPASS_KV.delete('brackets_data');
-      bracketsSaved = 'cleared';
-    } else if (!isBracketsData(brackets)) {
-      return new Response('Bad request: brackets без stages/matches/participants', { status: 400 });
-    } else if (byteLength(brackets) > MAX_BRACKETS_BYTES) {
-      return new Response(
-        'Сетка больше ' + Math.round(MAX_BRACKETS_BYTES / 1024 / 1024) + ' МБ — не сохраняем. ' +
-        'Уменьшите число команд или уберите логотипы из сетки.',
-        { status: 413 }
-      );
-    } else {
-      await env.COMPASS_KV.put('brackets_data', JSON.stringify(brackets));
-      bracketsSaved = 'saved';
-    }
-  }
-
-  let metaSaved = null;
-  if (bracketsMeta !== undefined) {
-    if (bracketsMeta === null || clearBrackets === true) {
-      await env.COMPASS_KV.delete('brackets_meta');
-      metaSaved = 'cleared';
-    } else if (typeof bracketsMeta !== 'object') {
-      return new Response('Bad request: bracketsMeta должен быть объектом', { status: 400 });
-    } else if (byteLength(bracketsMeta) > MAX_META_BYTES) {
-      return new Response('Метаданные сетки больше ' + Math.round(MAX_META_BYTES / 1024) + ' КБ — не сохраняем.',
-        { status: 413 });
-    } else {
-      await env.COMPASS_KV.put('brackets_meta', JSON.stringify(bracketsMeta));
-      metaSaved = 'saved';
-    }
-  }
 
   // ---- Сохраняем историю (если передана) ----
   let historyKept = false;
@@ -269,7 +220,7 @@ export async function onRequestPost(context) {
     }
   }
 
-  return new Response(JSON.stringify({ ok: true, historyKept, bracketsSaved, metaSaved }), {
+  return new Response(JSON.stringify({ ok: true, historyKept }), {
     headers: { 'Content-Type': 'application/json' }
   });
 }

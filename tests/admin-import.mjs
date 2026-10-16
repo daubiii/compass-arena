@@ -290,7 +290,7 @@ console.log('\n4. Импорт команд: предупреждения, за�
   ok(saved.teams[0].players.length === 5 && saved.teams[0].players[0].role === 1, 'состав и роли на месте');
   ok(saved.teams[0].logo.indexOf('data:image') === 0, 'логотип перенесён');
 
-  ok(saved.matches.length === 5, 'сетка осталась из 5 матчей');
+  ok(saved.matches.length === 0, 'старая сетка сброшена — матчей нет, сетку надо сгенерировать заново');
   const dirty = saved.matches.filter((m) => m.team1 !== null || m.team2 !== null || m.winner !== null);
   ok(dirty.length === 0, 'все пары и результаты сброшены', JSON.stringify(dirty));
   ok(Object.keys(saved.schedule || {}).length === 0, 'расписание очищено', JSON.stringify(saved.schedule));
