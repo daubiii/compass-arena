@@ -198,17 +198,43 @@ export async function canSubmitLead(env, telegramId) {
  * @param {string} [reason]
  */
 export async function updateLeadStatus(env, id, status, moderatorId, reason = null) {
-  return env.DB.prepare(
+  /* Только из «на модерации»: два модератора, нажавшие одновременно, не перезапишут решение друг друга */
+  const result = await env.DB.prepare(
     `UPDATE leads SET
        status        = ?2,
        updated_at    = datetime('now'),
        moderated_at  = datetime('now'),
        moderated_by  = ?3,
        reject_reason = ?4
-     WHERE id = ?1`
+     WHERE id = ?1 AND status = 'pending'`
   )
     .bind(id, status, moderatorId || null, reason)
     .run();
+  return Boolean(result && result.meta && result.meta.changes);
+}
+
+/**
+ * Автор отзывает свою заявку (только пока она на модерации).
+ * @returns {Promise<boolean>} true — отозвана, false — уже обработана или чужая
+ */
+export async function withdrawLead(env, id, telegramId) {
+  const result = await env.DB.prepare(
+    `UPDATE leads SET status = 'withdrawn', updated_at = datetime('now')
+     WHERE id = ?1 AND telegram_id = ?2 AND status = 'pending'`
+  )
+    .bind(id, telegramId)
+    .run();
+  return Boolean(result && result.meta && result.meta.changes);
+}
+
+/** Есть ли у пользователя незакрытая заявка того же типа и дисциплины (для свободного агента и игрока) */
+export async function findPendingLeadOfType(env, telegramId, type, discipline) {
+  const row = await env.DB.prepare(
+    `SELECT * FROM leads WHERE telegram_id = ? AND status = 'pending' AND type = ? AND discipline = ? LIMIT 1`
+  )
+    .bind(telegramId, type, discipline)
+    .first();
+  return row ? withPayload(row) : null;
 }
 
 /** Счётчики заявок: { pending: n, approved: n, rejected: n } */
@@ -222,7 +248,7 @@ export async function countLeads(env, filters = {}) {
     `SELECT status, COUNT(*) AS n FROM leads ${where.length ? 'WHERE ' + where.join(' AND ') : ''} GROUP BY status`;
   const result = await env.DB.prepare(sql).bind(...params).all();
 
-  const counts = { pending: 0, approved: 0, rejected: 0 };
+  const counts = { pending: 0, approved: 0, rejected: 0, withdrawn: 0 };
   for (const row of result.results || []) counts[row.status] = row.n;
   return counts;
 }

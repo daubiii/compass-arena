@@ -152,8 +152,8 @@ export function createFakeD1(seed = {}) {
     // leads: счётчики по статусам
     {
       test: /^SELECT status, COUNT\(\*\) AS n FROM leads/,
-      all: (p) => {
-        const filters = readFilters(p);
+      all: (p, q) => {
+        const filters = readFilters(p, q);
         const counts = new Map();
         for (const row of filterRows(filters)) counts.set(row.status, (counts.get(row.status) || 0) + 1);
         return rows(Array.from(counts, ([status, n]) => ({ status, n })));
@@ -183,17 +183,33 @@ export function createFakeD1(seed = {}) {
         return rows(list.map(parseRow));
       }
     },
+    // leads: незакрытая заявка того же типа
+    {
+      test: /^SELECT \* FROM leads WHERE telegram_id = \? AND status = 'pending' AND type = \?/,
+      first: (p) => parseRow(db.leads.find((r) => r.telegram_id === p[0] && r.status === 'pending' && r.type === p[1] && r.discipline === p[2]) || null)
+    },
     // leads: универсальная выборка с LIMIT/OFFSET
     {
       test: /^SELECT \* FROM leads/,
-      all: (p) => {
+      all: (p, q) => {
         const limit = p[p.length - 2];
         const offset = p[p.length - 1];
-        const filters = readFilters(p.slice(0, p.length - 2));
+        const filters = readFilters(p.slice(0, p.length - 2), q);
         const list = filterRows(filters)
           .slice()
           .sort((a, b) => (a.created_at === b.created_at ? b.id - a.id : (a.created_at < b.created_at ? 1 : -1)));
         return rows(list.slice(offset, offset + limit).map(parseRow));
+      }
+    },
+    // leads: заявка автора отозвана
+    {
+      test: /^UPDATE leads SET status = 'withdrawn'/,
+      run: (p) => {
+        const row = db.leads.find((r) => r.id === p[0] && r.telegram_id === p[1] && r.status === 'pending');
+        if (!row) return ok({ changes: 0 });
+        row.status = 'withdrawn';
+        row.updated_at = nowSql();
+        return ok({ changes: 1 });
       }
     },
     // leads: модерация
@@ -203,12 +219,13 @@ export function createFakeD1(seed = {}) {
         const [id, status, moderatorId, reason] = p;
         const row = db.leads.find((r) => r.id === id);
         if (!row) throw new Error('fake-d1: заявка #' + id + ' не найдена');
+        if (row.status !== 'pending') return ok({ changes: 0 });
         row.status = status;
         row.moderated_at = nowSql();
         row.moderated_by = moderatorId || null;
         row.reject_reason = reason || null;
         row.updated_at = nowSql();
-        return ok();
+        return ok({ changes: 1 });
       }
     },
     // health-check воркера
@@ -224,10 +241,12 @@ export function createFakeD1(seed = {}) {
   ];
 
   /** Фильтры читаем ровно в том порядке, в котором их собирает db.js */
-  function readFilters(params) {
+  function readFilters(params, query = '') {
     const filters = {};
     let index = 0;
-    const keys = ['status', 'discipline', 'type', 'telegramId'];
+    const names = { status: 'status', discipline: 'discipline', type: 'type', telegram_id: 'telegramId' };
+    const found = [...String(query).matchAll(/\b(status|discipline|type|telegram_id) = \?/g)].map((m) => names[m[1]]);
+    const keys = found.length ? found : ['status', 'discipline', 'type', 'telegramId'];
     for (const key of keys) {
       if (index < params.length) filters[key] = params[index++];
     }
@@ -255,9 +274,9 @@ export function createFakeD1(seed = {}) {
     for (const handler of handlers) {
       if (!handler.test.test(query)) continue;
       return {
-        first: async () => (handler.first ? handler.first(params) : null),
-        all: async () => (handler.all ? handler.all(params) : rows([])),
-        run: async () => (handler.run ? handler.run(params) : ok())
+        first: async () => (handler.first ? handler.first(params, query) : null),
+        all: async () => (handler.all ? handler.all(params, query) : rows([])),
+        run: async () => (handler.run ? handler.run(params, query) : ok())
       };
     }
     throw new Error('fake-d1: нет обработчика для запроса → ' + query);

@@ -256,8 +256,12 @@ async function onApprove(env, query, ctx, rawId, flag) {
     }
   }
 
+  const changed = await updateLeadStatus(env, lead.id, 'approved', ctx.userId, null);
+  if (!changed) {
+    await answerCallbackQuery(env, query.id, { text: 'Уже обработано', showAlert: true });
+    return true;
+  }
   await answerCallbackQuery(env, query.id, { text: 'Одобрено' });
-  await updateLeadStatus(env, lead.id, 'approved', ctx.userId, null);
   const notified = await notifyAuthor(env, { ...lead, status: 'approved' }, 'approved', '');
   await stripButtons(env, ctx);
   await showNextAfter(env, ctx, lead.id, `Заявка #${lead.id} одобрена.`, notified);
@@ -316,7 +320,12 @@ async function submitRejection(env, ctx, temp, reason) {
   }
 
   const cleanReason = reason ? clean(reason).slice(0, 300) : '';
-  await updateLeadStatus(env, lead.id, 'rejected', ctx.userId, cleanReason || null);
+  const changed = await updateLeadStatus(env, lead.id, 'rejected', ctx.userId, cleanReason || null);
+  if (!changed) {
+    await sendMessage(env, ctx.chatId, `Уже обработано: заявка #${lead.id}.`,
+      { keyboard: kb([[{ text: 'К счётчикам', data: 'mod:menu' }], [menuRow]]) });
+    return true;
+  }
   const notified = await notifyAuthor(env, { ...lead, status: 'rejected', reject_reason: cleanReason }, 'rejected', cleanReason);
   await stripButtons(env, ctx);
   await showNextAfter(env, ctx, lead.id,

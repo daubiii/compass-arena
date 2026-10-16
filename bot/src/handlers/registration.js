@@ -21,7 +21,7 @@ import {
 } from '../lib/telegram.js';
 import {
   getState, setState, resetState, createLead, canSubmitLead,
-  findPendingTeamByName, isRegistrationOpen
+  findPendingTeamByName, findPendingLeadOfType, isRegistrationOpen
 } from '../lib/db.js';
 import { esc, clean, isNick, isTeamName, plural } from '../lib/esc.js';
 import {
@@ -117,6 +117,27 @@ async function replace(env, ctx, screen) {
   return send(env, ctx, screen);
 }
 
+/** Регистрацию могли закрыть, пока человек заполнял анкету */
+async function closedNow(env, ctx) {
+  if (await isRegistrationOpen(env)) return false;
+  await resetState(env, ctx.userId);
+  await sendMessage(env, ctx.chatId,
+    '⚠️ <b>Пока ты заполнял анкету, регистрацию закрыли.</b>\nЗаявка не отправлена. Вопросы — организаторам: ' + CONTACTS,
+    { keyboard: kb([[{ text: '📋 Мои заявки', data: 'my:list' }], menuRow]) });
+  return true;
+}
+
+/** У человека уже есть заявка такого же типа на модерации */
+async function pendingTwin(env, ctx, type, discipline) {
+  const twin = await findPendingLeadOfType(env, ctx.userId, type, discipline);
+  if (!twin) return false;
+  await sendMessage(env, ctx.chatId,
+    `У тебя уже есть такая заявка на модерации — <code>#${twin.id}</code>.\n` +
+    'Дождись решения или отзови её в /my и подай новую.',
+    { keyboard: kb([[{ text: '📋 Мои заявки', data: 'my:list' }], menuRow]) });
+  return true;
+}
+
 /** Ошибка на шаге: сообщение + повтор текущего экрана, прогресс не сбрасываем */
 async function fail(env, ctx, text, screen) {
   await sendMessage(env, ctx.chatId, problem(text));
@@ -125,6 +146,10 @@ async function fail(env, ctx, text, screen) {
 
 const maxLogoBytes = (env) => (Number(env.LOGO_MAX_KB) || 200) * 1024;
 const maxLogoKb = (env) => Math.round(maxLogoBytes(env) / 1024);
+
+/* Лимит логотипа для экранов без доступа к env: обновляется на каждом входящем апдейте */
+let LOGO_LIMIT_KB = 200;
+const syncLimits = (env) => { LOGO_LIMIT_KB = maxLogoKb(env || {}); };
 
 /** «загружен (84 КБ)» / «не загружен» — для карточки проверки */
 function logoStatus(temp) {
@@ -200,7 +225,7 @@ function screenTeamLogo(temp, note) {
       stepTitle(2, totalOf(temp)),
       '',
       'Пришли логотип команды одним фото.',
-      `Лимит: ${maxLogoKb({})} КБ. Больше — не принимается.` + CANCEL_HINT
+      `Лимит: ${LOGO_LIMIT_KB} КБ. Больше — не принимается.` + CANCEL_HINT
     ].filter(Boolean).join('\n'),
     keyboard: kb([backRow()])
   };
@@ -315,7 +340,7 @@ function screenEditLogo(temp, note) {
       '',
       `Сейчас: ${logoStatus(temp)}`,
       'Пришли новое фото одним сообщением.',
-      `Лимит: ${maxLogoKb({})} КБ. Больше — не принимается.` + CANCEL_HINT
+      `Лимит: ${LOGO_LIMIT_KB} КБ. Больше — не принимается.` + CANCEL_HINT
     ].filter(Boolean).join('\n'),
     keyboard: kb([backRow('reg:edit', '⬅️ Назад к списку полей')])
   };
@@ -503,6 +528,7 @@ async function handleSkip(env, ctx) {
    Кнопки
    ============================================================ */
 export async function handleCallback(env, query, ctx) {
+  syncLimits(env);
   const [, action, ...params] = String(ctx.data || '').split(':');
 
   try {
@@ -720,6 +746,11 @@ async function onConfirm(env, query, ctx) {
     return true;
   }
 
+  if (await closedNow(env, ctx)) {
+    await answerCallbackQuery(env, query.id, { text: 'Регистрация закрыта', showAlert: true });
+    return true;
+  }
+
   // 2. Rate limit
   const rate = await canSubmitLead(env, ctx.userId);
   if (!rate.allowed) {
@@ -754,7 +785,7 @@ async function onConfirm(env, query, ctx) {
   await sendMessage(env, ctx.chatId,
     `Заявка <code>#${leadId}</code> отправлена на модерацию.\n` +
     `Дисциплина: ${esc(disciplineLabel(temp.discipline))}\n\n` +
-    'Решение придёт в этот чат.\n' + contactsBlock(),
+    'Решение придёт в этот чат. Статус можно посмотреть в /my.\n' + contactsBlock(),
     { keyboard: kb([menuRow]) }
   );
 
@@ -946,6 +977,7 @@ async function onBack(env, query, ctx) {
    Текстовый ввод
    ============================================================ */
 export async function handleText(env, message, ctx) {
+  syncLimits(env);
   const state = await getState(env, ctx.userId);
   if (!state.step) return false;          // не наш апдейт — пусть index покажет меню
   // Шаги других обработчиков (например, причина отклонения) не трогаем
@@ -979,7 +1011,7 @@ export async function handleText(env, message, ctx) {
 async function onTeamName(env, ctx, temp, raw) {
   const name = clean(raw);
   if (!isTeamName(name)) {
-    return fail(env, ctx, 'Название: 2–30 символов, без спецсимволов.', screenTeamName(temp.discipline, null, totalOf(temp)));
+    return fail(env, ctx, 'Название не подошло: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Например: Night Wolves.', screenTeamName(temp.discipline, null, totalOf(temp)));
   }
   const updated = { ...temp, name };
   await setState(env, ctx.userId, STEP.TEAM_LOGO, updated);
@@ -991,7 +1023,7 @@ async function onTeamName(env, ctx, temp, raw) {
 async function onTeamCaptain(env, ctx, temp, raw) {
   const nick = clean(raw);
   if (!isNick(nick)) {
-    return fail(env, ctx, 'Ник: 2–30 символов.', screenTeamCaptain(temp));
+    return fail(env, ctx, 'Ник не подошёл: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Эмодзи и скобки нельзя.', screenTeamCaptain(temp));
   }
   const updated = { ...temp, captainNick: nick };
   return goToFirstPlayer(env, ctx, updated);
@@ -999,7 +1031,7 @@ async function onTeamCaptain(env, ctx, temp, raw) {
 
 /** На шаге логотипа принимаем только фото */
 async function onLogoText(env, ctx, temp) {
-  return fail(env, ctx, 'Нужно фото. Пришли логотип или /cancel.', screenTeamLogo(temp));
+  return fail(env, ctx, 'Нужно именно фото или картинка (не файл и не текст). Пришли логотип ещё раз или нажми /cancel.', screenTeamLogo(temp));
 }
 
 async function onPlayerNick(env, ctx, temp, raw) {
@@ -1007,12 +1039,12 @@ async function onPlayerNick(env, ctx, temp, raw) {
   const index = Number(temp.playerIndex) || 0;
   const screen = screenTeamPlayerNick(temp);
 
-  if (!isNick(nick)) return fail(env, ctx, 'Ник: 2–30 символов.', screen);
+  if (!isNick(nick)) return fail(env, ctx, 'Ник не подошёл: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Эмодзи и скобки нельзя.', screen);
 
   const players = temp.players || [];
   const taken = players.some((player, i) => i !== index && player && player.nick &&
     player.nick.toLowerCase() === nick.toLowerCase());
-  if (taken) return fail(env, ctx, 'Такой ник уже есть в составе.', screen);
+  if (taken) return fail(env, ctx, 'Этот ник уже есть в составе — у каждого игрока свой. Введи другой.', screen);
 
   const updated = { ...temp, players: players.map((player) => player), pendingNick: nick };
   await setState(env, ctx.userId, STEP.TEAM_PLAYER_ROLE, updated);
@@ -1048,7 +1080,7 @@ async function onEditFieldText(env, ctx, temp, raw) {
 
   if (field === 'name') {
     const name = clean(raw);
-    if (!isTeamName(name)) return fail(env, ctx, 'Название: 2–30 символов, без спецсимволов.', screenEditName(temp));
+    if (!isTeamName(name)) return fail(env, ctx, 'Название не подошло: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Например: Night Wolves.', screenEditName(temp));
     const updated = { ...temp, name, editField: null };
     await setState(env, ctx.userId, STEP.TEAM_CONFIRM, updated);
     await send(env, ctx, screenTeamConfirm(updated));
@@ -1058,12 +1090,12 @@ async function onEditFieldText(env, ctx, temp, raw) {
   if (field.startsWith('player:')) {
     const index = Number(field.split(':')[1]) - 1;
     const nick = clean(raw);
-    if (!isNick(nick)) return fail(env, ctx, 'Ник: 2–30 символов.', screenEditPlayer(temp, index));
+    if (!isNick(nick)) return fail(env, ctx, 'Ник не подошёл: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Эмодзи и скобки нельзя.', screenEditPlayer(temp, index));
 
     const players = (temp.players || []).map((player) => player);
     const taken = players.some((player, i) => i !== index && player && player.nick &&
       player.nick.toLowerCase() === nick.toLowerCase());
-    if (taken) return fail(env, ctx, 'Такой ник уже есть в составе.', screenEditPlayer(temp, index));
+    if (taken) return fail(env, ctx, 'Этот ник уже есть в составе — у каждого игрока свой. Введи другой.', screenEditPlayer(temp, index));
 
     players[index] = { ...(players[index] || {}), nick };
     const updated = { ...temp, players, pendingNick: nick, playerIndex: index };
@@ -1073,7 +1105,7 @@ async function onEditFieldText(env, ctx, temp, raw) {
   }
 
   if (field === 'logo') {
-    return fail(env, ctx, 'Нужно фото. Пришли логотип или /cancel.', screenEditLogo(temp));
+    return fail(env, ctx, 'Нужно именно фото или картинка (не файл и не текст). Пришли логотип ещё раз или нажми /cancel.', screenEditLogo(temp));
   }
 
   await sendMessage(env, ctx.chatId, 'Не удалось определить, что меняем. Открой меню правок заново.');
@@ -1083,7 +1115,7 @@ async function onEditFieldText(env, ctx, temp, raw) {
 /* ---------- Ветка B: свободный агент ---------- */
 async function onAgentNick(env, ctx, temp, raw) {
   const nick = clean(raw);
-  if (!isNick(nick)) return fail(env, ctx, 'Ник: 2–30 символов.', screenAgentNick(temp));
+  if (!isNick(nick)) return fail(env, ctx, 'Ник не подошёл: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Эмодзи и скобки нельзя.', screenAgentNick(temp));
   const updated = { ...temp, nick };
   await setState(env, ctx.userId, STEP.AGENT_ROLE, updated);
   await send(env, ctx, screenAgentRole(updated));
@@ -1092,7 +1124,7 @@ async function onAgentNick(env, ctx, temp, raw) {
 
 async function onAgentRank(env, ctx, temp, raw) {
   const rank = canSkip(raw) ? '' : clean(raw);
-  if (rank.length > 40) return fail(env, ctx, 'Ранг: до 40 символов.', screenAgentRank(temp));
+  if (rank.length > 40) return fail(env, ctx, 'Ранг слишком длинный — до 40 символов. Например: Immortal или Global Elite.', screenAgentRank(temp));
   const updated = { ...temp, rank };
   await setState(env, ctx.userId, STEP.AGENT_NOTE, updated);
   await send(env, ctx, screenAgentNote(updated));
@@ -1105,6 +1137,8 @@ async function onAgentNote(env, ctx, temp, raw) {
 }
 
 async function submitAgent(env, ctx, temp) {
+  if (await closedNow(env, ctx)) return true;
+  if (await pendingTwin(env, ctx, 'free_agent', temp.discipline)) { await resetState(env, ctx.userId); return true; }
   const rate = await canSubmitLead(env, ctx.userId);
   if (!rate.allowed) {
     await sendMessage(env, ctx.chatId, rateLimitText(env, rate.retryAfterSec), { keyboard: kb([menuRow]) });
@@ -1131,7 +1165,7 @@ async function submitAgent(env, ctx, temp) {
   await sendMessage(env, ctx.chatId,
     `Заявка <code>#${leadId}</code> принята.\n` +
     `Дисциплина: ${esc(disciplineLabel(temp.discipline))}\n\n` +
-    'Капитаны увидят её после модерации.\n' + contactsBlock(),
+    'Капитаны увидят её после модерации. Статус — в /my.\n' + contactsBlock(),
     { keyboard: kb([menuRow]) }
   );
 
@@ -1146,7 +1180,7 @@ async function submitAgent(env, ctx, temp) {
 /* ---------- Ветка C: заявка игрока ---------- */
 async function onPlayerNickInput(env, ctx, temp, raw) {
   const nick = clean(raw);
-  if (!isNick(nick)) return fail(env, ctx, 'Ник: 2–30 символов.', screenPlayerLeadNick(temp));
+  if (!isNick(nick)) return fail(env, ctx, 'Ник не подошёл: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Эмодзи и скобки нельзя.', screenPlayerLeadNick(temp));
   const updated = { ...temp, nick };
   await setState(env, ctx.userId, STEP.PLAYER_TEAM, updated);
   await send(env, ctx, screenPlayerTeam(updated));
@@ -1156,7 +1190,7 @@ async function onPlayerNickInput(env, ctx, temp, raw) {
 async function onPlayerTeam(env, ctx, temp, raw) {
   const teamName = canSkip(raw) ? null : clean(raw);
   if (teamName && !isTeamName(teamName)) {
-    return fail(env, ctx, 'Команда: 2–30 символов, без спецсимволов.', screenPlayerTeam(temp));
+    return fail(env, ctx, 'Название команды не подошло: 2–30 символов, без спецсимволов. Нет команды — нажми «Без команды» или /skip.', screenPlayerTeam(temp));
   }
   const updated = { ...temp, teamName };
   await setState(env, ctx.userId, STEP.PLAYER_ROLE, updated);
@@ -1165,6 +1199,8 @@ async function onPlayerTeam(env, ctx, temp, raw) {
 }
 
 async function submitPlayer(env, ctx, temp) {
+  if (await closedNow(env, ctx)) return true;
+  if (await pendingTwin(env, ctx, 'player', temp.discipline)) { await resetState(env, ctx.userId); return true; }
   const rate = await canSubmitLead(env, ctx.userId);
   if (!rate.allowed) {
     await sendMessage(env, ctx.chatId, rateLimitText(env, rate.retryAfterSec), { keyboard: kb([menuRow]) });
@@ -1189,8 +1225,9 @@ async function submitPlayer(env, ctx, temp) {
   await resetState(env, ctx.userId);
   await sendMessage(env, ctx.chatId,
     `Заявка <code>#${leadId}</code> принята.\n` +
-    `Дисциплина: ${esc(disciplineLabel(temp.discipline))}`,
-    { keyboard: kb([menuRow]) }
+    `Дисциплина: ${esc(disciplineLabel(temp.discipline))}\n\n` +
+    'Решение придёт в этот чат. Статус — в /my.',
+    { keyboard: kb([[{ text: '📋 Мои заявки', data: 'my:list' }], menuRow]) }
   );
 
   await notifyAdmins(env,
@@ -1209,6 +1246,7 @@ async function submitPlayer(env, ctx, temp) {
    вариант от Telegram больше лимита — заявку не принимаем.
    ============================================================ */
 export async function handlePhoto(env, message, ctx) {
+  syncLimits(env);
   const state = await getState(env, ctx.userId);
   const temp = state.temp || {};
   const editingLogo = state.step === STEP.TEAM_EDIT_FIELD && temp.editField === 'logo';

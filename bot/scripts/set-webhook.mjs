@@ -39,6 +39,15 @@ function readDevVars() {
   }
 }
 
+/** Меню «/» у бота: показывается в Telegram рядом с полем ввода */
+const COMMANDS = [
+  { command: 'start', description: 'Меню и выбор дисциплины' },
+  { command: 'my', description: 'Мои заявки и их статус' },
+  { command: 'faq', description: 'Частые вопросы' },
+  { command: 'help', description: 'Справка' },
+  { command: 'cancel', description: 'Сбросить текущий шаг' }
+];
+
 const [, , action = 'info', urlArg] = process.argv;
 const env = { ...readDevVars(), ...process.env };
 const token = env.BOT_TOKEN;
@@ -85,6 +94,8 @@ if (action === 'set') {
   });
   console.log('✅ Webhook установлен:', `${base}/webhook`);
   console.log('   Ответ Telegram:', result === true ? 'true' : JSON.stringify(result));
+  await call('setMyCommands', { commands: COMMANDS });
+  console.log('✅ Меню команд обновлено:', COMMANDS.map((c) => '/' + c.command).join(' '));
   const info = await call('getWebhookInfo', {});
   console.log('   Проверка:', JSON.stringify(info, null, 2));
 } else if (action === 'delete') {
