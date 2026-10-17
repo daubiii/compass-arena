@@ -135,6 +135,15 @@
   /* ---------- Роли ---------- */
   var ROLES = { 1: 'Керри', 2: 'Мидер', 3: 'Офлейн', 4: 'Саппорт 4', 5: 'Саппорт 5' };
   function roleName(role) { return ROLES[role] || ('Позиция ' + role); }
+  /** Роли (керри, мидер…) есть только в Dota 2; в остальных играх состав — просто список */
+  function hasRoles(game) {
+    var g = CA.games && CA.games.get(game || D.game);
+    return !g || !!g.roles;
+  }
+  function isSolo(game) {
+    var g = CA.games && CA.games.get(game || D.game);
+    return !!(g && g.solo);
+  }
   function normPlayers(list) {
     var out = [];
     if (!list) return out;
@@ -716,6 +725,8 @@
     isPlaceholderName: isPlaceholderName,
     isRealTeam: isRealTeam,
     roleName: roleName,
+    hasRoles: hasRoles,
+    isSolo: isSolo,
     normPlayers: normPlayers,
     team: function (id) { return team(D, id); },
     teamName: function (id) { return teamName(D, id); },

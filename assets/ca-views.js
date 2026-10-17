@@ -174,18 +174,20 @@
       ? '<img src="' + esc(t.logo) + '" alt="Логотип ' + esc(t.name) + '" width="60" height="60">'
       : '<span class="ph">' + esc(D.initials(t.name)) + '</span>';
 
-    var roster = t.players && t.players.length
+    var solo = D.isSolo();
+    var roles = D.hasRoles();
+    var roster = solo ? '' : (t.players && t.players.length
       ? t.players.map(function (p, i) {
           return '<div class="dlg-row"><span class="k">' + esc(p.nick || '—') + '</span>' +
-            '<span class="v">' + esc(D.roleName(p.role || i + 1)) + '</span></div>';
+            (roles ? '<span class="v">' + esc(D.roleName(p.role || i + 1)) + '</span>' : '') + '</div>';
         }).join('')
-      : '<div class="dlg-row is-none">Состав пока не указан</div>';
+      : '<div class="dlg-row is-none">Состав пока не указан</div>');
 
     var rec = D0.stats.records[teamId] || { wins: 0, losses: 0, played: 0 };
     var place = '';
     if (D0.champion && D0.champion.id === teamId) place = 'Чемпион турнира';
     else if (D0.runnerUp && D0.runnerUp.id === teamId) place = 'Серебро турнира';
-    else if (rec.out) place = 'Выбыла в M' + rec.out;
+    else if (rec.out) place = (solo ? 'Выбыл в M' : 'Выбыла в M') + rec.out;
 
     var stats = (rec.played > 0)
       ? '<div class="stat-grid" style="margin-top:22px">' +
@@ -198,7 +200,7 @@
     return {
       logo: logo,
       name: t.name,
-      sub: place || (D0.phase === 'pre' ? 'Участник турнира' : 'Состав команды'),
+      sub: place || (D0.phase === 'pre' || solo ? 'Участник турнира' : 'Состав команды'),
       body: roster,
       stats: stats
     };

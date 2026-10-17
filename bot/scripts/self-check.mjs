@@ -197,8 +197,8 @@ ok(kb.inline_keyboard[0][0].callback_data === 'reg:disc:dota2', 'callback_data �
 ok(kb.inline_keyboard[1][0].url === 'https://compassarena.ru', 'url-кнопка собирается');
 ok(inlineKeyboard([[{ text: 'x', data: 'a'.repeat(100) }]]).inline_keyboard[0][0].callback_data.length === 64, 'callback_data обрезается до 64 байт');
 ok(DISCIPLINE_KEYS.join(',') === 'dota2,csgo,clash,brawl', 'четыре дисциплины');
-ok(roleNum('csgo', 'AWP') === 2 && roleLabel('csgo', 'AWP') === 'AWPer', 'роль CS:GO → номер и подпись');
-ok(roleTitle('csgo', 'IGL') === 'IGL — Капитан', 'полная подпись роли');
+ok(roleNum('dota2', '2') === 2 && roleLabel('dota2', '2') === 'Мидер', 'роль Dota 2 → номер и подпись');
+ok(roleTitle('dota2', '1') === '1 — Керри', 'полная подпись роли');
 ok(roleLabel('dota2', '4') === 'Саппорт 4' && roleNum('dota2', '4') === 4, 'роль Dota → 4');
 ok(disciplineLabel('csgo') === 'CS:GO' && leadTypeLabel('free_agent') === 'Ищет команду', 'подписи дисциплин и типов');
 
@@ -329,7 +329,7 @@ console.log('\n5. Роутер бота (команды, права, кнопк�
   mockTelegram();
   await say(env, USER, '/help');
   ok(!/\/leads/.test(last()), '/help для игрока без админ-команд');
-  ok(/Свободный агент — ник, роль, ранг, описание/.test(last()), 'справка описывает три типа заявок');
+  ok(/Свободный агент — ник, ранг, описание/.test(last()), 'справка описывает три типа заявок');
 }
 {
   const env = baseEnv();
@@ -667,14 +667,14 @@ console.log('\n7. Поиск команды (ветка B)');
   mockTelegram();
 
   await say(env, USER, '/start');
-  await tap(env, USER, 'reg:disc:csgo');
+  await tap(env, USER, 'reg:disc:dota2');
   await tap(env, USER, 'reg:type:looking');
   ok(/Шаг 1 из 4/.test(last()) && /Твой игровой ник \(2–30 символов\)/.test(last()), 'ветка B: шаг 1 — ник');
 
   await say(env, USER, 's1mple');
   ok(/Шаг 2 из 4/.test(last()) && /Позиция:/.test(last()), 'ветка B: шаг 2 — позиция');
 
-  await tap(env, USER, 'reg:role:AWP');
+  await tap(env, USER, 'reg:role:2');
   ok(/Шаг 3 из 4/.test(last()) && /Ранг \(до 40 символов\)/.test(last()), 'ветка B: шаг 3 — ранг');
 
   await say(env, USER, 'Premier 21 000');
@@ -682,12 +682,12 @@ console.log('\n7. Поиск команды (ветка B)');
 
   await say(env, USER, 'Играю на AWP, свободен по вечерам');
   ok(/принята/.test(lastTo(USER)), 'ветка B: заявка принята');
-  ok(/Дисциплина: CS:GO/.test(lastTo(USER)), 'ветка B: в ответе указана дисциплина');
+  ok(/Дисциплина: Dota 2/.test(lastTo(USER)), 'ветка B: в ответе указана дисциплина');
   ok(/Сайт: https:\/\/compassarena\.ru/.test(lastTo(USER)), 'ветка B: в ответе есть сайт');
 
   const lead = fake._db.lastLead();
-  ok(lead.type === 'free_agent' && lead.discipline === 'csgo', 'тип free_agent и дисциплина csgo');
-  ok(lead.payload.type === 'looking_for_team' && lead.payload.role === 2 && lead.payload.roleLabel === 'AWPer', 'payload свободного агента');
+  ok(lead.type === 'free_agent' && lead.discipline === 'dota2', 'тип free_agent и дисциплина dota2');
+  ok(lead.payload.type === 'looking_for_team' && lead.payload.role === 2 && lead.payload.roleLabel === 'Мидер', 'payload свободного агента');
   ok(lead.payload.rank === 'Premier 21 000' && /AWP/.test(lead.payload.note), 'ранг и описание сохранены');
   ok(fake._db.state(USER) === null, 'состояние сброшено');
 }
@@ -1412,20 +1412,32 @@ console.log('\n16. Brawl Stars и Clash Royale');
 
   // Clash Royale: один участник
   await tap(env, USER2, 'reg:disc:clash');
-  await tap(env, USER2, 'reg:type:team');
-  await say(env, USER2, 'Royal One');
-  await handleUpdate(env, photoUpdate(USER2, [{ file_id: 'logo', width: 800 }]));
+  ok(/Твой игровой ник/.test(lastTo(USER2)) && !/Что делаем/.test(lastTo(USER2)), 'Clash Royale: сразу вопрос про ник, без меню типов');
+  ok(!/логотип/i.test(lastTo(USER2).replace(/Команды и логотип не нужны[^\n]*/, '')), 'Clash Royale: логотип не спрашивается');
   await say(env, USER2, 'Kingpin');
-  ok(/reg:confirm/.test(markupSince(0)), 'Clash Royale: после одного ника — проверка заявки');
+  ok(/reg:confirm/.test(markupSince(0)) && /Ник игрока: <b>Kingpin/.test(lastTo(USER2)), 'Clash Royale: после ника — проверка заявки');
   await tap(env, USER2, 'reg:confirm');
   const clash = fake._db.lastLead();
-  ok(clash.discipline === 'clash' && clash.payload.players.length === 1, 'в заявке Clash Royale один игрок');
+  ok(clash.discipline === 'clash' && clash.payload.players.length === 1 && clash.payload.name === 'Kingpin' && clash.payload.logo === '', 'в заявке Clash Royale ник, без логотипа');
+
+  // CS:GO: пять игроков, роли не спрашиваются
+  const NEWBIE = 446;
+  await tap(env, NEWBIE, 'reg:disc:csgo');
+  await tap(env, NEWBIE, 'reg:type:team');
+  await say(env, NEWBIE, 'Five Stack');
+  await handleUpdate(env, photoUpdate(NEWBIE, [{ file_id: 'logo', width: 800 }]));
+  for (const n of ['p1', 'p2', 'p3', 'p4']) await say(env, NEWBIE, n);
+  ok(/Ник игрока 5/.test(lastTo(NEWBIE)), 'CS:GO: роль не спрашивается, идём к пятому игроку');
+  await say(env, NEWBIE, 'p5');
+  await tap(env, NEWBIE, 'reg:confirm');
+  const cs = fake._db.lastLead();
+  ok(cs.discipline === 'csgo' && cs.payload.players.length === 5 && cs.payload.players.every((p) => p.roleLabel === 'Игрок'), 'CS:GO: пять игроков без ролей', JSON.stringify(cs.payload).slice(0, 200) + ' / ' + lastTo(NEWBIE).slice(0, 100));
 
   // Свободный агент без ролей: ник → ранг → описание
-  await tap(env, ADMIN, 'reg:disc:clash');
+  await tap(env, ADMIN, 'reg:disc:brawl');
   await tap(env, ADMIN, 'reg:type:looking');
   await say(env, ADMIN, 'Solo');
-  ok(/Ранг/.test(lastTo(ADMIN)), 'агент Clash: после ника сразу ранг');
+  ok(/Ранг/.test(lastTo(ADMIN)), 'агент Brawl: после ника сразу ранг');
 }
 
 /* ============================================================

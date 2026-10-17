@@ -233,7 +233,7 @@
     .admin-games button.active { color:var(--gc); border-color:var(--gc); background:rgba(255,255,255,.04); box-shadow:0 0 0 1px var(--gc) inset; }
     .admin-games .ag-note { flex-basis:100%; font-size:12px; color:#5f6773; }
 </style>
-<script src="/assets/ca-bracket-engine.js?v=eec3093"></script>
+<script src="/assets/ca-bracket-engine.js?v=535082f"></script>
 </head>
 <body>
 
@@ -251,7 +251,7 @@
     </div>
 
     <div class="tabs">
-        <button class="tab active" data-tab="teams">Команды</button>
+        <button class="tab active" data-tab="teams" id="tabTeamsBtn">Команды</button>
         <button class="tab" data-tab="import">📥 Импорт из бота</button>
         <button class="tab" data-tab="agents">🎯 Свободные агенты</button>
         <button class="tab" data-tab="matches">Матчи</button>
@@ -262,16 +262,16 @@
 
     <div class="tab-content active" id="tab-teams">
         <div class="card">
-            <div class="card-header"><h3>➕ Добавить команду</h3></div>
+            <div class="card-header"><h3 id="teamAddTitle">➕ Добавить команду</h3></div>
             <div class="form-row">
-                <div class="form-group"><label>Название</label><input type="text" id="teamNameInput" placeholder="Team Name"></div>
-                <div class="form-group">
-                    <label>Игроки (Ник:Роль через запятую)</label>
+                <div class="form-group"><label id="teamNameLabel">Название</label><input type="text" id="teamNameInput" placeholder="Team Name"></div>
+                <div class="form-group" id="teamPlayersGroup">
+                    <label id="teamPlayersLabel">Игроки (Ник:Роль через запятую)</label>
                     <input type="text" id="teamPlayersInput" placeholder="Yatoro:1, Larl:2, Collapse:3, Mira:4, Miposhka:5">
                 </div>
             </div>
             <div class="form-group" style="margin-bottom:10px;">
-                <label>Логотип команды (PNG/JPG, до 5 МБ — автосжатие до 600×600)</label>
+                <label id="teamLogoLabel">Логотип команды (PNG/JPG, до 5 МБ — автосжатие до 600×600)</label>
                 <div class="logo-uploader">
                     <div class="logo-preview" id="newTeamLogoPreview"><span class="placeholder">нет<br>логотипа</span></div>
                     <div class="logo-uploader-actions">
@@ -286,7 +286,7 @@
         </div>
         <div class="card">
             <div class="card-header">
-                <h3>📋 Список команд</h3>
+                <h3 id="teamListTitle">📋 Список команд</h3>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                     <span id="teamsCount" style="color:#5f6773;font-size:12px;">0 команд</span>
                     <button class="btn btn-sm" onclick="shuffleTeams()" title="Случайно перемешать посев">🔀 Перемешать</button>
@@ -419,7 +419,7 @@
             </p>
             <div class="form-row three">
                 <div class="form-group">
-                    <label>Команд в сетке</label>
+                    <label id="brCountLabel">Команд в сетке</label>
                     <select id="brTeamCount" onchange="brSyncForm()">
                         <option value="4">4</option>
                         <option value="6">6</option>
@@ -428,6 +428,8 @@
                         <option value="12">12</option>
                         <option value="14">14</option>
                         <option value="16">16</option>
+                        <option value="24">24</option>
+                        <option value="32">32</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -499,13 +501,15 @@
 <div class="modal-overlay" id="editModal">
     <div class="modal">
         <button class="modal-close" onclick="closeEditModal()">&times;</button>
-        <h2>Редактирование команды</h2>
+        <h2 id="editTeamTitle">Редактирование команды</h2>
         <input type="text" id="editTeamName" placeholder="Название команды">
-        <input type="text" id="editTeamPlayers" placeholder="Yatoro:1, Larl:2, Collapse:3, Mira:4, Miposhka:5">
-        <div class="hint" style="margin-bottom:10px;">Формат: <code>Ник:Роль</code> через запятую. Роль — число 1–5.</div>
+        <div id="editPlayersWrap">
+            <input type="text" id="editTeamPlayers" placeholder="Yatoro:1, Larl:2, Collapse:3, Mira:4, Miposhka:5">
+            <div class="hint" id="editPlayersHint" style="margin-bottom:10px;">Формат: <code>Ник:Роль</code> через запятую. Роль — число 1–5.</div>
+        </div>
 
         <div class="form-group" style="margin-bottom:10px;">
-            <label>Логотип (PNG/JPG, до 5 МБ — автосжатие до 600×600)</label>
+            <label id="editLogoLabel">Логотип (PNG/JPG, до 5 МБ — автосжатие до 600×600)</label>
             <div class="logo-uploader">
                 <div class="logo-preview" id="editLogoPreview"><span class="placeholder">нет<br>логотипа</span></div>
                 <div class="logo-uploader-actions">
@@ -604,10 +608,10 @@
 // ДАННЫЕ
 // ============================================================
 var ADMIN_GAMES = {
-    dota2: { name: 'Dota 2', teamSize: 5, accent: '#e3c48a', roles: { 1: 'Керри', 2: 'Мидер', 3: 'Офлейн', 4: 'Саппорт 4', 5: 'Саппорт 5' } },
-    csgo: { name: 'CS:GO', teamSize: 5, accent: '#ff8a3d', roles: { 1: 'IGL', 2: 'AWPer', 3: 'Entry', 4: 'Support', 5: 'Lurker' } },
-    clash: { name: 'Clash Royale', teamSize: 1, accent: '#4aa3ff', roles: { 1: 'Игрок' } },
-    brawl: { name: 'Brawl Stars', teamSize: 3, accent: '#a66bff', roles: { 1: 'Игрок 1', 2: 'Игрок 2', 3: 'Игрок 3' } }
+    dota2: { name: 'Dota 2', teamSize: 5, accent: '#e3c48a', hasRoles: true, solo: false, roles: { 1: 'Керри', 2: 'Мидер', 3: 'Офлейн', 4: 'Саппорт 4', 5: 'Саппорт 5' } },
+    csgo: { name: 'CS:GO', teamSize: 5, accent: '#ff8a3d', hasRoles: false, solo: false, roles: null },
+    clash: { name: 'Clash Royale', teamSize: 1, accent: '#4aa3ff', hasRoles: false, solo: true, roles: null },
+    brawl: { name: 'Brawl Stars', teamSize: 3, accent: '#a66bff', hasRoles: false, solo: false, roles: null }
 };
 var ADMIN_GAME_IDS = ['dota2', 'csgo', 'clash', 'brawl'];
 /* Какая дисциплина открыта в админке: ?game=… , иначе Dota 2 */
@@ -619,6 +623,9 @@ var GAME = (function () {
     return 'dota2';
 })();
 function teamSize() { return ADMIN_GAMES[GAME].teamSize; }
+/* Роли (керри, мидер…) есть только в Dota 2; в Clash Royale нет команд — играют одиночки */
+function gameHasRoles() { return !!ADMIN_GAMES[GAME].hasRoles; }
+function gameIsSolo() { return !!ADMIN_GAMES[GAME].solo; }
 
 var DATA = getDefaultData();
 var HISTORY = [];
@@ -645,7 +652,7 @@ function getDefaultData() {
 // ============================================================
 function parsePlayersInput(str) {
     var result = [];
-    if (!str) return result;
+    if (!str || gameIsSolo()) return result;
     var parts = str.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
     for (var i = 0; i < parts.length; i++) {
         var p = parts[i];
@@ -655,7 +662,7 @@ function parsePlayersInput(str) {
         if (m) {
             nick = m[1].trim();
             var r = parseInt(m[2], 10);
-            if (r >= 1 && r <= 5) role = r;
+            if (gameHasRoles() && r >= 1 && r <= 5) role = r;
         }
         result.push({ nick: nick, role: role });
     }
@@ -667,7 +674,7 @@ function playersToInput(players) {
     for (var i = 0; i < players.length; i++) {
         var p = players[i];
         if (typeof p === 'string') arr.push(p);
-        else arr.push(p.nick + ':' + p.role);
+        else arr.push(gameHasRoles() ? (p.nick + ':' + p.role) : p.nick);
     }
     return arr.join(', ');
 }
@@ -1145,7 +1152,41 @@ function clearBracket() {
     saveData().then(function () { renderEverything(); });
 }
 
+/* Подписи и поля под выбранную игру: роли — только Dota 2,
+   Clash Royale — без команд (ник игрока, логотип по желанию) */
+function applyGameUi() {
+    var solo = gameIsSolo();
+    var roles = gameHasRoles();
+    var size = teamSize();
+    var set = function (id, text) { var el = document.getElementById(id); if (el) el.textContent = text; };
+    set('tabTeamsBtn', solo ? 'Игроки' : 'Команды');
+    set('teamAddTitle', solo ? '➕ Добавить игрока' : '➕ Добавить команду');
+    set('teamNameLabel', solo ? 'Ник игрока' : 'Название');
+    set('teamListTitle', solo ? '📋 Список игроков' : '📋 Список команд');
+    set('teamLogoLabel', (solo ? 'Логотип (необязательно, ' : 'Логотип команды (') + 'PNG/JPG, до 5 МБ — автосжатие до 600×600)');
+    set('editLogoLabel', (solo ? 'Логотип (необязательно, ' : 'Логотип (') + 'PNG/JPG, до 5 МБ — автосжатие до 600×600)');
+    set('editTeamTitle', solo ? 'Редактирование игрока' : 'Редактирование команды');
+    set('brCountLabel', solo ? 'Игроков в сетке' : 'Команд в сетке');
+    var nameIn = document.getElementById('teamNameInput');
+    if (nameIn) nameIn.placeholder = solo ? 'Ник игрока' : 'Team Name';
+    var editName = document.getElementById('editTeamName');
+    if (editName) editName.placeholder = solo ? 'Ник игрока' : 'Название команды';
+    var pg = document.getElementById('teamPlayersGroup');
+    if (pg) pg.style.display = solo ? 'none' : '';
+    var ew = document.getElementById('editPlayersWrap');
+    if (ew) ew.style.display = solo ? 'none' : '';
+    var example = roles ? 'Yatoro:1, Larl:2, Collapse:3, Mira:4, Miposhka:5'
+        : (size === 3 ? 'Ник1, Ник2, Ник3' : 'Ник1, Ник2, Ник3, Ник4, Ник5');
+    var pi = document.getElementById('teamPlayersInput'); if (pi) pi.placeholder = example;
+    var ei = document.getElementById('editTeamPlayers'); if (ei) ei.placeholder = example;
+    set('teamPlayersLabel', roles ? 'Игроки (Ник:Роль через запятую)' : 'Игроки (ники через запятую, ' + size + ')');
+    var hint = document.getElementById('editPlayersHint');
+    if (hint) hint.innerHTML = roles ? 'Формат: <code>Ник:Роль</code> через запятую. Роль — число 1–5.'
+        : 'Ники через запятую — просто список игроков, без ролей.';
+}
+
 function renderGameSwitch() {
+    applyGameUi();
     var box = document.getElementById('adminGames');
     if (!box) return;
     box.innerHTML = ADMIN_GAME_IDS.map(function (id) {
@@ -1397,14 +1438,15 @@ function renderTeams() {
             var arr = [];
             for (var k = 0; k < t.players.length; k++) {
                 var p = t.players[k];
-                arr.push(typeof p === 'string' ? p : (p.nick + ' (' + p.role + ')'));
+                arr.push(typeof p === 'string' ? p : (gameHasRoles() ? (p.nick + ' (' + p.role + ')') : p.nick));
             }
             playersText = arr.join(' · ');
         } else {
-            playersText = 'состав не указан';
+            playersText = gameIsSolo() ? '' : 'состав не указан';
         }
+        if (gameIsSolo()) playersText = '';
         /* Неполный состав — не ошибка (команда из бота может прийти без пятого), но видно сразу */
-        var rosterWarn = (t.players && t.players.length === teamSize()) ? ''
+        var rosterWarn = (gameIsSolo() || (t.players && t.players.length === teamSize())) ? ''
             : '<span class="roster-warn" title="В заявке не хватает игроков: нужно ' + teamSize() + '">⚠️ неполный состав</span> ';
 
         var upBtn = '<button class="btn btn-sm" ' + (i === 0 ? 'disabled style="opacity:0.3;"' : 'onclick="moveTeam(' + i + ',-1)"') + ' title="Выше">↑</button>';
@@ -1417,7 +1459,7 @@ function renderTeams() {
             '<div class="actions">' + upBtn + downBtn + '<button class="btn btn-sm" onclick="openEditModal(' + t.id + ')">✏️</button><button class="btn btn-sm btn-danger" onclick="deleteTeam(' + t.id + ')">✕</button></div>';
         container.appendChild(div);
     }
-    if (count) count.textContent = DATA.teams.length + ' команд';
+    if (count) count.textContent = DATA.teams.length + (gameIsSolo() ? ' игроков' : ' команд');
     initDragAndDrop();
 }
 
@@ -2799,14 +2841,14 @@ document.addEventListener('keydown', function(e) {
    и автотесты (tests/admin-import.mjs). */
 
 var BOT_ROLES = {};
-ADMIN_GAME_IDS.forEach(function (id) { BOT_ROLES[id] = { label: ADMIN_GAMES[id].name, roles: ADMIN_GAMES[id].roles }; });
+ADMIN_GAME_IDS.forEach(function (id) { BOT_ROLES[id] = { label: ADMIN_GAMES[id].name, roles: ADMIN_GAMES[id].roles, known: true }; });
 
 var BOT_PENDING = null;   /* разобранный файл, ожидающий подтверждения */
 var BOT_STEP = null;      /* текущий шаг подтверждения */
 
 function botDisciplineInfo(code) {
     if (BOT_ROLES[code]) return BOT_ROLES[code];
-    return { label: code ? String(code) : 'неизвестная дисциплина', roles: null };
+    return { label: code ? String(code) : 'неизвестная дисциплина', roles: null, known: false };
 }
 function pluralPlayers(n) {
     var m10 = n % 10, m100 = n % 100;
@@ -2866,7 +2908,9 @@ function botValidateTeams(doc) {
     var warnings = [];
     var incomplete = 0;
     var info = botDisciplineInfo(doc.discipline);
-    if (!info.roles) errors.push('Неизвестная дисциплина: ' + info.label + '.');
+    if (!info.known) errors.push('Неизвестная дисциплина: ' + info.label + '.');
+    var solo = !!(ADMIN_GAMES[doc.discipline] && ADMIN_GAMES[doc.discipline].solo);
+    var size = ADMIN_GAMES[doc.discipline] ? ADMIN_GAMES[doc.discipline].teamSize : teamSize();
 
     if (!Array.isArray(doc.teams)) {
         return { ok: false, errors: ['Нет списка команд (поле teams).'], warnings: [] };
@@ -2880,13 +2924,14 @@ function botValidateTeams(doc) {
         if (!name) errors.push(label + ': не указано название.');
         else if (name.length < 2 || name.length > 30) errors.push(label + ': название должно быть от 2 до 30 символов.');
 
+        if (solo) continue;      /* Clash Royale: игрок = «команда», состава нет */
         if (!Array.isArray(t.players)) {
             warnings.push(label + ': нет состава (players) — команда добавится без игроков.');
             incomplete++;
             continue;
         }
-        if (t.players.length !== teamSize()) {
-            warnings.push(label + ': ' + t.players.length + ' ' + pluralPlayers(t.players.length) + ' из ' + teamSize() + ' — состав неполный.');
+        if (t.players.length !== size) {
+            warnings.push(label + ': ' + t.players.length + ' ' + pluralPlayers(t.players.length) + ' из ' + size + ' — состав неполный.');
             incomplete++;
         }
         for (var k = 0; k < t.players.length; k++) {
@@ -3231,7 +3276,7 @@ function botApplyTeams() {
     var incomplete = 0;
     for (var i = 0; i < plan.teams.length; i++) {
         if (plan.teams[i].logoOversized) oversized++;
-        if (!plan.teams[i].players || plan.teams[i].players.length !== teamSize()) incomplete++;
+        if (!gameIsSolo() && (!plan.teams[i].players || plan.teams[i].players.length !== teamSize())) incomplete++;
     }
 
     var fileKey = botGameKey(plan.doc.discipline);
@@ -3337,7 +3382,7 @@ function renderAgents() {
     for (var i = 0; i < agents.length; i++) {
         var a = agents[i] || {};
         var info = botDisciplineInfo(botCurrentDiscipline());
-        var roleText = a.roleLabel || (info.roles && info.roles[a.role]) || '';
+        var roleText = gameHasRoles() ? (a.roleLabel || (info.roles && info.roles[a.role]) || '') : '';
         var meta = [];
         if (roleText) meta.push(roleText);
         if (a.rank) meta.push('ранг: ' + a.rank);

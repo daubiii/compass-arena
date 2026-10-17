@@ -25,7 +25,7 @@ import {
 } from '../lib/db.js';
 import { esc, clean, isNick, isTeamName, plural } from '../lib/esc.js';
 import {
-  DISCIPLINES, disciplineLabel, roleByKey, rolesOf, teamSizeOf, hasRoles, soloRole, sizeLabel
+  DISCIPLINES, disciplineLabel, roleByKey, rolesOf, teamSizeOf, hasRoles, soloRole, sizeLabel, isSolo
 } from '../lib/domain.js';
 import { CANCEL_HINT, CONTACTS, contactsBlock, problem, stepTitle } from '../lib/texts.js';
 import { showMainMenu } from './start.js';
@@ -172,6 +172,15 @@ function playersList(temp, withRoles = true) {
 
 /** Карточка проверки заявки команды */
 function teamCard(temp) {
+  if (isSolo(temp.discipline)) {
+    return [
+      `${DISCIPLINES[temp.discipline].emoji} <b>${esc(disciplineLabel(temp.discipline))}</b> · участие`,
+      `${stepTitle(2, 2)} · проверка заявки`,
+      '',
+      `Ник игрока: <b>${esc(temp.name || '—')}</b>`,
+      `Telegram: <b>${esc(temp.captainNick || '—')}</b>`
+    ].join('\n');
+  }
   const total = totalOf(temp);
   return [
     `${DISCIPLINES[temp.discipline].emoji} <b>${esc(disciplineLabel(temp.discipline))}</b> · команда`,
@@ -212,6 +221,19 @@ function screenType(discipline) {
 }
 
 function screenTeamName(discipline, note, total = teamSteps(discipline, false)) {
+  if (isSolo(discipline)) {
+    return {
+      text: [
+        note ? `${note}\n` : '',
+        `${DISCIPLINES[discipline].emoji} <b>${esc(disciplineLabel(discipline))}</b> · дуэли 1×1`,
+        stepTitle(1, 2),
+        '',
+        'Твой игровой ник (2–30 символов).',
+        'Команды и логотип не нужны — участвуешь сам.' + CANCEL_HINT
+      ].filter(Boolean).join('\n'),
+      keyboard: kb([backRow()])
+    };
+  }
   return {
     text: [
       note ? `${note}\n` : '',
@@ -303,6 +325,12 @@ function screenTeamConfirm(temp, note) {
 }
 
 function screenEditMenu(temp, note) {
+  if (isSolo(temp.discipline)) {
+    return {
+      text: [note ? `${note}\n` : '', '<b>Что изменить?</b>', '', `Ник: <b>${esc(temp.name || '—')}</b>`].filter(Boolean).join('\n'),
+      keyboard: kb([[{ text: 'Ник', data: 'reg:edit:name' }], backRow('reg:back', '⬅️ Назад к проверке')])
+    };
+  }
   const rows = [
     [{ text: 'Название', data: 'reg:edit:name' }, { text: 'Логотип', data: 'reg:edit:logo' }]
   ];
@@ -326,6 +354,12 @@ function screenEditMenu(temp, note) {
 }
 
 function screenEditName(temp, note) {
+  if (isSolo(temp.discipline)) {
+    return {
+      text: [note ? `${note}\n` : '', '<b>Изменение ника</b>', '', `Сейчас: <b>${esc(temp.name || '—')}</b>`, 'Игровой ник (2–30 символов).' + CANCEL_HINT].filter(Boolean).join('\n'),
+      keyboard: kb([backRow('reg:edit', '⬅️ Назад к списку полей')])
+    };
+  }
   return {
     text: [
       note ? `${note}\n` : '',
@@ -574,8 +608,23 @@ async function onDiscipline(env, query, ctx, discipline) {
   }
 
   await answerCallbackQuery(env, query.id);
+  if (isSolo(discipline)) return startSolo(env, ctx, discipline);
   await setState(env, ctx.userId, STEP.TYPE, { discipline, type: null });
   await replace(env, ctx, screenType(discipline));
+  return true;
+}
+
+/** Дисциплина без команд (Clash Royale): сразу спрашиваем ник, без логотипа */
+async function startSolo(env, ctx, discipline) {
+  const temp = {
+    discipline, type: 'team', solo: true,
+    name: '', logo: '', logoOversized: false, logoBytes: 0,
+    players: [], playerIndex: 0, pendingNick: '', editField: null,
+    captainNick: ctx.username ? '@' + ctx.username : '',
+    askCaptain: false, totalSteps: 2
+  };
+  await setState(env, ctx.userId, STEP.TEAM_NAME, temp);
+  await replace(env, ctx, screenTeamName(discipline, null, 2));
   return true;
 }
 
@@ -742,7 +791,7 @@ async function onConfirm(env, query, ctx) {
   }
 
   // Логотип обязателен: без него заявку не отправляем
-  if (!temp.logo) {
+  if (!temp.logo && !isSolo(temp.discipline)) {
     await answerCallbackQuery(env, query.id, { text: 'Нужен логотип', showAlert: true });
     await setState(env, ctx.userId, STEP.TEAM_LOGO, temp);
     await sendMessage(env, ctx.chatId, problem('Нужен логотип команды. Пришли фото.'), { keyboard: kb([menuRow]) });
@@ -885,6 +934,7 @@ async function onBack(env, query, ctx) {
       return true;
 
     case STEP.TEAM_NAME:
+      if (isSolo(discipline)) { await showMainMenu(env, ctx.chatId, ctx.userId); return true; }
       await setState(env, ctx.userId, STEP.TYPE, { discipline, type: null });
       await replace(env, ctx, screenType(discipline));
       return true;
@@ -927,7 +977,12 @@ async function onBack(env, query, ctx) {
     }
 
     case STEP.TEAM_CONFIRM: {
-      const last = { ...temp, playerIndex: 4 };
+      if (isSolo(discipline)) {
+        await setState(env, ctx.userId, STEP.TEAM_NAME, temp);
+        await replace(env, ctx, screenTeamName(discipline, '⬅️ Возврат к нику.', 2));
+        return true;
+      }
+      const last = { ...temp, playerIndex: teamSizeOf(discipline) - 1 };
       await setState(env, ctx.userId, STEP.TEAM_PLAYER_NICK, last);
       await replace(env, ctx, screenTeamPlayerNick(last, '⬅️ Возврат к последнему игроку.'));
       return true;
@@ -1025,6 +1080,14 @@ export async function handleText(env, message, ctx) {
 /* ---------- Ветка A: текстовые шаги ---------- */
 async function onTeamName(env, ctx, temp, raw) {
   const name = clean(raw);
+  if (isSolo(temp.discipline)) {
+    if (!isNick(name)) return fail(env, ctx, 'Ник не подошёл: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Эмодзи и скобки нельзя.', screenTeamName(temp.discipline, null, 2));
+    const solo = soloRole(temp.discipline, 0);
+    const done = { ...temp, name, players: [{ nick: name, role: solo.num, roleLabel: solo.label }], captainNick: temp.captainNick || name };
+    await setState(env, ctx.userId, STEP.TEAM_CONFIRM, done);
+    await send(env, ctx, screenTeamConfirm(done));
+    return true;
+  }
   if (!isTeamName(name)) {
     return fail(env, ctx, 'Название не подошло: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Например: Night Wolves.', screenTeamName(temp.discipline, null, totalOf(temp)));
   }
@@ -1093,6 +1156,16 @@ async function proceedAfterLogo(env, ctx, temp, note) {
 /* ---------- Правка полей ---------- */
 async function onEditFieldText(env, ctx, temp, raw) {
   const field = String(temp.editField || '');
+
+  if (field === 'name' && isSolo(temp.discipline)) {
+    const nick = clean(raw);
+    if (!isNick(nick)) return fail(env, ctx, 'Ник не подошёл: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Эмодзи и скобки нельзя.', screenEditName(temp));
+    const solo = soloRole(temp.discipline, 0);
+    const updated = { ...temp, name: nick, players: [{ nick, role: solo.num, roleLabel: solo.label }], editField: null };
+    await setState(env, ctx.userId, STEP.TEAM_CONFIRM, updated);
+    await send(env, ctx, screenTeamConfirm(updated));
+    return true;
+  }
 
   if (field === 'name') {
     const name = clean(raw);

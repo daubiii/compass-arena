@@ -40,8 +40,11 @@ export const DISCIPLINES = {
    Роль в JSON — просто номер слота (1..teamSize) и подпись «Игрок». */
 DISCIPLINES.dota2.teamSize = 5;
 DISCIPLINES.csgo.teamSize = 5;
+/* Роли (керри, мидер…) — только у Dota 2. В CS:GO состав — просто список из пяти. */
+DISCIPLINES.csgo.noRoles = true;
+DISCIPLINES.csgo.roles = [{ key: 'P', num: 1, label: 'Игрок', title: 'Игрок' }];
 DISCIPLINES.clash = {
-  key: 'clash', label: 'Clash Royale', emoji: '👑', game: 'Clash Royale', teamSize: 1, noRoles: true, unit: 'player',
+  key: 'clash', label: 'Clash Royale', emoji: '👑', game: 'Clash Royale', teamSize: 1, noRoles: true, solo: true, unit: 'player',
   roles: [{ key: 'P', num: 1, label: 'Игрок', title: 'Игрок' }]
 };
 DISCIPLINES.brawl = {
@@ -76,6 +79,10 @@ export function teamSizeOf(key) {
 }
 
 /** Есть ли в дисциплине выбор роли */
+export function isSolo(key) {
+  return isDiscipline(key) && Boolean(DISCIPLINES[key].solo);
+}
+
 export function hasRoles(key) {
   return isDiscipline(key) && !DISCIPLINES[key].noRoles;
 }

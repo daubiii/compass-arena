@@ -21,6 +21,11 @@
   var BOT_URL = 'https://t.me/CompassArenaReg_bot';
   /* Текущая дисциплина: из адреса (?game=…), иначе всегда Dota 2 */
   var GAME = G ? G.fromUrl() : 'dota2';
+  /** «команда/команды/команд» или «игрок/игрока/игроков» (Clash Royale) */
+  function unitPlural(n) {
+    return gm().solo ? D.plural(n, 'игрок', 'игрока', 'игроков') : D.plural(n, 'команда', 'команды', 'команд');
+  }
+
   function gm() { return G ? G.get(GAME) : { id: 'dota2', name: 'Dota 2', owner: 'Valve Corporation', teamSize: 5, matchFormat: 'Bo3', tagline: '' }; }
 
   /* ---------- Первый экран ---------- */
@@ -405,7 +410,7 @@
     var sub = document.getElementById('bracketViewerSub');
     if (sub) {
       sub.textContent = info.matchType + ' · ' + info.inBracket + ' ' +
-        D.plural(info.inBracket, 'команда', 'команды', 'команд') + ' · ' +
+        unitPlural(info.inBracket) + ' · ' +
         info.matches + ' ' + D.plural(info.matches, 'матч', 'матча', 'матчей') +
         (info.byes ? ' · без игры: ' + info.byes : '');
     }
@@ -530,7 +535,7 @@
 
     if (kicker) {
       kicker.textContent = info.matchType + ' · ' + info.inBracket + ' ' +
-        plural(info.inBracket, 'команда', 'команды', 'команд') + ' · ' +
+        unitPlural(info.inBracket) + ' · ' +
         (info.isDe ? 'нижняя сетка' : 'без нижней сетки');
     }
     if (!copy) return;
@@ -548,7 +553,7 @@
     parts.push('Матчей: <b>' + info.matches + '</b>' + (info.grand > 1 ? ', гранд-финал со сбросом.' : '.'));
     if (info.byes) {
       parts.push('Команд меньше размера сетки — <b>' + info.byes + '</b> ' +
-        plural(info.byes, 'команда', 'команды', 'команд') + ' ' +
+        unitPlural(info.byes) + ' ' +
         plural(info.byes, 'проходит', 'проходят', 'проходят') + ' первый раунд без игры.');
     }
     parts.push('Победитель каждого матча идёт дальше автоматически.');
@@ -576,7 +581,7 @@
     if (!teams.length) {
       grid.innerHTML = '<div class="teams-empty reveal">' +
         '<span class="te-ic">' + ic('users', 'ic-32') + '</span>' +
-        '<div class="te-body"><h3 class="h3">Идёт регистрация команд</h3>' +
+        '<div class="te-body"><h3 class="h3">Идёт регистрация</h3>' +
         '<p class="lead-sm">Составы нового сезона ещё собираются. Как только команды подтвердят участие, они появятся здесь, ' +
         'а на этой странице откроется турнирная сетка.</p></div>' +
         '<a class="btn btn-gold" href="https://t.me/CompassArenaReg_bot" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку в боте</a>' +
@@ -590,17 +595,18 @@
       var logo = t.logo
         ? '<img src="' + esc(t.logo) + '" alt="Логотип ' + esc(t.name) + '" width="52" height="52" loading="lazy">'
         : '<span class="ph">' + esc(D.initials(t.name)) + '</span>';
-      var players = t.players.length
+      var solo = !!(G && G.get(GAME).solo);
+      var players = solo ? '' : (t.players.length
         ? t.players.map(function (p) { return esc(p.nick || '—'); }).join(' · ')
-        : 'Состав уточняется';
+        : 'Состав уточняется');
       var mark = '';
       if (d.champion && d.champion.id === t.id) mark = '<span class="st st-gold">' + ic('trophy') + 'Чемпион</span>';
       else if (d.runnerUp && d.runnerUp.id === t.id) mark = '<span class="st st-done">Серебро</span>';
-      else if (rec.out) mark = '<span class="st st-flag">Выбыла в M' + rec.out + '</span>';
+      else if (rec.out) mark = '<span class="st st-flag">' + (solo ? 'Выбыл' : 'Выбыла') + ' в M' + rec.out + '</span>';
       return '<button class="team-card reveal" data-team="' + t.id + '" type="button">' +
         '<span class="tc-top"><span class="tc-logo">' + logo + '</span>' + mark + '</span>' +
         '<span class="tc-name">' + esc(t.name) + '</span>' +
-        '<span class="tc-players">' + players + '</span>' +
+        (players ? '<span class="tc-players">' + players + '</span>' : '') +
         (rec.played ? '<span class="tc-rec">' + rec.wins + '–' + rec.losses + ' · карты ' + rec.mapsWon + ':' + rec.mapsLost + '</span>' : '') +
         '</button>';
     }).join('');
@@ -802,6 +808,8 @@
     if (G) G.applyTheme(GAME);
     var set = function (id, text) { var el = document.getElementById(id); if (el) el.textContent = text; };
     set('teamsTitle', w.participants);
+    var emblem = document.getElementById('arenaEmblem');
+    if (emblem && G) emblem.innerHTML = G.glyph(GAME);
     set('teamsKicker', g.teamSize === 1 ? 'Игроки и статистика' : 'Составы и статистика');
     set('teamsCopy', g.teamSize === 1
       ? 'Нажмите на игрока, чтобы увидеть его путь по сетке.'

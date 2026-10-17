@@ -440,13 +440,13 @@ body[data-phase="live"] .head-live { display: inline-flex; }
   mask-image: radial-gradient(ellipse 72% 62% at 50% 34%, #000 5%, transparent 76%);
 }
 .arena > * { position: relative; z-index: 1; }
-.arena-compass {
+.arena-emblem {
   position: absolute; z-index: 0; pointer-events: none;
-  color: var(--gold); opacity: .07;
-  font-size: min(78vw, 760px);
-  right: -12%; top: -18%;
+  color: var(--gold); opacity: .055;
+  font-size: min(44vw, 440px);
+  right: 2%; top: 1%;
 }
-.arena-compass .ic { width: 1em; height: 1em; }
+.arena-emblem .ic { width: 1em; height: 1em; }
 
 /* ==========================================================
    10. ПАНЕЛИ И КАРТОЧКИ
@@ -1081,7 +1081,7 @@ body.bview-open { overflow: hidden; }
   .burger { display: block; }
   .orn { gap: 12px; }
   .orn .ic { font-size: 18px; }
-  .arena-compass { font-size: 150vw; right: -40%; top: -6%; opacity: .05; }
+  .arena-emblem { font-size: 80vw; right: -14%; top: 0; opacity: .045; }
 
   /* Сетка на телефоне — вертикальная лента вместо горизонтального скролла:
      ограничитель по высоте и кнопка разворота тут не нужны */
@@ -1160,8 +1160,8 @@ body.bview-open { overflow: hidden; }
     --gold: #7d5f21; --gold-hi: #7d5f21; --blood: #a03a30; --blood-hi: #a03a30;
   }
   body { background: #fff; color: #101010; }
-  body::before, body::after, html::before, .hero-motif, #dust, .hero-img, .hero-shade, .site-head, .menu,
-  .site-foot, .to-top, .champ-chip, .arena-compass, .stream-frame,
+  body::before, body::after, #dust, .hero-img, .hero-shade, .site-head, .menu,
+  .site-foot, .to-top, .champ-chip, .arena-emblem, .stream-frame,
   .btn, .bracket-hint, .skip, .head-progress { display: none !important; }
   .hero, body[data-phase] .hero { min-height: 0; padding: 24px 0 8px; }
   .sec { padding: 24px 0; }
@@ -1259,37 +1259,13 @@ body[data-empty="1"] .bracket-hint { display: none !important; }
 .s-row[data-game] { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--gc, transparent) 70%, transparent); }
 @media (max-width: 480px) { .game-tab.sm .gt-size { display: none; } }
 
-/* ---------- Оформление дисциплин (этап 5) ----------
-   Основа — общий арт; каждая игра добавляет свой цвет, свечение и
-   собственный полутоновый знак (img/motif-*.svg — не логотипы игр). */
-html { --motif: url(/img/motif-dota2.svg); --hero-hue: 0deg; --hero-sat: 1; }
-html[data-game="csgo"]  { --motif: url(/img/motif-csgo.svg);  --hero-hue: -14deg; --hero-sat: 1.15; }
-html[data-game="clash"] { --motif: url(/img/motif-clash.svg); --hero-hue: 168deg; --hero-sat: 1.05; }
-html[data-game="brawl"] { --motif: url(/img/motif-brawl.svg); --hero-hue: 232deg; --hero-sat: 1.05; }
-
+/* ---------- Оформление дисциплин ----------
+   Основа — общий арт; каждая игра перекрашивает его в свой цвет
+   и показывает свой предмет вместо компаса (см. .arena-emblem). */
+html { --hero-hue: 0deg; --hero-sat: 1; }
+html[data-game="csgo"]  { --hero-hue: -14deg; --hero-sat: 1.15; }
+html[data-game="clash"] { --hero-hue: 168deg; --hero-sat: 1.05; }
+html[data-game="brawl"] { --hero-hue: 232deg; --hero-sat: 1.05; }
 .hero-img img { filter: hue-rotate(var(--hero-hue)) saturate(var(--hero-sat)); transition: filter .6s var(--ease); }
-
-/* Знак игры в первом экране: справа, под затемнением текста */
-.hero-motif {
-  position: absolute; z-index: 1; pointer-events: none;
-  right: max(2%, 0px); top: 46%; width: min(44vw, 520px); aspect-ratio: 1;
-  transform: translateY(-50%);
-  background: linear-gradient(135deg, var(--gold-hi), var(--gold) 55%, var(--gold-lo));
-  -webkit-mask: var(--motif) center / contain no-repeat; mask: var(--motif) center / contain no-repeat;
-  opacity: .2; mix-blend-mode: screen;
-  transition: opacity .5s var(--ease);
-}
-/* Едва заметный знак на фоне остальных страниц */
-html::before {
-  content: ''; position: fixed; z-index: 0; pointer-events: none;
-  right: -6vmin; bottom: -6vmin; width: min(70vmin, 640px); aspect-ratio: 1;
-  background: var(--gold);
-  -webkit-mask: var(--motif) center / contain no-repeat; mask: var(--motif) center / contain no-repeat;
-  opacity: .045;
-}
-@media (max-width: 820px) {
-  .hero-motif { width: 92vw; right: -22vw; top: 38%; opacity: .12; }
-}
-@media (prefers-reduced-motion: reduce) { .hero-img img, .hero-motif { transition: none; } }
-
+@media (prefers-reduced-motion: reduce) { .hero-img img { transition: none; } }
 .gamebar-wrap + .hero .hero-body { padding-top: calc(var(--head-h) + var(--gamebar-h) + 30px); }
