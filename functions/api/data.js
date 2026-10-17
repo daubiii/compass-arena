@@ -94,30 +94,44 @@ export async function onRequestGet(context) {
   if (!game) return new Response('Unknown game', { status: 400 });
   const key = tournamentKey(game);
 
-  let data = await env.COMPASS_KV.get(key, { type: 'json' });
-  if (!data) {
-    data = game === DEFAULT_GAME ? DEFAULT_DATA : emptyTournament(game);
-    await env.COMPASS_KV.put(key, JSON.stringify(data));
+  /* Бесплатный тариф Workers — 10 мс CPU на запрос. Разбор и сборка JSON на несколько мегабайт
+     (логотипы и фото внутри данных) эти 10 мс съедают, поэтому данные и архив отдаём ТЕКСТОМ,
+     не разбирая: просто склеиваем строки. Фото в ответе — ссылки /api/photo/<id>;
+     data:-URL собираются только по ?full=1 (резервная копия в админке). */
+  let raw = await env.COMPASS_KV.get(key);
+  if (!raw) {
+    raw = JSON.stringify(game === DEFAULT_GAME ? DEFAULT_DATA : emptyTournament(game));
+    await env.COMPASS_KV.put(key, raw);
   }
 
-  // История турниров — отдельный ключ. Если нет — пустой массив.
-  let history = await env.COMPASS_KV.get('history', { type: 'json' });
-  if (!Array.isArray(history)) history = [];
+  let historyRaw = await env.COMPASS_KV.get('history');
+  if (!historyRaw || !String(historyRaw).trim()) historyRaw = '[]';
 
-  // Публичным страницам нужны только ссылки на кадры: ?light=1 экономит трафик
-  // и не заставляет воркер тянуть из KV мегабайты base64.
-  const light = new URL(context.request ? context.request.url : 'https://x/').searchParams.get('light') === '1';
-  if (!light) history = await hydratePhotos(env, history);
+  const full = reqUrl.searchParams.get('full') === '1';
+  if (full) {
+    let history = [];
+    try { history = JSON.parse(historyRaw); } catch { history = []; }
+    historyRaw = JSON.stringify(await hydratePhotos(env, Array.isArray(history) ? history : []));
+  }
 
-  // Отдаём объединённый объект: текущие данные + history
-  const response = Object.assign({}, data, { history, game });
-
-  return new Response(JSON.stringify(response), {
+  return new Response(joinResponse(raw, historyRaw, game), {
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store'
     }
   });
+}
+
+/** {"teams":…} + history + game одной строкой, без JSON.parse/stringify */
+function joinResponse(raw, historyRaw, game) {
+  const text = String(raw).trim();
+  const end = text.lastIndexOf('}');
+  if (!text.startsWith('{') || end < 0) {
+    return '{"history":' + historyRaw + ',"game":' + JSON.stringify(game) + '}';
+  }
+  const head = text.slice(0, end);
+  const sep = /\{\s*$/.test(head) ? '' : ',';
+  return head + sep + '"history":' + historyRaw + ',"game":' + JSON.stringify(game) + '}';
 }
 
 /**

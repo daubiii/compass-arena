@@ -2,6 +2,7 @@
 import { onRequestPost } from '../functions/api/save.js';
 import { onRequestGet as getPhoto } from '../functions/api/photo/[id].js';
 import { onRequestGet as getData } from '../functions/api/data.js';
+import { onRequestPost as upload } from '../functions/api/upload.js';
 
 let failed = 0;
 const ok = (c, m) => { if (!c) { failed++; console.error('✗', m); } else console.log('✓', m); };
@@ -37,7 +38,7 @@ ok(r.status === 200, 'сохранение проходит');
    поэтому проверяем результат по /api/data: именно его видит админка.
    Лёгкий вариант (?light=1) — то, что видят публичные страницы. */
 const light = await (await getData({ env, request: new Request('http://x/api/data?light=1') })).json();
-const d1 = await (await getData({ env, request: new Request('http://x/api/data') })).json();
+const d1 = await (await getData({ env, request: new Request('http://x/api/data?full=1') })).json();
 ok(light.history[0].photos.length === 1, 'мусор и svg отброшены, валидное фото осталось', light.history[0].photos.length);
 const url = light.history[0].photos[0].url;
 ok(/^\/api\/photo\/[a-f0-9]{32}$/.test(url), 'в лёгком ответе ссылка на /api/photo/<id>', url);
@@ -56,7 +57,7 @@ ok(dl.history[0].photos[0].url === url && !JSON.stringify(dl).includes('base64')
 
 r = await save({ teams: [], history: stored });
 out = await r.json();
-ok(out.historyKept === true && env.COMPASS_KV.m.size >= 3, 'повторное сохранение со ссылками ничего не пересоздаёт');
+ok(!out.historyKept && env.COMPASS_KV.m.size >= 3, 'повторное сохранение со ссылками ничего не пересоздаёт');
 ok([...env.COMPASS_KV.m.keys()].filter(k => k.startsWith('photo:')).length === 1, 'в KV одно фото');
 
 r = await save({ teams: [], history: [ch('a', [])] });
@@ -73,6 +74,39 @@ ok(r.status === 403, 'неверный пароль → 403');
 r = await save({ teams: [], history: [] });
 out = await r.json();
 ok(out.historyKept === true, 'пустая история не затирает архив без clearHistory');
+
+/* ---------- Загрузка картинок отдельным запросом (/api/upload) ---------- */
+const bin = Uint8Array.from(atob(PNG.split(',')[1]), (c) => c.charCodeAt(0));
+const up = (headers, body = bin) => upload({ request: new Request('http://x/api/upload', { method: 'POST', headers, body }), env });
+let ur = await up({ 'Content-Type': 'image/png' });
+ok(ur.status === 403, 'upload без пароля → 403');
+ur = await up({ 'Content-Type': 'image/svg+xml', 'X-Admin-Password': 'pw' });
+ok(ur.status === 415, 'upload: svg не принимается');
+ur = await up({ 'Content-Type': 'image/png', 'X-Admin-Password': 'pw' }, new Uint8Array(0));
+ok(ur.status === 400, 'upload: пустое тело → 400');
+ur = await up({ 'Content-Type': 'image/png', 'X-Admin-Password': 'pw' }, new Uint8Array(3 * 1024 * 1024 + 1));
+ok(ur.status === 413, 'upload: больше 3 МБ → 413');
+ur = await up({ 'Content-Type': 'image/png', 'X-Admin-Password': 'pw' });
+const upOut = await ur.json();
+ok(ur.status === 200 && /^\/api\/photo\/[a-f0-9]{32}$/.test(upOut.url), 'upload: возвращает ссылку /api/photo/<id>');
+const upPhoto = await getPhoto({ params: { id: upOut.url.split('/').pop() }, env });
+ok(upPhoto.status === 200 && upPhoto.headers.get('Content-Type') === 'image/png', 'загруженную картинку отдаёт /api/photo');
+
+/* Данные с логотипом-ссылкой: сохранение и чтение без разбора мегабайтов */
+r = await save({ teams: [{ id: 1, name: 'A', logo: upOut.url, players: [] }], matches: [] });
+ok(r.status === 200, 'сохранение команды с логотипом-ссылкой');
+const roundtrip = await (await getData({ env, request: new Request('http://x/api/data') })).json();
+ok(roundtrip.teams[0].logo === upOut.url && Array.isArray(roundtrip.history) && roundtrip.game === 'dota2', '/api/data: данные + history + game одним валидным JSON');
+
+/* Сохранение без поля history не трогает архив */
+r = await save({ teams: [], history: [ch('keep', [])] });
+r = await save({ teams: [{ id: 2, name: 'B', players: [] }] });
+const kept = await (await getData({ env, request: new Request('http://x/api/data') })).json();
+ok(kept.history.length === 1 && kept.history[0].id === 'keep' && kept.teams[0].name === 'B', 'сохранение без history оставляет архив на месте');
+
+/* Любая игра: ответ тоже склеивается (пустой турнир) */
+const brawl = await (await getData({ env, request: new Request('http://x/api/data?game=brawl') })).json();
+ok(brawl.game === 'brawl' && brawl.teams.length === 0 && brawl.history.length === 1, '/api/data?game=brawl: пустой турнир + общий архив');
 
 console.log(failed ? '\nПРОВАЛЕНО: ' + failed : '\nвсе проверки пройдены');
 process.exit(failed ? 1 : 0);
