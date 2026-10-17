@@ -295,7 +295,7 @@ console.log('\n5. Роутер бота (команды, права, кнопк�
   ok(/Нажми \/help, чтобы открыть меню бота\.\nВыбери свою дисциплину\.\nЗарегистрируй состав команды\./.test(text),
     'три шага участия идут подряд, без пустых строк');
   ok(!/Турнир по Dota 2/.test(text) && !/Впиши \/help/.test(text), 'лишних строк про турнир нет');
-  ok(/📞 <b>Связь для сотрудничества и вопросов:<\/b>\nG0gg1a\nuuutt7/.test(text), 'контакты в приветствии на своих строках');
+  ok(/📞 <b>Связь для сотрудничества и вопросов:<\/b>\n<a href="https:\/\/t\.me\/G0gg1a">G0gg1a<\/a>\n<a href="https:\/\/t\.me\/uuutt7">uuutt7<\/a>/.test(text), 'контакты в приветствии — ссылки на профили, каждый на своей строке');
   ok(/👇 <b>Выбери дисциплину, чтобы начать<\/b>/.test(text), 'приветствие зовёт выбрать дисциплину');
   const markup = JSON.stringify(messages()[0].body.reply_markup);
   ok(markup.includes('reg:disc:dota2') && markup.includes('reg:disc:csgo'), '/start показывает кнопки дисциплин (reg:disc:*)');
@@ -306,7 +306,7 @@ console.log('\n5. Роутер бота (команды, права, кнопк�
   mockTelegram();
   await say(env, USER, '/start');
   ok(/Регистрация сейчас закрыта/.test(last()), 'закрытая регистрация сообщает об этом');
-  ok(/@G0gg1a · @uuutt7/.test(last()), 'в закрытой регистрации есть контакты организаторов');
+  ok(/<a href="https:\/\/t\.me\/G0gg1a">@G0gg1a<\/a> · <a href="https:\/\/t\.me\/uuutt7">@uuutt7<\/a>/.test(last()), 'в закрытой регистрации контакты — ссылки на профили');
   ok(!/reg:disc:/.test(markupSince(0)), 'кнопок дисциплин нет, пока регистрация закрыта');
   ok(/act:help/.test(markupSince(0)), 'но справка остаётся доступной');
 
@@ -324,7 +324,7 @@ console.log('\n5. Роутер бота (команды, права, кнопк�
   await say(env, ADMIN, '/help');
   ok(/Как проходит регистрация/.test(last()) && /\/leads/.test(last()) && /\/export/.test(last()), '/help для админа со всеми командами');
   ok(/Для организаторов:/.test(last()), 'у админа отдельный блок «Для организаторов»');
-  ok(/Сайт: https:\/\/compassarena\.ru/.test(last()) && /Связь: @G0gg1a · @uuutt7/.test(last()),
+  ok(/Сайт: https:\/\/compassarena\.ru/.test(last()) && /Связь: <a href="https:\/\/t\.me\/G0gg1a">@G0gg1a<\/a> · <a href="https:\/\/t\.me\/uuutt7">@uuutt7<\/a>/.test(last()),
     'в справке есть сайт и контакты');
   mockTelegram();
   await say(env, USER, '/help');

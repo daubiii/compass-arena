@@ -12,10 +12,11 @@
 export const SITE_URL = 'https://compassarena.ru';
 
 /** Связь с организаторами */
-export const CONTACTS = '@G0gg1a · @uuutt7';
+const tg = (nick, label) => `<a href="https://t.me/${nick}">${label}</a>`;
+export const CONTACTS = `${tg('G0gg1a', '@G0gg1a')} · ${tg('uuutt7', '@uuutt7')}`;
 
 /** Те же контакты, но каждый на своей строке (для приветствия) */
-export const CONTACTS_LINES = 'G0gg1a\nuuutt7';
+export const CONTACTS_LINES = `${tg('G0gg1a', 'G0gg1a')}\n${tg('uuutt7', 'uuutt7')}`;
 
 /** Название турнира, если в настройках D1 пусто */
 export const DEFAULT_TOURNAMENT = 'Compass Arena Season 2';
