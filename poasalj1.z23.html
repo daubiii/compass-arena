@@ -226,8 +226,14 @@
             .history-item { flex-wrap: wrap; }
         }
     
+
+    .admin-games { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 16px; }
+    .admin-games button { cursor:pointer; padding:9px 16px; border-radius:999px; border:1px solid #2a2f3a; background:#14171d; color:#aeb4c0; font:inherit; font-size:13px; }
+    .admin-games button:hover { color:#fff; border-color:#444c5c; }
+    .admin-games button.active { color:var(--gc); border-color:var(--gc); background:rgba(255,255,255,.04); box-shadow:0 0 0 1px var(--gc) inset; }
+    .admin-games .ag-note { flex-basis:100%; font-size:12px; color:#5f6773; }
 </style>
-<script src="/assets/ca-bracket-engine.js?v=7ac9e8f"></script>
+<script src="/assets/ca-bracket-engine.js?v=d4a3071"></script>
 </head>
 <body>
 
@@ -236,6 +242,8 @@
         <h1>⚙️ COMPASS <em>ARENA</em> · АДМИН-ПАНЕЛЬ</h1>
         <a href="/" class="back">← На сайт</a>
     </div>
+
+    <div class="admin-games" id="adminGames" role="tablist" aria-label="Дисциплина"></div>
 
     <div class="password-section">
         <strong style="color:#e3c48a;">🔐 Пароль администратора</strong>
@@ -595,6 +603,23 @@
 // ============================================================
 // ДАННЫЕ
 // ============================================================
+var ADMIN_GAMES = {
+    dota2: { name: 'Dota 2', teamSize: 5, accent: '#e3c48a', roles: { 1: 'Керри', 2: 'Мидер', 3: 'Офлейн', 4: 'Саппорт 4', 5: 'Саппорт 5' } },
+    csgo: { name: 'CS:GO', teamSize: 5, accent: '#ff8a3d', roles: { 1: 'IGL', 2: 'AWPer', 3: 'Entry', 4: 'Support', 5: 'Lurker' } },
+    clash: { name: 'Clash Royale', teamSize: 1, accent: '#4aa3ff', roles: { 1: 'Игрок' } },
+    brawl: { name: 'Brawl Stars', teamSize: 3, accent: '#a66bff', roles: { 1: 'Игрок 1', 2: 'Игрок 2', 3: 'Игрок 3' } }
+};
+var ADMIN_GAME_IDS = ['dota2', 'csgo', 'clash', 'brawl'];
+/* Какая дисциплина открыта в админке: ?game=… , иначе Dota 2 */
+var GAME = (function () {
+    try {
+        var g = new URLSearchParams(location.search).get('game');
+        if (g && ADMIN_GAMES[g]) return g;
+    } catch (e) {}
+    return 'dota2';
+})();
+function teamSize() { return ADMIN_GAMES[GAME].teamSize; }
+
 var DATA = getDefaultData();
 var HISTORY = [];
 var EDITING_HISTORY_ID = null;
@@ -602,7 +627,7 @@ var EDITING_HISTORY_PHOTOS = [];
 
 function getDefaultData() {
     return {
-        tournament: { name: "Compass Arena", game: "Dota 2", format: "Custom Bracket", matches: "Bo3", dates: "26 сентября 2026" },
+        tournament: { name: "Compass Arena", game: ADMIN_GAMES[GAME].name, format: "Custom Bracket", matches: "Bo3", dates: "26 сентября 2026" },
         teams: [],
         matches: [],
         schedule: {},
@@ -833,7 +858,7 @@ var SERVER_HISTORY_N = 0;
 var LAST_LOAD_FAILED = false;
 
 function loadData() {
-    return fetch('/api/data', { cache: 'no-store' })
+    return fetch('/api/data?game=' + encodeURIComponent(GAME), { cache: 'no-store' })
         .then(function(res) {
             if (!res.ok) throw new Error('bad response');
             return res.json();
@@ -1120,11 +1145,38 @@ function clearBracket() {
     saveData().then(function () { renderEverything(); });
 }
 
+function renderGameSwitch() {
+    var box = document.getElementById('adminGames');
+    if (!box) return;
+    box.innerHTML = ADMIN_GAME_IDS.map(function (id) {
+        var g = ADMIN_GAMES[id];
+        return '<button type="button" role="tab" class="' + (id === GAME ? 'active' : '') + '" style="--gc:' + g.accent +
+            '" aria-selected="' + (id === GAME) + '" onclick="switchGame(\'' + id + '\')">' + escapeHtml(g.name) + '</button>';
+    }).join('') + '<span class="ag-note">Редактируется: <b>' + escapeHtml(ADMIN_GAMES[GAME].name) + '</b> · ' +
+        (teamSize() === 1 ? 'дуэли 1×1' : teamSize() + '×' + teamSize()) + '. У каждой игры свои команды, сетка и расписание; архив общий.</span>';
+    document.title = 'Админ-панель · ' + ADMIN_GAMES[GAME].name;
+}
+
+function switchGame(id) {
+    if (!ADMIN_GAMES[id] || id === GAME) return;
+    GAME = id;
+    try {
+        var url = new URL(location.href);
+        if (id === 'dota2') url.searchParams.delete('game'); else url.searchParams.set('game', id);
+        history.replaceState(null, '', url.pathname + (url.search || '') + location.hash);
+    } catch (e) {}
+    DATA_READY = false;
+    DATA = getDefaultData();
+    renderGameSwitch();
+    loadData().then(renderEverything);
+}
+
 function renderEverything() {
+    renderGameSwitch();
     var nameEl = document.getElementById('settingsName');
     if (nameEl) nameEl.value = DATA.tournament.name || 'Compass Arena';
     var gameEl = document.getElementById('settingsGame');
-    if (gameEl) gameEl.value = DATA.tournament.game || 'Dota 2';
+    if (gameEl) gameEl.value = DATA.tournament.game || ADMIN_GAMES[GAME].name;
     var fmtEl = document.getElementById('settingsFormat');
     if (fmtEl) fmtEl.value = DATA.tournament.matches || 'Bo3';
     var datesEl = document.getElementById('settingsDates');
@@ -1200,7 +1252,7 @@ function saveData(force) {
     return fetch('/api/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pw, data: payload })
+        body: JSON.stringify({ password: pw, game: GAME, data: payload })
     }).then(function(res) {
         if (res.status === 403) {
             ADMIN_PW = null;
@@ -1352,8 +1404,8 @@ function renderTeams() {
             playersText = 'состав не указан';
         }
         /* Неполный состав — не ошибка (команда из бота может прийти без пятого), но видно сразу */
-        var rosterWarn = (t.players && t.players.length === 5) ? ''
-            : '<span class="roster-warn" title="В заявке меньше 5 игроков">⚠️ неполный состав</span> ';
+        var rosterWarn = (t.players && t.players.length === teamSize()) ? ''
+            : '<span class="roster-warn" title="В заявке не хватает игроков: нужно ' + teamSize() + '">⚠️ неполный состав</span> ';
 
         var upBtn = '<button class="btn btn-sm" ' + (i === 0 ? 'disabled style="opacity:0.3;"' : 'onclick="moveTeam(' + i + ',-1)"') + ' title="Выше">↑</button>';
         var downBtn = '<button class="btn btn-sm" ' + (i === DATA.teams.length - 1 ? 'disabled style="opacity:0.3;"' : 'onclick="moveTeam(' + i + ',1)"') + ' title="Ниже">↓</button>';
@@ -2091,7 +2143,8 @@ function buildSnapshot() {
         name: DATA.tournament.name || 'Compass Arena',
         date: dateStr,
         format: (DATA.tournament.format || 'Custom Bracket') + ' · ' + (DATA.tournament.matches || 'Bo3'),
-        game: DATA.tournament.game || 'Dota 2',
+        game: DATA.tournament.game || ADMIN_GAMES[GAME].name,
+        gameId: GAME,
         createdAt: now.toISOString(),
         fingerprint: seasonFingerprint(),
         // Снапшот данных на момент фиксации
@@ -2577,7 +2630,7 @@ function saveSettings() {
     var banner = document.getElementById('settingsAlwaysBanner').checked;
 
     DATA.tournament.name = name || 'Compass Arena';
-    DATA.tournament.game = game || 'Dota 2';
+    DATA.tournament.game = game || ADMIN_GAMES[GAME].name;
     DATA.tournament.matches = format || 'Bo3';
     DATA.tournament.dates = dates || '26 сентября 2026';
     DATA.tournamentStart = startVal ? new Date(startVal).toISOString() : null;
@@ -2745,10 +2798,8 @@ document.addEventListener('keydown', function(e) {
    Разбор, проверка и нормализация — чистые функции: их вызывает и интерфейс,
    и автотесты (tests/admin-import.mjs). */
 
-var BOT_ROLES = {
-    dota2: { label: 'Dota 2', roles: { 1: 'Керри', 2: 'Мидер', 3: 'Офлейн', 4: 'Саппорт 4', 5: 'Саппорт 5' } },
-    csgo: { label: 'CS:GO', roles: { 1: 'IGL', 2: 'AWPer', 3: 'Entry', 4: 'Support', 5: 'Lurker' } }
-};
+var BOT_ROLES = {};
+ADMIN_GAME_IDS.forEach(function (id) { BOT_ROLES[id] = { label: ADMIN_GAMES[id].name, roles: ADMIN_GAMES[id].roles }; });
 
 var BOT_PENDING = null;   /* разобранный файл, ожидающий подтверждения */
 var BOT_STEP = null;      /* текущий шаг подтверждения */
@@ -2780,9 +2831,7 @@ function botGameKey(value) {
 }
 /* Какая дисциплина сейчас в админке — нужна для подписи ролей у агентов */
 function botCurrentDiscipline() {
-    var key = botGameKey(DATA.tournament && DATA.tournament.game);
-    if (key === 'csgo' || key === 'counterstrike' || key === 'cs2') return 'csgo';
-    return 'dota2';
+    return GAME;
 }
 
 /* ---------- 1. Разбор файла ---------- */
@@ -2836,8 +2885,8 @@ function botValidateTeams(doc) {
             incomplete++;
             continue;
         }
-        if (t.players.length !== 5) {
-            warnings.push(label + ': ' + t.players.length + ' ' + pluralPlayers(t.players.length) + ' из 5 — состав неполный.');
+        if (t.players.length !== teamSize()) {
+            warnings.push(label + ': ' + t.players.length + ' ' + pluralPlayers(t.players.length) + ' из ' + teamSize() + ' — состав неполный.');
             incomplete++;
         }
         for (var k = 0; k < t.players.length; k++) {
@@ -3182,12 +3231,11 @@ function botApplyTeams() {
     var incomplete = 0;
     for (var i = 0; i < plan.teams.length; i++) {
         if (plan.teams[i].logoOversized) oversized++;
-        if (!plan.teams[i].players || plan.teams[i].players.length !== 5) incomplete++;
+        if (!plan.teams[i].players || plan.teams[i].players.length !== teamSize()) incomplete++;
     }
 
-    var gameKey = botGameKey(DATA.tournament.game);
     var fileKey = botGameKey(plan.doc.discipline);
-    var mismatch = fileKey && gameKey && fileKey !== gameKey;
+    var mismatch = fileKey && fileKey !== GAME;
 
     DATA.teams = plan.teams;
     DATA.freeAgents = plan.agents;
@@ -3242,7 +3290,7 @@ function botShowImportResult(kind, fileName, teamsN, agentsN, oversized, mismatc
     }
     if (incomplete > 0) {
         html += '<div class="as-text">⚠️ У <b>' + incomplete + '</b> ' + pluralTeams(incomplete) +
-            ' неполный состав (меньше 5 игроков) — команды добавлены, состав можно поправить на вкладке «Команды».</div>';
+            ' неполный состав (меньше ' + teamSize() + ' игроков) — команды добавлены, состав можно поправить на вкладке «Команды».</div>';
     }
     if (oversized > 0) {
         html += '<div class="as-text">⚠️ У ' + oversized + ' команд логотип больше 200 КБ — на сайте они могут грузиться дольше.</div>';
