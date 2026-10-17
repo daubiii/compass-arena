@@ -651,12 +651,20 @@
       });
   }
 
+  /** Каждый матч помнит свой набор данных и игру — для общего расписания */
+  function tagMatches(ds) {
+    ds.matches.forEach(function (m) {
+      Object.defineProperty(m, '__d', { value: ds, enumerable: false, configurable: true });
+      Object.defineProperty(m, '__game', { value: ds.game, enumerable: false, configurable: true });
+    });
+  }
+
   /** Все дисциплины сразу (расписание, архив): { games: {id: D}, history } — текущее состояние не трогает */
   function loadAll() {
     var ids = (CA.games && CA.games.ids) || ['dota2'];
     return Promise.all(ids.map(function (id) {
       return fetchRaw(id, true)
-        .then(function (raw) { var d = finalize(normalize(Object.assign({ game: id }, raw))); d.fromServer = true; return [id, d, raw]; })
+        .then(function (raw) { var d = finalize(normalize(Object.assign({ game: id }, raw))); d.fromServer = true; tagMatches(d); return [id, d, raw]; })
         .catch(function () { return [id, finalize(normalize({ game: id })), null]; });
     })).then(function (list) {
       var games = {};
@@ -667,6 +675,14 @@
       });
       return { games: games, history: history };
     });
+  }
+
+  /** Выполняет fn так, будто текущий набор данных — ds (для матча из другой дисциплины) */
+  function using(ds, fn) {
+    if (!ds || ds === D) return fn();
+    var prev = D;
+    D = ds;
+    try { return fn(); } finally { D = prev; }
   }
 
   function setGame(game) { GAME = (CA.games && CA.games.isGame(game)) ? game : 'dota2'; return GAME; }
@@ -687,6 +703,7 @@
     get: get,
     load: load,
     loadAll: loadAll,
+    using: using,
     setGame: setGame,
     game: getGame,
     setRaw: setRaw,

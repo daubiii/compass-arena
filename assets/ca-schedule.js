@@ -13,7 +13,11 @@
   var V = CA.views;
   var ic = U.icon;
 
+  var G = CA.games;
   var FILTER = 'all';
+  var GAME_FILTER = 'all';           /* 'all' или id дисциплины */
+  var ALL = null;                    /* { games: {id: D}, history } */
+  var NEXT = null;                   /* ближайший/идущий матч среди всех игр */
   var FILTERS = [
     { key: 'all', label: 'Все матчи' },
     { key: 'r1', label: 'Раунд 1' },
@@ -29,32 +33,76 @@
     return 'r1';
   }
 
-  function visibleMatches(d) {
-    return d.matches.filter(function (m) {
-      if (!m.bothKnown && !m.scheduled) return false;
-      if (FILTER === 'done') return !!m.winner;
-      if (FILTER !== 'all' && stageKey(m) !== FILTER) return false;
-      return true;
-    }).sort(function (a, b) {
+  function allMatches() {
+    var out = [];
+    if (!ALL) return out;
+    G.ids.forEach(function (id) {
+      if (GAME_FILTER !== 'all' && GAME_FILTER !== id) return;
+      var ds = ALL.games[id];
+      if (ds) ds.matches.forEach(function (m) { out.push(m); });
+    });
+    return out;
+  }
+
+  function passes(m, key) {
+    if (!m.bothKnown && !m.scheduled) return false;
+    if (key === 'done') return !!m.winner;
+    if (key !== 'all' && stageKey(m) !== key) return false;
+    return true;
+  }
+
+  function visibleMatches() {
+    return allMatches().filter(function (m) { return passes(m, FILTER); }).sort(function (a, b) {
       var ta = a.scheduled || 9e15, tb = b.scheduled || 9e15;
-      return ta - tb || a.id - b.id;
+      return ta - tb || a.id - b.id || String(a.__game).localeCompare(String(b.__game));
     });
   }
 
-  function countFor(d, key) {
-    return d.matches.filter(function (m) {
-      if (!m.bothKnown && !m.scheduled) return false;
-      if (key === 'done') return !!m.winner;
-      if (key !== 'all' && stageKey(m) !== key) return false;
-      return true;
-    }).length;
+  function countFor(key) {
+    return allMatches().filter(function (m) { return passes(m, key); }).length;
   }
 
-  function renderFilters(d) {
+  /** Сколько матчей у дисциплины (для счётчика на табе игры) */
+  function gameCount(id) {
+    var ds = ALL && ALL.games[id];
+    return ds ? ds.matches.filter(function (m) { return passes(m, 'all'); }).length : 0;
+  }
+
+  /** Ближайший идущий или предстоящий матч среди всех игр */
+  function pickNext() {
+    var best = null;
+    G.ids.forEach(function (id) {
+      var ds = ALL && ALL.games[id];
+      if (!ds || ds.empty) return;
+      var m = ds.liveMatch || ds.nextMatch;
+      if (!m) return;
+      var score = (m.state === 'live' ? -1e15 : 0) + (m.scheduled || 9e14);
+      if (!best || score < best.score) best = { m: m, score: score };
+    });
+    return best ? best.m : null;
+  }
+
+  function renderGameFilters() {
+    var box = document.getElementById('gameFilters');
+    if (!box) return;
+    var items = [{ id: 'all', name: 'Все игры' }].concat(G.list.map(function (g) { return { id: g.id, name: g.short }; }));
+    box.innerHTML = items.map(function (it) {
+      var on = GAME_FILTER === it.id;
+      var glyph = it.id === 'all' ? '' : G.glyph(it.id);
+      var count = it.id === 'all'
+        ? G.ids.reduce(function (n, id) { return n + gameCount(id); }, 0)
+        : gameCount(it.id);
+      return '<button class="game-tab sm' + (on ? ' is-on' : '') + '" type="button" role="tab" aria-selected="' + on +
+        '" data-gamefilter="' + it.id + '"' + (it.id === 'all' ? '' : ' style="--gc:' + G.get(it.id).theme.accent + '"') + '>' +
+        glyph + '<span class="gt-name">' + it.name + '</span><span class="gt-size">' + count + '</span></button>';
+    }).join('');
+  }
+
+  function renderFilters() {
     var box = document.getElementById('filters');
     if (!box) return;
     box.innerHTML = FILTERS.map(function (f) {
-      var n = countFor(d, f.key);
+      var n = countFor(f.key);
       return '<button class="chip-f' + (FILTER === f.key ? ' active' : '') + '" type="button" role="tab"' +
         ' aria-selected="' + (FILTER === f.key) + '" data-filter="' + f.key + '">' +
         f.label + '<span class="chip-n">' + n + '</span></button>';
@@ -62,10 +110,12 @@
   }
 
   /* ---------- Карточка «сейчас / следом» ---------- */
-  function renderNextCard(d) {
+  function renderNextCard() {
     var box = document.getElementById('nextCard');
     if (!box) return;
-    var m = d.liveMatch || d.nextMatch;
+    var m = NEXT;
+    var d = m && m.__d ? m.__d : D.get();
+    if (m && m.__d) { var mm = m; return D.using(m.__d, function () { renderNextIn(box, mm, d); }); }
     if (!m) {
       box.innerHTML = '<div class="next-card is-empty">' +
         '<div class="nc-left"><p class="kicker">Расписание</p>' +
@@ -75,12 +125,17 @@
         '</div>';
       return;
     }
+    renderNextIn(box, m, d);
+  }
+
+  function renderNextIn(box, m, d) {
     var isLive = m.state === 'live';
     var a = D.slotLabel(m, 1).text, b = D.slotLabel(m, 2).text;
     var has = m.score1 != null && m.score2 != null;
+    var gameName = m.__game ? G.get(m.__game).name : '';
     box.innerHTML = '<div class="next-card' + (isLive ? ' is-live' : '') + '">' +
       '<div class="nc-left">' +
-        '<p class="kicker">' + (isLive ? '<span class="dot-live"></span> Идёт прямо сейчас' : ic('clock') + ' Следующий матч') + '</p>' +
+        '<p class="kicker">' + (isLive ? '<span class="dot-live"></span> Идёт прямо сейчас' : ic('clock') + ' Следующий матч') + (gameName ? ' · ' + D.esc(gameName) : '') + '</p>' +
         '<div class="nc-teams">' + D.esc(a) +
           (has ? ' <span class="sc">' + D.esc(m.score1) + ':' + D.esc(m.score2) + '</span> ' : ' <span class="vs">против</span> ') +
           D.esc(b) + '</div>' +
@@ -101,8 +156,7 @@
   function tickCard() {
     var box = document.getElementById('ncCount');
     if (!box) return;
-    var d = D.get();
-    var m = d.liveMatch || d.nextMatch;
+    var m = NEXT;
     if (!m) { box.innerHTML = ''; return; }
     if (m.state === 'live') {
       box.innerHTML = '<b class="live-num">LIVE</b><small>матч идёт</small>';
@@ -121,10 +175,10 @@
   }
 
   /* ---------- Список матчей ---------- */
-  function renderList(d) {
+  function renderList() {
     var box = document.getElementById('scheduleList');
     if (!box) return;
-    var list = visibleMatches(d);
+    var list = visibleMatches();
     if (!list.length) {
       box.innerHTML = '<div class="s-empty">По этому фильтру матчей нет</div>';
       return;
@@ -142,7 +196,7 @@
       var label = g.items.length + ' ' + D.plural(g.items.length, 'матч', 'матча', 'матчей');
       return '<section class="day">' +
         '<h2 class="day-title">' + D.esc(title) + '<small>' + label + '</small></h2>' +
-        V.scheduleRows(d, g.items, { date: false }) +
+        V.scheduleRows(null, g.items, { date: false, games: true }) +
         '</section>';
     }).join('');
   }
@@ -155,14 +209,20 @@
       : ' Рядом с каждым матчем — ваше местное время.';
   }
 
-  function render(d) {
-    document.body.setAttribute('data-phase', d.phase);
-    renderFilters(d);
-    renderNextCard(d);
-    renderList(d);
+  function render() {
+    NEXT = pickNext();
+    var live = !!(NEXT && NEXT.state === 'live');
+    var played = 0, total = 0;
+    G.ids.forEach(function (id) { var ds = ALL && ALL.games[id]; if (ds && !ds.empty) { played += ds.stats.played; total += ds.stats.matchesTotal; } });
+    document.body.setAttribute('data-phase', live ? 'live' : (played && played >= total ? 'post' : 'pre'));
+    /* Тема страницы: у выбранной игры — её цвета, иначе фирменные (Dota 2) */
+    G.applyTheme(GAME_FILTER === 'all' ? G.DEFAULT : GAME_FILTER);
+    renderGameFilters();
+    renderFilters();
+    renderNextCard();
+    renderList();
     renderTzNote();
-    var played = d.stats.played, total = d.stats.matchesTotal || 1;
-    U.setProgress(d.phase === 'post' ? 1 : played / total);
+    U.setProgress(total ? played / total : 0);
   }
 
   /* ---------- URL-состояние фильтра ---------- */
@@ -172,6 +232,21 @@
       if (f && FILTERS.some(function (x) { return x.key === f; })) return f;
     } catch (e) {}
     return 'all';
+  }
+  function gameFromUrl() {
+    try {
+      var g = new URLSearchParams(location.search).get('g') || new URLSearchParams(location.search).get('game');
+      if (g && G.isGame(g)) return g;
+    } catch (e) {}
+    return 'all';
+  }
+  function pushGame(id) {
+    try {
+      var url = new URL(location.href);
+      if (id === 'all') url.searchParams.delete('g');
+      else url.searchParams.set('g', id);
+      history.replaceState(null, '', url.pathname + (url.search || '') + location.hash);
+    } catch (e) {}
   }
   function pushFilter(key) {
     try {
@@ -186,6 +261,7 @@
     U.injectSprite();
     U.initChrome();
     FILTER = filterFromUrl();
+    GAME_FILTER = gameFromUrl();
 
     var filters = document.getElementById('filters');
     if (filters) {
@@ -194,7 +270,7 @@
         if (!btn) return;
         FILTER = btn.getAttribute('data-filter');
         pushFilter(FILTER);
-        render(D.get());
+        render();
         U.observeReveals();
       });
       filters.addEventListener('keydown', function (e) {
@@ -209,22 +285,32 @@
       });
     }
 
-    D.load().then(function (d) {
-      render(d);
-      U.observeReveals();
-    });
+    var gf = document.getElementById('gameFilters');
+    if (gf) {
+      gf.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-gamefilter]');
+        if (!btn) return;
+        GAME_FILTER = btn.getAttribute('data-gamefilter');
+        pushGame(GAME_FILTER);
+        render();
+        U.observeReveals();
+      });
+    }
 
-    var queued = false;
-    D.onChange(function () {
-      if (queued) return;
-      queued = true;
-      global.requestAnimationFrame(function () { queued = false; render(D.get()); });
-    });
+    function refresh() {
+      return D.loadAll().then(function (all) {
+        ALL = all;
+        render();
+        U.observeReveals();
+      });
+    }
+    refresh();
 
     if (TICK) clearInterval(TICK);
     TICK = setInterval(tickCard, 1000);
+    setInterval(refresh, 60000);
   }
 
-  CA.schedule = { init: init, render: render };
+  CA.schedule = { init: init, render: render, setData: function (all) { ALL = all; render(); } };
   U.contentReady(init);
 })(typeof window !== 'undefined' ? window : globalThis);

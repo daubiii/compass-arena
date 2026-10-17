@@ -62,16 +62,30 @@
     return '<span class="st">' + esc(D.stageLabel(m)) + '</span>';
   }
 
+  /* Значок игры в строке общего расписания (цвет — акцент дисциплины) */
+  function gameTag(m) {
+    var G = CA.games;
+    if (!G || !m.__game) return '';
+    var g = G.get(m.__game);
+    return '<span class="s-game" style="--gc:' + g.theme.accent + '">' + G.glyph(g.id) + esc(g.short) + '</span>';
+  }
+
   function scheduleRow(D0, m, opts) {
+    if (m.__d && m.__d !== D.get()) return D.using(m.__d, function () { return scheduleRowIn(D0, m, opts); });
+    return scheduleRowIn(D0, m, opts);
+  }
+
+  function scheduleRowIn(D0, m, opts) {
     opts = opts || {};
     var cls = 's-row';
     if (m.state === 'live') cls += ' is-live';
     if (m.winner) cls += ' done';
     if (m.isNext) cls += ' is-next';
-    return '<div class="' + cls + '" data-match="' + m.id + '">' +
+    return '<div class="' + cls + '" data-match="' + m.id + '"' + (m.__game ? ' data-game="' + m.__game + '"' : '') + '>' +
       whenHtml(D0, m, opts) +
       teamsHtml(D0, m) +
       '<div class="s-side">' +
+        (opts.games ? gameTag(m) : '') +
         (opts.stage === false ? '' : '<span class="s-tag' + (m.bracket === 'grand' ? ' grand' : '') + '">' + esc(D.stageLabel(m)) + '</span>') +
         tagHtml(m) + actions(D0, m, opts) +
       '</div></div>';

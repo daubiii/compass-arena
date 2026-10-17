@@ -24,7 +24,7 @@
 
 <link rel="preload" href="/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/onest-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/site.css?v=84b003e">
+<link rel="stylesheet" href="/site.css?v=7ac9e8f">
 
 <style>
 /* ==========================================================
@@ -172,6 +172,7 @@
   <section class="sched" aria-labelledby="schedTitle">
     <div class="wrap">
       <h2 class="sr-only" id="schedTitle">Все матчи</h2>
+      <div class="gamebar sched-games" id="gameFilters" role="tablist" aria-label="Дисциплина"></div>
       <div class="filters" id="filters" role="tablist" aria-label="Фильтр матчей"></div>
       <div id="scheduleList"><div class="s-empty">Загрузка…</div></div>
     </div>
@@ -220,9 +221,10 @@
 </button>
 
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-<script src="/assets/ca-data.js?v=84b003e" defer></script>
-<script src="/assets/ca-ui.js?v=84b003e" defer></script>
-<script src="/assets/ca-views.js?v=84b003e" defer></script>
-<script src="/assets/ca-schedule.js?v=84b003e" defer></script>
+<script src="/assets/ca-games.js?v=7ac9e8f" defer></script>
+<script src="/assets/ca-data.js?v=7ac9e8f" defer></script>
+<script src="/assets/ca-ui.js?v=7ac9e8f" defer></script>
+<script src="/assets/ca-views.js?v=7ac9e8f" defer></script>
+<script src="/assets/ca-schedule.js?v=7ac9e8f" defer></script>
 </body>
 </html>

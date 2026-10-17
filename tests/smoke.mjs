@@ -24,7 +24,7 @@ function makeDom(file, fixture, scripts) {
     runScripts: 'dangerously'
   });
   const w = dom.window;
-  w.fetch = async () => ({ ok: true, json: async () => fixture });
+  w.fetch = async (u) => { const g = (String(u).match(/game=(\w+)/) || [])[1]; const empty = g && g !== 'dota2'; return { ok: true, json: async () => empty ? { game: g, teams: [], matches: [] } : fixture }; };
   for (const f of scripts) {
     try { w.eval(read('assets/' + f)); } catch (e) { throw new Error(f + ': ' + e.message); }
   }
@@ -32,7 +32,7 @@ function makeDom(file, fixture, scripts) {
 }
 
 const HOME = ['ca-data.js', 'ca-ui.js', 'ca-views.js', 'ca-bracket.js', 'ca-bracket-viewer.js', 'ca-home.js'];
-const SCHED = ['ca-data.js', 'ca-ui.js', 'ca-views.js', 'ca-schedule.js'];
+const SCHED = ['ca-games.js', 'ca-data.js', 'ca-ui.js', 'ca-views.js', 'ca-schedule.js'];
 const HIST = ['ca-data.js', 'ca-ui.js', 'ca-views.js', 'ca-history.js'];
 
 /* ---------------- главная ---------------- */
