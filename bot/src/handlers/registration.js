@@ -25,7 +25,7 @@ import {
 } from '../lib/db.js';
 import { esc, clean, isNick, isTeamName, plural } from '../lib/esc.js';
 import {
-  DISCIPLINES, disciplineLabel, roleByKey, rolesOf
+  DISCIPLINES, disciplineLabel, roleByKey, rolesOf, teamSizeOf, hasRoles, soloRole, sizeLabel, isSolo
 } from '../lib/domain.js';
 import { CANCEL_HINT, CONTACTS, contactsBlock, problem, stepTitle } from '../lib/texts.js';
 import { showMainMenu } from './start.js';
@@ -62,16 +62,21 @@ const STEP = {
 /** Шаги, которые обслуживает этот обработчик (чужие шаги игнорируем) */
 const OWN_STEPS = new Set(Object.values(STEP));
 
-const TEAM_STEPS = 7;   // ветка A: название, логотип и 5 игроков
-const TEAM_STEPS_CAPTAIN = 8; // то же плюс вопрос про ник капитана (когда нет @username)
-const AGENT_STEPS = 4;  // ветка B
-const PLAYER_STEPS = 3; // ветка C
+const TEAM_STEPS = 7;   // запасное значение: название, логотип и 5 игроков
+const AGENT_STEPS = 4;  // ветка B (3, если у дисциплины нет ролей)
+const PLAYER_STEPS = 3; // ветка C (2, если у дисциплины нет ролей)
+
+/** Число шагов ветки команды: название + логотип + игроки (+ ник капитана) */
+const teamSteps = (discipline, askCaptain) => 2 + teamSizeOf(discipline) + (askCaptain ? 1 : 0);
+const agentTotal = (temp) => (hasRoles(temp.discipline) ? AGENT_STEPS : AGENT_STEPS - 1);
+const agentNo = (temp, n) => (hasRoles(temp.discipline) || n < 3 ? n : n - 1);
+const playerTotal = (temp) => (hasRoles(temp.discipline) ? PLAYER_STEPS : PLAYER_STEPS - 1);
 
 /** Сколько шагов в ветке команды (8, если спрашиваем ник капитана) */
 const totalOf = (temp) => Number(temp.totalSteps) || TEAM_STEPS;
 
 /** Номер шага игрока: 3, когда шага капитана нет, и 4, когда он есть */
-const playerStepNo = (temp, index) => (totalOf(temp) >= TEAM_STEPS_CAPTAIN ? 4 : 3) + index;
+const playerStepNo = (temp, index) => (temp.askCaptain ? 4 : 3) + index;
 
 /* ============================================================
    Вспомогательные функции
@@ -167,6 +172,15 @@ function playersList(temp, withRoles = true) {
 
 /** Карточка проверки заявки команды */
 function teamCard(temp) {
+  if (isSolo(temp.discipline)) {
+    return [
+      `${DISCIPLINES[temp.discipline].emoji} <b>${esc(disciplineLabel(temp.discipline))}</b> · участие`,
+      `${stepTitle(2, 2)} · проверка заявки`,
+      '',
+      `Ник игрока: <b>${esc(temp.name || '—')}</b>`,
+      `Telegram: <b>${esc(temp.captainNick || '—')}</b>`
+    ].join('\n');
+  }
   const total = totalOf(temp);
   return [
     `${DISCIPLINES[temp.discipline].emoji} <b>${esc(disciplineLabel(temp.discipline))}</b> · команда`,
@@ -191,7 +205,9 @@ function screenType(discipline) {
       '',
       'Что делаем?',
       '',
-      '🏆 Команда — название, логотип и 5 игроков с ролями',
+      teamSizeOf(discipline) === 1
+        ? '🏆 Участник — название, логотип и игровой ник'
+        : `🏆 Команда ${sizeLabel(discipline)} — название, логотип и ${teamSizeOf(discipline)} игроков` + (hasRoles(discipline) ? ' с ролями' : ''),
       '🎯 Свободный агент — ник, роль, ранг, описание',
       '🧍 Заявка игрока — ник, команда, роль'
     ].join('\n'),
@@ -204,7 +220,20 @@ function screenType(discipline) {
   };
 }
 
-function screenTeamName(discipline, note, total = TEAM_STEPS) {
+function screenTeamName(discipline, note, total = teamSteps(discipline, false)) {
+  if (isSolo(discipline)) {
+    return {
+      text: [
+        note ? `${note}\n` : '',
+        `${DISCIPLINES[discipline].emoji} <b>${esc(disciplineLabel(discipline))}</b> · дуэли 1×1`,
+        stepTitle(1, 2),
+        '',
+        'Твой игровой ник (2–30 символов).',
+        'Команды и логотип не нужны — участвуешь сам.' + CANCEL_HINT
+      ].filter(Boolean).join('\n'),
+      keyboard: kb([backRow()])
+    };
+  }
   return {
     text: [
       note ? `${note}\n` : '',
@@ -296,6 +325,12 @@ function screenTeamConfirm(temp, note) {
 }
 
 function screenEditMenu(temp, note) {
+  if (isSolo(temp.discipline)) {
+    return {
+      text: [note ? `${note}\n` : '', '<b>Что изменить?</b>', '', `Ник: <b>${esc(temp.name || '—')}</b>`].filter(Boolean).join('\n'),
+      keyboard: kb([[{ text: 'Ник', data: 'reg:edit:name' }], backRow('reg:back', '⬅️ Назад к проверке')])
+    };
+  }
   const rows = [
     [{ text: 'Название', data: 'reg:edit:name' }, { text: 'Логотип', data: 'reg:edit:logo' }]
   ];
@@ -319,6 +354,12 @@ function screenEditMenu(temp, note) {
 }
 
 function screenEditName(temp, note) {
+  if (isSolo(temp.discipline)) {
+    return {
+      text: [note ? `${note}\n` : '', '<b>Изменение ника</b>', '', `Сейчас: <b>${esc(temp.name || '—')}</b>`, 'Игровой ник (2–30 символов).' + CANCEL_HINT].filter(Boolean).join('\n'),
+      keyboard: kb([backRow('reg:edit', '⬅️ Назад к списку полей')])
+    };
+  }
   return {
     text: [
       note ? `${note}\n` : '',
@@ -364,7 +405,7 @@ function screenAgentNick(temp, note) {
     text: [
       note ? `${note}\n` : '',
       `${DISCIPLINES[temp.discipline].emoji} <b>${esc(disciplineLabel(temp.discipline))}</b> · поиск команды`,
-      stepTitle(1, AGENT_STEPS),
+      stepTitle(1, agentTotal(temp)),
       '',
       'Твой игровой ник (2–30 символов).' + CANCEL_HINT
     ].filter(Boolean).join('\n'),
@@ -382,7 +423,7 @@ function screenAgentRole(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      stepTitle(2, AGENT_STEPS),
+      stepTitle(2, agentTotal(temp)),
       '',
       `Ник: <b>${esc(temp.nick || '')}</b>`,
       'Позиция:'
@@ -395,7 +436,7 @@ function screenAgentRank(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      stepTitle(3, AGENT_STEPS),
+      stepTitle(agentNo(temp, 3), agentTotal(temp)),
       '',
       'Ранг (до 40 символов).',
       'Пример: Divine 3, Immortal, Premier 18 000.',
@@ -409,7 +450,7 @@ function screenAgentNote(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      stepTitle(4, AGENT_STEPS),
+      stepTitle(agentNo(temp, 4), agentTotal(temp)),
       '',
       'Кратко о себе: опыт, сильные стороны, когда играешь (до 300 символов).',
       'Если не нужно — /skip.' + CANCEL_HINT
@@ -423,7 +464,7 @@ function screenPlayerLeadNick(temp, note) {
     text: [
       note ? `${note}\n` : '',
       `${DISCIPLINES[temp.discipline].emoji} <b>${esc(disciplineLabel(temp.discipline))}</b> · заявка игрока`,
-      stepTitle(1, PLAYER_STEPS),
+      stepTitle(1, playerTotal(temp)),
       '',
       'Твой ник (2–30 символов).' + CANCEL_HINT
     ].filter(Boolean).join('\n'),
@@ -435,7 +476,7 @@ function screenPlayerTeam(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      stepTitle(2, PLAYER_STEPS),
+      stepTitle(2, playerTotal(temp)),
       '',
       `Ник: <b>${esc(temp.nick || '')}</b>`,
       'Название текущей команды (2–30 символов).',
@@ -455,7 +496,7 @@ function screenPlayerLeadRole(temp, note) {
   return {
     text: [
       note ? `${note}\n` : '',
-      stepTitle(3, PLAYER_STEPS),
+      stepTitle(3, playerTotal(temp)),
       '',
       `Ник: <b>${esc(temp.nick || '')}</b>`,
       'Позиция:'
@@ -512,6 +553,10 @@ async function handleSkip(env, ctx) {
 
   if (state.step === STEP.PLAYER_TEAM) {
     const updated = { ...temp, teamName: null };
+    if (!hasRoles(temp.discipline)) {
+      const solo = soloRole(temp.discipline, 0);
+      return submitPlayer(env, ctx, { ...updated, role: solo.num, roleLabel: solo.label });
+    }
     await setState(env, ctx.userId, STEP.PLAYER_ROLE, updated);
     await replace(env, ctx, screenPlayerLeadRole(updated));
     return true;
@@ -563,8 +608,23 @@ async function onDiscipline(env, query, ctx, discipline) {
   }
 
   await answerCallbackQuery(env, query.id);
+  if (isSolo(discipline)) return startSolo(env, ctx, discipline);
   await setState(env, ctx.userId, STEP.TYPE, { discipline, type: null });
   await replace(env, ctx, screenType(discipline));
+  return true;
+}
+
+/** Дисциплина без команд (Clash Royale): сразу спрашиваем ник, без логотипа */
+async function startSolo(env, ctx, discipline) {
+  const temp = {
+    discipline, type: 'team', solo: true,
+    name: '', logo: '', logoOversized: false, logoBytes: 0,
+    players: [], playerIndex: 0, pendingNick: '', editField: null,
+    captainNick: ctx.username ? '@' + ctx.username : '',
+    askCaptain: false, totalSteps: 2
+  };
+  await setState(env, ctx.userId, STEP.TEAM_NAME, temp);
+  await replace(env, ctx, screenTeamName(discipline, null, 2));
   return true;
 }
 
@@ -586,7 +646,8 @@ async function onType(env, query, ctx, type) {
       name: '', logo: '', logoOversized: false, logoBytes: 0,
       players: [], playerIndex: 0, pendingNick: '', editField: null,
       captainNick: needsCaptainNick ? '' : '@' + ctx.username,
-      totalSteps: needsCaptainNick ? TEAM_STEPS_CAPTAIN : TEAM_STEPS
+      askCaptain: needsCaptainNick,
+      totalSteps: teamSteps(discipline, needsCaptainNick)
     };
     await setState(env, ctx.userId, STEP.TEAM_NAME, temp);
     await replace(env, ctx, screenTeamName(discipline, null, temp.totalSteps));
@@ -608,6 +669,33 @@ async function onType(env, query, ctx, type) {
   }
 
   await answerCallbackQuery(env, query.id, { text: 'Неизвестное действие' });
+  return true;
+}
+
+/** Записывает роль текущего игрока команды и идёт к следующему шагу */
+async function applyTeamRole(env, ctx, temp, role) {
+  const index = Number(temp.playerIndex) || 0;
+  const players = (temp.players || []).slice();
+  players[index] = { nick: temp.pendingNick || (players[index] || {}).nick || '', role: role.num, roleLabel: role.label };
+  const updated = { ...temp, players, pendingNick: '' };
+
+  // Правка ника существующего игрока — сразу назад к проверке
+  if (String(temp.editField || '').startsWith('player:')) {
+    const done = { ...updated, editField: null };
+    await setState(env, ctx.userId, STEP.TEAM_CONFIRM, done);
+    await replace(env, ctx, screenTeamConfirm(done));
+    return true;
+  }
+
+  if (index < teamSizeOf(temp.discipline) - 1) {
+    const next = { ...updated, playerIndex: index + 1 };
+    await setState(env, ctx.userId, STEP.TEAM_PLAYER_NICK, next);
+    await replace(env, ctx, screenTeamPlayerNick(next));
+    return true;
+  }
+
+  await setState(env, ctx.userId, STEP.TEAM_CONFIRM, updated);
+  await replace(env, ctx, screenTeamConfirm(updated));
   return true;
 }
 
@@ -634,31 +722,7 @@ async function onRole(env, query, ctx, roleKey) {
 
   await answerCallbackQuery(env, query.id, { text: role.label });
 
-  if (isTeamRole) {
-    const index = Number(temp.playerIndex) || 0;
-    const players = (temp.players || []).slice();
-    players[index] = { nick: temp.pendingNick || (players[index] || {}).nick || '', role: role.num, roleLabel: role.label };
-    const updated = { ...temp, players, pendingNick: '' };
-
-    // Правка ника существующего игрока — сразу назад к проверке
-    if (String(temp.editField || '').startsWith('player:')) {
-      const done = { ...updated, editField: null };
-      await setState(env, ctx.userId, STEP.TEAM_CONFIRM, done);
-      await replace(env, ctx, screenTeamConfirm(done));
-      return true;
-    }
-
-    if (index < 4) {
-      const next = { ...updated, playerIndex: index + 1 };
-      await setState(env, ctx.userId, STEP.TEAM_PLAYER_NICK, next);
-      await replace(env, ctx, screenTeamPlayerNick(next));
-      return true;
-    }
-
-    await setState(env, ctx.userId, STEP.TEAM_CONFIRM, updated);
-    await replace(env, ctx, screenTeamConfirm(updated));
-    return true;
-  }
+  if (isTeamRole) return applyTeamRole(env, ctx, temp, role);
 
   if (isAgentRole) {
     const updated = { ...temp, role: role.num, roleLabel: role.label };
@@ -721,13 +785,13 @@ async function onConfirm(env, query, ctx) {
   }
 
   const players = temp.players || [];
-  if (players.length !== 5 || players.some((player) => !player || !player.nick || !player.role)) {
+  if (players.length !== teamSizeOf(temp.discipline) || players.some((player) => !player || !player.nick || !player.role)) {
     await answerCallbackQuery(env, query.id, { text: 'Состав заполнен не полностью', showAlert: true });
     return true;
   }
 
   // Логотип обязателен: без него заявку не отправляем
-  if (!temp.logo) {
+  if (!temp.logo && !isSolo(temp.discipline)) {
     await answerCallbackQuery(env, query.id, { text: 'Нужен логотип', showAlert: true });
     await setState(env, ctx.userId, STEP.TEAM_LOGO, temp);
     await sendMessage(env, ctx.chatId, problem('Нужен логотип команды. Пришли фото.'), { keyboard: kb([menuRow]) });
@@ -837,7 +901,7 @@ async function onEdit(env, query, ctx, params) {
 
   if (field === 'player') {
     const index = Number(params[1]);
-    if (!(index >= 1 && index <= 5)) {
+    if (!(index >= 1 && index <= teamSizeOf(temp.discipline))) {
       await sendMessage(env, ctx.chatId, 'Неизвестный номер игрока — открой меню правок заново.');
       return true;
     }
@@ -870,6 +934,7 @@ async function onBack(env, query, ctx) {
       return true;
 
     case STEP.TEAM_NAME:
+      if (isSolo(discipline)) { await showMainMenu(env, ctx.chatId, ctx.userId); return true; }
       await setState(env, ctx.userId, STEP.TYPE, { discipline, type: null });
       await replace(env, ctx, screenType(discipline));
       return true;
@@ -888,7 +953,7 @@ async function onBack(env, query, ctx) {
       const index = Number(temp.playerIndex) || 0;
       if (index === 0) {
         // если спрашивали ник капитана — возвращаемся к нему
-        const backToCaptain = totalOf(temp) >= TEAM_STEPS_CAPTAIN && !temp.captainNick && !ctx.username;
+        const backToCaptain = temp.askCaptain && !temp.captainNick && !ctx.username;
         if (backToCaptain) {
           await setState(env, ctx.userId, STEP.TEAM_CAPTAIN, temp);
           await replace(env, ctx, screenTeamCaptain(temp, '⬅️ Возврат к нику капитана.'));
@@ -912,7 +977,12 @@ async function onBack(env, query, ctx) {
     }
 
     case STEP.TEAM_CONFIRM: {
-      const last = { ...temp, playerIndex: 4 };
+      if (isSolo(discipline)) {
+        await setState(env, ctx.userId, STEP.TEAM_NAME, temp);
+        await replace(env, ctx, screenTeamName(discipline, '⬅️ Возврат к нику.', 2));
+        return true;
+      }
+      const last = { ...temp, playerIndex: teamSizeOf(discipline) - 1 };
       await setState(env, ctx.userId, STEP.TEAM_PLAYER_NICK, last);
       await replace(env, ctx, screenTeamPlayerNick(last, '⬅️ Возврат к последнему игроку.'));
       return true;
@@ -1010,6 +1080,14 @@ export async function handleText(env, message, ctx) {
 /* ---------- Ветка A: текстовые шаги ---------- */
 async function onTeamName(env, ctx, temp, raw) {
   const name = clean(raw);
+  if (isSolo(temp.discipline)) {
+    if (!isNick(name)) return fail(env, ctx, 'Ник не подошёл: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Эмодзи и скобки нельзя.', screenTeamName(temp.discipline, null, 2));
+    const solo = soloRole(temp.discipline, 0);
+    const done = { ...temp, name, players: [{ nick: name, role: solo.num, roleLabel: solo.label }], captainNick: temp.captainNick || name };
+    await setState(env, ctx.userId, STEP.TEAM_CONFIRM, done);
+    await send(env, ctx, screenTeamConfirm(done));
+    return true;
+  }
   if (!isTeamName(name)) {
     return fail(env, ctx, 'Название не подошло: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Например: Night Wolves.', screenTeamName(temp.discipline, null, totalOf(temp)));
   }
@@ -1047,6 +1125,7 @@ async function onPlayerNick(env, ctx, temp, raw) {
   if (taken) return fail(env, ctx, 'Этот ник уже есть в составе — у каждого игрока свой. Введи другой.', screen);
 
   const updated = { ...temp, players: players.map((player) => player), pendingNick: nick };
+  if (!hasRoles(temp.discipline)) return applyTeamRole(env, ctx, updated, soloRole(temp.discipline, index));
   await setState(env, ctx.userId, STEP.TEAM_PLAYER_ROLE, updated);
   await send(env, ctx, screenTeamPlayerRole(updated));
   return true;
@@ -1065,7 +1144,7 @@ async function goToFirstPlayer(env, ctx, temp, note) {
  * не указан — один раз спрашиваем его, иначе сразу идём к игрокам.
  */
 async function proceedAfterLogo(env, ctx, temp, note) {
-  const needsCaptain = totalOf(temp) >= TEAM_STEPS_CAPTAIN && !temp.captainNick && !ctx.username;
+  const needsCaptain = temp.askCaptain && !temp.captainNick && !ctx.username;
   if (needsCaptain) {
     await setState(env, ctx.userId, STEP.TEAM_CAPTAIN, temp);
     await send(env, ctx, screenTeamCaptain(temp, note));
@@ -1077,6 +1156,16 @@ async function proceedAfterLogo(env, ctx, temp, note) {
 /* ---------- Правка полей ---------- */
 async function onEditFieldText(env, ctx, temp, raw) {
   const field = String(temp.editField || '');
+
+  if (field === 'name' && isSolo(temp.discipline)) {
+    const nick = clean(raw);
+    if (!isNick(nick)) return fail(env, ctx, 'Ник не подошёл: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Эмодзи и скобки нельзя.', screenEditName(temp));
+    const solo = soloRole(temp.discipline, 0);
+    const updated = { ...temp, name: nick, players: [{ nick, role: solo.num, roleLabel: solo.label }], editField: null };
+    await setState(env, ctx.userId, STEP.TEAM_CONFIRM, updated);
+    await send(env, ctx, screenTeamConfirm(updated));
+    return true;
+  }
 
   if (field === 'name') {
     const name = clean(raw);
@@ -1099,6 +1188,7 @@ async function onEditFieldText(env, ctx, temp, raw) {
 
     players[index] = { ...(players[index] || {}), nick };
     const updated = { ...temp, players, pendingNick: nick, playerIndex: index };
+    if (!hasRoles(temp.discipline)) return applyTeamRole(env, ctx, updated, soloRole(temp.discipline, index));
     await setState(env, ctx.userId, STEP.TEAM_PLAYER_ROLE, updated);
     await send(env, ctx, screenTeamPlayerRole(updated));
     return true;
@@ -1117,6 +1207,13 @@ async function onAgentNick(env, ctx, temp, raw) {
   const nick = clean(raw);
   if (!isNick(nick)) return fail(env, ctx, 'Ник не подошёл: 2–30 символов — буквы, цифры, пробел, точка, дефис или подчёркивание. Эмодзи и скобки нельзя.', screenAgentNick(temp));
   const updated = { ...temp, nick };
+  if (!hasRoles(temp.discipline)) {
+    const solo = soloRole(temp.discipline, 0);
+    const next = { ...updated, role: solo.num, roleLabel: solo.label };
+    await setState(env, ctx.userId, STEP.AGENT_RANK, next);
+    await send(env, ctx, screenAgentRank(next));
+    return true;
+  }
   await setState(env, ctx.userId, STEP.AGENT_ROLE, updated);
   await send(env, ctx, screenAgentRole(updated));
   return true;
@@ -1193,6 +1290,10 @@ async function onPlayerTeam(env, ctx, temp, raw) {
     return fail(env, ctx, 'Название команды не подошло: 2–30 символов, без спецсимволов. Нет команды — нажми «Без команды» или /skip.', screenPlayerTeam(temp));
   }
   const updated = { ...temp, teamName };
+  if (!hasRoles(temp.discipline)) {
+    const solo = soloRole(temp.discipline, 0);
+    return submitPlayer(env, ctx, { ...updated, role: solo.num, roleLabel: solo.label });
+  }
   await setState(env, ctx.userId, STEP.PLAYER_ROLE, updated);
   await send(env, ctx, screenPlayerLeadRole(updated));
   return true;

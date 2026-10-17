@@ -1,3 +1,5 @@
+import { DEFAULT_GAME, GAMES, gameFrom, tournamentKey } from '../_lib/games.js';
+
 
 // ============================================================
 // DEFAULT_DATA — сид для первого запуска.
@@ -43,6 +45,22 @@ const DEFAULT_DATA = {
   alwaysShowBracketBanner: true
 };
 
+/** Пустой турнир новой дисциплины: команд и сетки ещё нет */
+function emptyTournament(game) {
+  return {
+    tournament: { name: 'Compass Arena', game: GAMES[game].name, format: 'Custom Bracket', matches: 'Bo3', dates: '' },
+    teams: [],
+    matches: [],
+    schedule: {},
+    liveMatchId: null,
+    tournamentStart: null,
+    projectStart: null,
+    nextSeason: null,
+    archivedSnapshotId: null,
+    alwaysShowBracketBanner: true
+  };
+}
+
 /** id всех кадров архива: они лежат в отдельных ключах photo:<id> */
 function photoIdsIn(history) {
   const ids = new Set();
@@ -70,10 +88,16 @@ function bytesToBase64(bytes) {
 export async function onRequestGet(context) {
   const { env } = context;
 
-  let data = await env.COMPASS_KV.get('tournament', { type: 'json' });
+  // Дисциплина: ?game=csgo (по умолчанию Dota 2 — её данные в старом ключе `tournament`)
+  const reqUrl = new URL(context.request ? context.request.url : 'https://x/');
+  const game = gameFrom(reqUrl.searchParams.get('game'));
+  if (!game) return new Response('Unknown game', { status: 400 });
+  const key = tournamentKey(game);
+
+  let data = await env.COMPASS_KV.get(key, { type: 'json' });
   if (!data) {
-    data = DEFAULT_DATA;
-    await env.COMPASS_KV.put('tournament', JSON.stringify(data));
+    data = game === DEFAULT_GAME ? DEFAULT_DATA : emptyTournament(game);
+    await env.COMPASS_KV.put(key, JSON.stringify(data));
   }
 
   // История турниров — отдельный ключ. Если нет — пустой массив.
@@ -86,7 +110,7 @@ export async function onRequestGet(context) {
   if (!light) history = await hydratePhotos(env, history);
 
   // Отдаём объединённый объект: текущие данные + history
-  const response = Object.assign({}, data, { history });
+  const response = Object.assign({}, data, { history, game });
 
   return new Response(JSON.stringify(response), {
     headers: {

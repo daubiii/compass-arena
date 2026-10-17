@@ -240,7 +240,8 @@ console.log('\n3. Проверка содержимого файла коман�
     players: [{ nick: 's1mple', role: 7 }, { nick: 'b1t', role: 2 }, { nick: 'electroNic', role: 3 }, { nick: 'Perfecto', role: 4 }, { nick: 'Boombl4', role: 5 }]
   })];
   await chooseFile(w, JSON.stringify(teamsDoc(csRoles, [], 'csgo')));
-  ok(/не подходит для CS:GO/.test(statusText(w)), 'ошибка роли называет CS:GO', statusText(w).slice(0, 140));
+  ok(modalOpen(w), 'у CS:GO ролей нет — номер роли в файле не проверяется');
+  if (modalOpen(w)) w.botImportCancel();
 
   await chooseFile(w, JSON.stringify({ type: 'teams', version: 1, discipline: 'dota2' }));
   ok(/Нет списка команд/.test(statusText(w)), 'без массива teams → понятная ошибка', statusText(w).slice(0, 80));

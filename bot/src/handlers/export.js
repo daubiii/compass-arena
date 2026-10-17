@@ -5,7 +5,7 @@
    вручную через раздел «Импорт из бота».
 
    Поток:
-     /export → дисциплина (Dota 2 / CS:GO / обе)
+     /export → дисциплина (любая из четырёх / все)
              → что экспортировать (команды / настройки / оба)
              → подтверждение: «N команд, M агентов, K файлов»
              → отправка файлов по одному через sendDocument
@@ -157,7 +157,8 @@ function screenDiscipline() {
     ].join('\n'),
     keyboard: kb([
       [{ text: 'Dota 2', data: 'exp:disc:dota2' }, { text: 'CS:GO', data: 'exp:disc:csgo' }],
-      [{ text: 'Обе дисциплины', data: 'exp:disc:both' }],
+      [{ text: 'Clash Royale', data: 'exp:disc:clash' }, { text: 'Brawl Stars', data: 'exp:disc:brawl' }],
+      [{ text: 'Все дисциплины', data: 'exp:disc:both' }],
       [menuRow]
     ])
   };
@@ -165,7 +166,7 @@ function screenDiscipline() {
 
 function screenTarget(choice) {
   const title = choice === 'both'
-    ? 'Dota 2 и CS:GO'
+    ? 'все дисциплины'
     : disciplineLabel(choice);
   return {
     text: [
@@ -190,7 +191,7 @@ function screenConfirm(choice, target, data) {
       `Готовлю экспорт: ${data.teams} ${plural(data.teams, 'команда', 'команды', 'команд')}, ` +
       `${data.agents} ${plural(data.agents, 'агент', 'агента', 'агентов')}, ` +
       `${data.files} ${plural(data.files, 'файл', 'файла', 'файлов')}.`,
-      `Дисциплина: ${esc(choice === 'both' ? 'Dota 2 и CS:GO' : disciplineLabel(choice))}`,
+      `Дисциплина: ${esc(choice === 'both' ? 'все дисциплины' : disciplineLabel(choice))}`,
       `Состав: ${esc(TARGETS[target] ? TARGETS[target].label : target)}`
     ].join('\n'),
     keyboard: kb([

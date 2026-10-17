@@ -1,7 +1,7 @@
 /* ============================================================
    Предметная область: дисциплины и роли
    ------------------------------------------------------------
-   Дисциплины: dota2 | csgo (ключи совпадают с полем discipline в БД).
+   Дисциплины: dota2 | csgo | clash | brawl (ключи совпадают с полем discipline в БД).
    Роль хранится ключом (для callback_data) и раскладывается
    в JSON как role (число 1..5) + roleLabel (строка) — формат,
    который понимает админка сайта.
@@ -36,6 +36,22 @@ export const DISCIPLINES = {
   }
 };
 
+/* Дисциплины без ролей: Clash Royale (1×1) и Brawl Stars (3×3).
+   Роль в JSON — просто номер слота (1..teamSize) и подпись «Игрок». */
+DISCIPLINES.dota2.teamSize = 5;
+DISCIPLINES.csgo.teamSize = 5;
+/* Роли (керри, мидер…) — только у Dota 2. В CS:GO состав — просто список из пяти. */
+DISCIPLINES.csgo.noRoles = true;
+DISCIPLINES.csgo.roles = [{ key: 'P', num: 1, label: 'Игрок', title: 'Игрок' }];
+DISCIPLINES.clash = {
+  key: 'clash', label: 'Clash Royale', emoji: '👑', game: 'Clash Royale', teamSize: 1, noRoles: true, solo: true, unit: 'player',
+  roles: [{ key: 'P', num: 1, label: 'Игрок', title: 'Игрок' }]
+};
+DISCIPLINES.brawl = {
+  key: 'brawl', label: 'Brawl Stars', emoji: '💥', game: 'Brawl Stars', teamSize: 3, noRoles: true, unit: 'team',
+  roles: [{ key: 'P', num: 1, label: 'Игрок', title: 'Игрок' }]
+};
+
 export const DISCIPLINE_KEYS = Object.keys(DISCIPLINES);
 
 export function isDiscipline(key) {
@@ -55,6 +71,31 @@ export function disciplineGame(key) {
 /** «Dota 2, CS:GO» — для справок и сообщений */
 export function disciplinesListLabel() {
   return DISCIPLINE_KEYS.map((key) => DISCIPLINES[key].label).join(', ');
+}
+
+/** Сколько игроков в составе */
+export function teamSizeOf(key) {
+  return isDiscipline(key) ? DISCIPLINES[key].teamSize : 5;
+}
+
+/** Есть ли в дисциплине выбор роли */
+export function isSolo(key) {
+  return isDiscipline(key) && Boolean(DISCIPLINES[key].solo);
+}
+
+export function hasRoles(key) {
+  return isDiscipline(key) && !DISCIPLINES[key].noRoles;
+}
+
+/** Роль-заглушка для дисциплин без ролей: слот index (с нуля) */
+export function soloRole(key, index) {
+  return { key: 'P', num: (Number(index) || 0) + 1, label: 'Игрок', title: 'Игрок' };
+}
+
+/** Короткая подпись формата: «5×5», «1×1», «3×3» */
+export function sizeLabel(key) {
+  const n = teamSizeOf(key);
+  return n + '×' + n;
 }
 
 /** Список ролей дисциплины */

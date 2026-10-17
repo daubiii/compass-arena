@@ -135,6 +135,15 @@
   /* ---------- Роли ---------- */
   var ROLES = { 1: 'Керри', 2: 'Мидер', 3: 'Офлейн', 4: 'Саппорт 4', 5: 'Саппорт 5' };
   function roleName(role) { return ROLES[role] || ('Позиция ' + role); }
+  /** Роли (керри, мидер…) есть только в Dota 2; в остальных играх состав — просто список */
+  function hasRoles(game) {
+    var g = CA.games && CA.games.get(game || D.game);
+    return !g || !!g.roles;
+  }
+  function isSolo(game) {
+    var g = CA.games && CA.games.get(game || D.game);
+    return !!(g && g.solo);
+  }
   function normPlayers(list) {
     var out = [];
     if (!list) return out;
@@ -169,7 +178,11 @@
       fromServer: !!(raw && typeof raw === 'object' && (src.teams || src.matches))
     };
 
-    var teams = Array.isArray(src.teams) && src.teams.length ? src.teams : def.teams;
+    /* Dota 2 без команд показывает заглушку «Слот 1–6»; новые дисциплины стартуют пустыми */
+    var emptyOk = !!(src.game && src.game !== 'dota2');
+    D.game = src.game || 'dota2';
+    D.empty = false;
+    var teams = Array.isArray(src.teams) && src.teams.length ? src.teams : (emptyOk ? [] : def.teams);
     for (var i = 0; i < teams.length; i++) {
       var t = teams[i] || {};
       D.teams.push({
@@ -180,7 +193,7 @@
       });
     }
 
-    var matches = Array.isArray(src.matches) && src.matches.length ? src.matches : def.matches;
+    var matches = Array.isArray(src.matches) && src.matches.length ? src.matches : (emptyOk ? [] : def.matches);
     for (var m = 0; m < matches.length; m++) {
       var mm = matches[m] || {};
       var match = {
@@ -201,6 +214,8 @@
       if (mm.resetFor) match.resetFor = toInt(mm.resetFor);
       D.matches.push(match);
     }
+
+    D.empty = emptyOk && !D.teams.length && !D.matches.length;
 
     if (src.schedule && typeof src.schedule === 'object') {
       Object.keys(src.schedule).forEach(function (k) {
@@ -615,13 +630,24 @@
   }
   function onChange(fn) { listeners.push(fn); return fn; }
 
-  function load() {
-    return fetch('/api/data', { cache: 'no-store' })
-      .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
+  var GAME = 'dota2';
+  function dataUrl(game, light) {
+    return '/api/data?game=' + encodeURIComponent(game) + (light ? '&light=1' : '');
+  }
+  function fetchRaw(game, light) {
+    return fetch(dataUrl(game, light), { cache: 'no-store' }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    });
+  }
+
+  /** Загружает данные дисциплины (по умолчанию — текущей) и делает их текущими */
+  function load(game) {
+    if (game) GAME = game;
+    var requested = GAME;
+    return fetchRaw(requested)
       .then(function (raw) {
+        if (requested !== GAME) return D;      // успели переключиться на другую игру
         var data = Object.assign({}, raw);
         D = finalize(normalize(data));
         D.fromServer = true;
@@ -634,9 +660,46 @@
       });
   }
 
+  /** Каждый матч помнит свой набор данных и игру — для общего расписания */
+  function tagMatches(ds) {
+    ds.matches.forEach(function (m) {
+      Object.defineProperty(m, '__d', { value: ds, enumerable: false, configurable: true });
+      Object.defineProperty(m, '__game', { value: ds.game, enumerable: false, configurable: true });
+    });
+  }
+
+  /** Все дисциплины сразу (расписание, архив): { games: {id: D}, history } — текущее состояние не трогает */
+  function loadAll() {
+    var ids = (CA.games && CA.games.ids) || ['dota2'];
+    return Promise.all(ids.map(function (id) {
+      return fetchRaw(id, true)
+        .then(function (raw) { var d = finalize(normalize(Object.assign({ game: id }, raw))); d.fromServer = true; tagMatches(d); return [id, d, raw]; })
+        .catch(function () { return [id, finalize(normalize({ game: id })), null]; });
+    })).then(function (list) {
+      var games = {};
+      var history = [];
+      list.forEach(function (it) {
+        games[it[0]] = it[1];
+        if (!history.length && it[2] && Array.isArray(it[2].history)) history = it[2].history;
+      });
+      return { games: games, history: history };
+    });
+  }
+
+  /** Выполняет fn так, будто текущий набор данных — ds (для матча из другой дисциплины) */
+  function using(ds, fn) {
+    if (!ds || ds === D) return fn();
+    var prev = D;
+    D = ds;
+    try { return fn(); } finally { D = prev; }
+  }
+
+  function setGame(game) { GAME = (CA.games && CA.games.isGame(game)) ? game : 'dota2'; return GAME; }
+  function getGame() { return GAME; }
+
   function startAutoRefresh(ms) {
     if (timer) clearInterval(timer);
-    timer = setInterval(load, ms || 60000);
+    timer = setInterval(function () { load(); }, ms || 60000);
     return timer;
   }
 
@@ -648,6 +711,10 @@
     finalize: finalize,
     get: get,
     load: load,
+    loadAll: loadAll,
+    using: using,
+    setGame: setGame,
+    game: getGame,
     setRaw: setRaw,
     onChange: onChange,
     startAutoRefresh: startAutoRefresh,
@@ -658,6 +725,8 @@
     isPlaceholderName: isPlaceholderName,
     isRealTeam: isRealTeam,
     roleName: roleName,
+    hasRoles: hasRoles,
+    isSolo: isSolo,
     normPlayers: normPlayers,
     team: function (id) { return team(D, id); },
     teamName: function (id) { return teamName(D, id); },

@@ -442,13 +442,16 @@
   /* ==========================================================
      Глава архива
      ========================================================== */
-  function rosterHtml(team) {
+  function rosterHtml(team, item) {
+    var gid = item && item.gameId;
+    var roles = !gid || gid === 'dota2';          /* роли — только у Dota 2 */
+    if (gid === 'clash') return '';               /* Clash Royale: одиночки, состава нет */
     var players = (team && team.players) || [];
     if (!players.length) return '<p class="ch-quiet">Состав не сохранён.</p>';
     return '<ul class="ch-roster">' + players.map(function (p, i) {
       var nick = typeof p === 'string' ? p : (p.nick || p.name || '—');
       var role = typeof p === 'string' ? (i + 1) : (p.role || (i + 1));
-      return '<li><b>' + esc(nick) + '</b><span>' + esc(D().roleName(role)) + '</span></li>';
+      return '<li><b>' + esc(nick) + '</b>' + (roles ? '<span>' + esc(D().roleName(role)) + '</span>' : '') + '</li>';
     }).join('') + '</ul>';
   }
 
@@ -546,7 +549,7 @@
       champBlock = '<p class="ch-k">' + ic('champion') + 'Чемпион</p>' +
         '<div class="ch-champ-name">' + esc(champion.name) + '</div>' +
         (runner ? '<p class="ch-final">Гранд-финал против ' + esc(runner.name) + (score ? ', ' + esc(score) : '') + '</p>' : '') +
-        rosterHtml(champion);
+        rosterHtml(champion, item);
     } else {
       champBlock = '<p class="ch-k">' + ic('champion') + 'Чемпион</p><p class="ch-quiet">В этой главе чемпион не зафиксирован.</p>';
     }
@@ -564,7 +567,7 @@
     } else {
       sideBlock = '<p class="ch-k">' + ic('finalist') + 'Финалист</p>' +
         (runner
-          ? '<div class="ch-champ-name is-runner">' + esc(runner.name) + '</div>' + rosterHtml(runner)
+          ? '<div class="ch-champ-name is-runner">' + esc(runner.name) + '</div>' + rosterHtml(runner, item)
           : '<p class="ch-quiet">Данные о финалисте не сохранены.</p>');
     }
 

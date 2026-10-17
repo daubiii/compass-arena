@@ -1,3 +1,5 @@
+import { gameFrom, tournamentKey } from '../_lib/games.js';
+
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 10 * 60 * 1000; // 10 минут блокировки после превышения лимита
 
@@ -119,7 +121,7 @@ export async function onRequestPost(context) {
     return new Response('Bad request', { status: 400 });
   }
 
-  const { password, data } = body || {};
+  const { password, data, game: gameRaw } = body || {};
 
   // В Cloudflare IP можно получить так:
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
@@ -156,12 +158,14 @@ export async function onRequestPost(context) {
   if (!data || typeof data !== 'object') {
     return new Response('Bad request: missing data', { status: 400 });
   }
+  const game = gameFrom(gameRaw);
+  if (!game) return new Response('Bad request: unknown game', { status: 400 });
 
   // ---- Сохраняем основное состояние турнира ----
   // history живёт в отдельном ключе.
   const { history, clearHistory, ...tournamentData } = data;
 
-  await env.COMPASS_KV.put('tournament', JSON.stringify(tournamentData));
+  await env.COMPASS_KV.put(tournamentKey(game), JSON.stringify(tournamentData));
 
   // ---- Сохраняем историю (если передана) ----
   let historyKept = false;
@@ -220,7 +224,7 @@ export async function onRequestPost(context) {
     }
   }
 
-  return new Response(JSON.stringify({ ok: true, historyKept }), {
+  return new Response(JSON.stringify({ ok: true, historyKept, game }), {
     headers: { 'Content-Type': 'application/json' }
   });
 }

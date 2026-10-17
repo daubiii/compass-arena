@@ -196,9 +196,9 @@ const kb = inlineKeyboard([[{ text: 'Dota 2', data: 'reg:disc:dota2' }], [{ text
 ok(kb.inline_keyboard[0][0].callback_data === 'reg:disc:dota2', 'callback_data собирается');
 ok(kb.inline_keyboard[1][0].url === 'https://compassarena.ru', 'url-кнопка собирается');
 ok(inlineKeyboard([[{ text: 'x', data: 'a'.repeat(100) }]]).inline_keyboard[0][0].callback_data.length === 64, 'callback_data обрезается до 64 байт');
-ok(DISCIPLINE_KEYS.join(',') === 'dota2,csgo', 'две дисциплины');
-ok(roleNum('csgo', 'AWP') === 2 && roleLabel('csgo', 'AWP') === 'AWPer', 'роль CS:GO → номер и подпись');
-ok(roleTitle('csgo', 'IGL') === 'IGL — Капитан', 'полная подпись роли');
+ok(DISCIPLINE_KEYS.join(',') === 'dota2,csgo,clash,brawl', 'четыре дисциплины');
+ok(roleNum('dota2', '2') === 2 && roleLabel('dota2', '2') === 'Мидер', 'роль Dota 2 → номер и подпись');
+ok(roleTitle('dota2', '1') === '1 — Керри', 'полная подпись роли');
 ok(roleLabel('dota2', '4') === 'Саппорт 4' && roleNum('dota2', '4') === 4, 'роль Dota → 4');
 ok(disciplineLabel('csgo') === 'CS:GO' && leadTypeLabel('free_agent') === 'Ищет команду', 'подписи дисциплин и типов');
 
@@ -295,7 +295,7 @@ console.log('\n5. Роутер бота (команды, права, кнопк�
   ok(/Нажми \/help, чтобы открыть меню бота\.\nВыбери свою дисциплину\.\nЗарегистрируй состав команды\./.test(text),
     'три шага участия идут подряд, без пустых строк');
   ok(!/Турнир по Dota 2/.test(text) && !/Впиши \/help/.test(text), 'лишних строк про турнир нет');
-  ok(/📞 <b>Связь для сотрудничества и вопросов:<\/b>\nG0gg1a\nuuutt7/.test(text), 'контакты в приветствии на своих строках');
+  ok(/📞 <b>Связь для сотрудничества и вопросов:<\/b>\n<a href="https:\/\/t\.me\/G0gg1a">G0gg1a<\/a>\n<a href="https:\/\/t\.me\/uuutt7">uuutt7<\/a>/.test(text), 'контакты в приветствии — ссылки на профили, каждый на своей строке');
   ok(/👇 <b>Выбери дисциплину, чтобы начать<\/b>/.test(text), 'приветствие зовёт выбрать дисциплину');
   const markup = JSON.stringify(messages()[0].body.reply_markup);
   ok(markup.includes('reg:disc:dota2') && markup.includes('reg:disc:csgo'), '/start показывает кнопки дисциплин (reg:disc:*)');
@@ -306,7 +306,7 @@ console.log('\n5. Роутер бота (команды, права, кнопк�
   mockTelegram();
   await say(env, USER, '/start');
   ok(/Регистрация сейчас закрыта/.test(last()), 'закрытая регистрация сообщает об этом');
-  ok(/@G0gg1a · @uuutt7/.test(last()), 'в закрытой регистрации есть контакты организаторов');
+  ok(/<a href="https:\/\/t\.me\/G0gg1a">@G0gg1a<\/a> · <a href="https:\/\/t\.me\/uuutt7">@uuutt7<\/a>/.test(last()), 'в закрытой регистрации контакты — ссылки на профили');
   ok(!/reg:disc:/.test(markupSince(0)), 'кнопок дисциплин нет, пока регистрация закрыта');
   ok(/act:help/.test(markupSince(0)), 'но справка остаётся доступной');
 
@@ -324,12 +324,12 @@ console.log('\n5. Роутер бота (команды, права, кнопк�
   await say(env, ADMIN, '/help');
   ok(/Как проходит регистрация/.test(last()) && /\/leads/.test(last()) && /\/export/.test(last()), '/help для админа со всеми командами');
   ok(/Для организаторов:/.test(last()), 'у админа отдельный блок «Для организаторов»');
-  ok(/Сайт: https:\/\/compassarena\.ru/.test(last()) && /Связь: @G0gg1a · @uuutt7/.test(last()),
+  ok(/Сайт: https:\/\/compassarena\.ru/.test(last()) && /Связь: <a href="https:\/\/t\.me\/G0gg1a">@G0gg1a<\/a> · <a href="https:\/\/t\.me\/uuutt7">@uuutt7<\/a>/.test(last()),
     'в справке есть сайт и контакты');
   mockTelegram();
   await say(env, USER, '/help');
   ok(!/\/leads/.test(last()), '/help для игрока без админ-команд');
-  ok(/Свободный агент — ник, роль, ранг, описание/.test(last()), 'справка описывает три типа заявок');
+  ok(/Свободный агент — ник, ранг, описание/.test(last()), 'справка описывает три типа заявок');
 }
 {
   const env = baseEnv();
@@ -667,14 +667,14 @@ console.log('\n7. Поиск команды (ветка B)');
   mockTelegram();
 
   await say(env, USER, '/start');
-  await tap(env, USER, 'reg:disc:csgo');
+  await tap(env, USER, 'reg:disc:dota2');
   await tap(env, USER, 'reg:type:looking');
   ok(/Шаг 1 из 4/.test(last()) && /Твой игровой ник \(2–30 символов\)/.test(last()), 'ветка B: шаг 1 — ник');
 
   await say(env, USER, 's1mple');
   ok(/Шаг 2 из 4/.test(last()) && /Позиция:/.test(last()), 'ветка B: шаг 2 — позиция');
 
-  await tap(env, USER, 'reg:role:AWP');
+  await tap(env, USER, 'reg:role:2');
   ok(/Шаг 3 из 4/.test(last()) && /Ранг \(до 40 символов\)/.test(last()), 'ветка B: шаг 3 — ранг');
 
   await say(env, USER, 'Premier 21 000');
@@ -682,12 +682,12 @@ console.log('\n7. Поиск команды (ветка B)');
 
   await say(env, USER, 'Играю на AWP, свободен по вечерам');
   ok(/принята/.test(lastTo(USER)), 'ветка B: заявка принята');
-  ok(/Дисциплина: CS:GO/.test(lastTo(USER)), 'ветка B: в ответе указана дисциплина');
+  ok(/Дисциплина: Dota 2/.test(lastTo(USER)), 'ветка B: в ответе указана дисциплина');
   ok(/Сайт: https:\/\/compassarena\.ru/.test(lastTo(USER)), 'ветка B: в ответе есть сайт');
 
   const lead = fake._db.lastLead();
-  ok(lead.type === 'free_agent' && lead.discipline === 'csgo', 'тип free_agent и дисциплина csgo');
-  ok(lead.payload.type === 'looking_for_team' && lead.payload.role === 2 && lead.payload.roleLabel === 'AWPer', 'payload свободного агента');
+  ok(lead.type === 'free_agent' && lead.discipline === 'dota2', 'тип free_agent и дисциплина dota2');
+  ok(lead.payload.type === 'looking_for_team' && lead.payload.role === 2 && lead.payload.roleLabel === 'Мидер', 'payload свободного агента');
   ok(lead.payload.rank === 'Premier 21 000' && /AWP/.test(lead.payload.note), 'ранг и описание сохранены');
   ok(fake._db.state(USER) === null, 'состояние сброшено');
 }
@@ -1111,7 +1111,7 @@ const agentLead = (id, telegramId, nick, discipline, type = 'looking_for_team') 
   let mark = marker();
   await tap(env, ADMIN, 'exp:target:both:both');
   const confirm = lastTo(ADMIN);
-  ok(/Готовлю экспорт: 3 команды, 2 агента, 4 файла/.test(confirm), 'подтверждение со счётчиками', confirm.slice(0, 90));
+  ok(/Готовлю экспорт: 3 команды, 2 агента, 8 файлов/.test(confirm), 'подтверждение со счётчиками', confirm.slice(0, 90));
   ok(/exp:go:both:both/.test(markupSince(mark)) && /Отмена/.test(markupSince(mark)), 'кнопки «Отправить» и «Отмена»',
     markupSince(mark).slice(0, 200));
 
@@ -1125,14 +1125,14 @@ const agentLead = (id, telegramId, nick, discipline, type = 'looking_for_team') 
   mark = marker();
   await tap(env, ADMIN, 'exp:go:both:both');
   const docs = calls.slice(mark).filter((call) => call.method === 'sendDocument').map((call) => call.body);
-  ok(docs.length === 4, 'отправлено четыре файла', docs.length);
+  ok(docs.length === 8, 'отправлено восемь файлов', docs.length);
   ok(docs.map((d) => d.filename).join(' | ') ===
-    'teams_2026-10-07_dota2.json | teams_2026-10-07_csgo.json | settings_2026-10-07_dota2.json | settings_2026-10-07_csgo.json'
+    ['dota2', 'csgo', 'clash', 'brawl'].map((g) => 'teams_2026-10-07_' + g + '.json').concat(['dota2', 'csgo', 'clash', 'brawl'].map((g) => 'settings_2026-10-07_' + g + '.json')).join(' | ')
     .replace(/2026-10-07/g, new Date().toISOString().slice(0, 10)),
     'имена файлов: команды по дисциплинам, затем настройки', docs.map((d) => d.filename).join(' | '));
-  ok(docs[0].caption === 'Файл 1/4: Dota 2 команды' && docs[1].caption === 'Файл 2/4: CS:GO команды',
+  ok(docs[0].caption === 'Файл 1/8: Dota 2 команды' && docs[1].caption === 'Файл 2/8: CS:GO команды' && docs[3].caption === 'Файл 4/8: Brawl Stars команды',
     'подписи файлов команд', docs.map((d) => d.caption).join(' | '));
-  ok(docs[2].caption === 'Файл 3/4: Dota 2 настройки' && docs[3].caption === 'Файл 4/4: CS:GO настройки',
+  ok(docs[4].caption === 'Файл 5/8: Dota 2 настройки' && docs[5].caption === 'Файл 6/8: CS:GO настройки',
     'подписи файлов настроек');
   ok(/Экспорт готов/.test(lastTo(ADMIN)) && /Импорт из бота/.test(lastTo(ADMIN)), 'итоговое сообщение про импорт');
 
@@ -1380,6 +1380,64 @@ console.log('\n15. Защита от дублей и закрытая регис
   await say(env2, USER2, '/skip');
   ok(/регистрацию закрыли/.test(last()), 'регистрацию закрыли в процессе — заявка не уходит');
   ok(fake2._db.leads.length === 0, 'заявка не создана');
+}
+
+/* ============================================================
+   16. Новые дисциплины: Brawl Stars 3×3 и Clash Royale 1×1
+   ============================================================ */
+console.log('\n16. Brawl Stars и Clash Royale');
+{
+  const fake = createFakeD1();
+  const env = baseEnv(fake);
+  mockTelegram();
+
+  await say(env, USER, '/start');
+  ok(/reg:disc:clash/.test(markupSince(0)) && /reg:disc:brawl/.test(markupSince(0)), '/start показывает все четыре дисциплины');
+
+  // Brawl Stars: 3 игрока, без выбора роли
+  await tap(env, USER, 'reg:disc:brawl');
+  ok(/3×3/.test(lastTo(USER)), 'экран дисциплины говорит про 3×3', lastTo(USER).slice(0, 120));
+  await tap(env, USER, 'reg:type:team');
+  await say(env, USER, 'Star Crew');
+  await handleUpdate(env, photoUpdate(USER, [{ file_id: 'logo', width: 800 }]));
+  await say(env, USER, 'Ann');
+  ok(/Ник игрока 2/.test(lastTo(USER)), 'после ника сразу ник второго игрока — роль не спрашивается');
+  await say(env, USER, 'Bob');
+  await say(env, USER, 'Cid');
+  ok(/reg:confirm/.test(markupSince(0)) && /Cid/.test(lastTo(USER)), 'после третьего игрока — финальная проверка');
+  await tap(env, USER, 'reg:confirm');
+  const brawl = fake._db.lastLead();
+  ok(brawl.discipline === 'brawl' && brawl.payload.players.length === 3, 'в заявке Brawl Stars три игрока');
+  ok(brawl.payload.players[2].role === 3 && brawl.payload.players[2].roleLabel === 'Игрок', 'роль — номер слота и подпись «Игрок»');
+
+  // Clash Royale: один участник
+  await tap(env, USER2, 'reg:disc:clash');
+  ok(/Твой игровой ник/.test(lastTo(USER2)) && !/Что делаем/.test(lastTo(USER2)), 'Clash Royale: сразу вопрос про ник, без меню типов');
+  ok(!/логотип/i.test(lastTo(USER2).replace(/Команды и логотип не нужны[^\n]*/, '')), 'Clash Royale: логотип не спрашивается');
+  await say(env, USER2, 'Kingpin');
+  ok(/reg:confirm/.test(markupSince(0)) && /Ник игрока: <b>Kingpin/.test(lastTo(USER2)), 'Clash Royale: после ника — проверка заявки');
+  await tap(env, USER2, 'reg:confirm');
+  const clash = fake._db.lastLead();
+  ok(clash.discipline === 'clash' && clash.payload.players.length === 1 && clash.payload.name === 'Kingpin' && clash.payload.logo === '', 'в заявке Clash Royale ник, без логотипа');
+
+  // CS:GO: пять игроков, роли не спрашиваются
+  const NEWBIE = 446;
+  await tap(env, NEWBIE, 'reg:disc:csgo');
+  await tap(env, NEWBIE, 'reg:type:team');
+  await say(env, NEWBIE, 'Five Stack');
+  await handleUpdate(env, photoUpdate(NEWBIE, [{ file_id: 'logo', width: 800 }]));
+  for (const n of ['p1', 'p2', 'p3', 'p4']) await say(env, NEWBIE, n);
+  ok(/Ник игрока 5/.test(lastTo(NEWBIE)), 'CS:GO: роль не спрашивается, идём к пятому игроку');
+  await say(env, NEWBIE, 'p5');
+  await tap(env, NEWBIE, 'reg:confirm');
+  const cs = fake._db.lastLead();
+  ok(cs.discipline === 'csgo' && cs.payload.players.length === 5 && cs.payload.players.every((p) => p.roleLabel === 'Игрок'), 'CS:GO: пять игроков без ролей', JSON.stringify(cs.payload).slice(0, 200) + ' / ' + lastTo(NEWBIE).slice(0, 100));
+
+  // Свободный агент без ролей: ник → ранг → описание
+  await tap(env, ADMIN, 'reg:disc:brawl');
+  await tap(env, ADMIN, 'reg:type:looking');
+  await say(env, ADMIN, 'Solo');
+  ok(/Ранг/.test(lastTo(ADMIN)), 'агент Brawl: после ника сразу ранг');
 }
 
 /* ============================================================
