@@ -32,7 +32,7 @@ const HANDLERS = [startHandler, registrationHandler, moderationHandler, exportHa
  * Версия сборки. Видна в ответе GET / — по ней сразу понятно,
  * доехал ли до Cloudflare последний деплой (меняется вручную при выкладке).
  */
-export const BUILD_VERSION = '1.2.0';
+export const BUILD_VERSION = '1.3.0';
 
 export default {
   async fetch(request, env, ctx) {
