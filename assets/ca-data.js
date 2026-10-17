@@ -172,6 +172,7 @@
     /* Dota 2 без команд показывает заглушку «Слот 1–6»; новые дисциплины стартуют пустыми */
     var emptyOk = !!(src.game && src.game !== 'dota2');
     D.game = src.game || 'dota2';
+    D.empty = false;
     var teams = Array.isArray(src.teams) && src.teams.length ? src.teams : (emptyOk ? [] : def.teams);
     for (var i = 0; i < teams.length; i++) {
       var t = teams[i] || {};
@@ -204,6 +205,8 @@
       if (mm.resetFor) match.resetFor = toInt(mm.resetFor);
       D.matches.push(match);
     }
+
+    D.empty = emptyOk && !D.teams.length && !D.matches.length;
 
     if (src.schedule && typeof src.schedule === 'object') {
       Object.keys(src.schedule).forEach(function (k) {

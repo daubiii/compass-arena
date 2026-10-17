@@ -17,6 +17,11 @@
   var esc = D.esc;
 
   var TICK = null;
+  var G = CA.games;
+  var BOT_URL = 'https://t.me/CompassArenaReg_bot';
+  /* Текущая дисциплина: из адреса (?game=…), иначе всегда Dota 2 */
+  var GAME = G ? G.fromUrl() : 'dota2';
+  function gm() { return G ? G.get(GAME) : { id: 'dota2', name: 'Dota 2', owner: 'Valve Corporation', teamSize: 5, matchFormat: 'Bo3', tagline: '' }; }
 
   /* ---------- Первый экран ---------- */
   function renderHero(d) {
@@ -37,12 +42,12 @@
     } else if (d.phase === 'live') {
       kicker.innerHTML = '<span class="dot-live"></span> Идёт прямо сейчас';
       title.innerHTML = 'Турнир идёт —<br><em>смотрите вживую</em>';
-      lede.textContent = 'Шесть команд, серии до двух побед и один трофей. Матчи идут по расписанию, трансляция — на Twitch.';
+      lede.textContent = 'Серии до двух побед и один трофей. Матчи идут по расписанию, трансляция — на Twitch.';
       cta.innerHTML =
         '<a class="btn btn-live btn-lg" href="#stream">' + ic('live') + 'Смотреть эфир</a>' +
         '<a class="btn btn-ghost btn-lg" href="#bracket">' + ic('bracket') + 'Турнирная сетка</a>';
     } else {
-      kicker.innerHTML = 'Турнир по Dota 2 · первый сезон';
+      kicker.innerHTML = d.empty ? ('Турнир по ' + esc(gm().name) + ' · скоро') : ('Турнир по ' + esc(gm().name) + ' · первый сезон');
       title.innerHTML = 'Здесь сражаются<br>не ради участия —<br><em>здесь доказывают</em>';
       lede.textContent = 'Один шанс, полная концентрация и один трофей на всех. Первый турнир организации Compass Arena.';
       cta.innerHTML =
@@ -790,10 +795,120 @@
     global.requestAnimationFrame(frame);
   }
 
+  /* ---------- Дисциплины: переключатель, тема, тексты ---------- */
+  function renderGameChrome() {
+    var g = gm();
+    var w = G ? G.words(GAME) : { participants: 'Участники' };
+    if (G) G.applyTheme(GAME);
+    var set = function (id, text) { var el = document.getElementById(id); if (el) el.textContent = text; };
+    set('teamsTitle', w.participants);
+    set('teamsKicker', g.teamSize === 1 ? 'Игроки и статистика' : 'Составы и статистика');
+    set('teamsCopy', g.teamSize === 1
+      ? 'Нажмите на игрока, чтобы увидеть его путь по сетке.'
+      : 'Нажмите на команду, чтобы увидеть состав и её путь по сетке.');
+    set('footLegal', '© ' + new Date().getFullYear() + ' Compass Arena · ' + g.name + ' — товарные знаки принадлежат ' + g.owner);
+    set('footAbout', 'Организация турниров по ' + g.name + '. ' + (GAME === 'dota2' ? 'Первый сезон — шесть команд и один трофей.' : g.tagline + '.'));
+    document.title = 'Compass Arena — турнир по ' + g.name;
+    var teamsLink = document.querySelector('#heroCta a[href="#teams"]');
+    if (teamsLink && g.teamSize === 1) teamsLink.lastChild.textContent = 'Игроки';
+  }
+
+  /** Состояние «турнира ещё нет»: регистрация и сетка скоро */
+  function renderEmpty(d) {
+    var g = gm();
+    var box = document.getElementById('heroStatus');
+    if (box) {
+      box.innerHTML = '<div class="nm is-soon">' +
+        '<div class="nm-label">' + ic('clock') + 'Скоро</div>' +
+        '<div class="nm-teams">Турнир по ' + esc(g.name) + ' · ' + esc(g.tagline.toLowerCase()) + '</div>' +
+        '<div class="nm-meta">Регистрация откроется в боте — следите за анонсами в Telegram.</div>' +
+        '<div class="nm-count"><a class="btn btn-gold" href="' + BOT_URL + '" target="_blank" rel="noopener">' + ic('telegram') + 'Бот регистрации</a></div>' +
+        '</div>';
+    }
+    U.setProgress(0);
+    var kicker = document.getElementById('bracketKicker');
+    if (kicker) kicker.textContent = g.matchFormat + ' · ' + g.tagline;
+    var wrap = document.getElementById('bracketWrap');
+    if (wrap) wrap.innerHTML = soonCard('Сетка появится после регистрации', 'Когда команды подтвердят участие и пройдёт жеребьёвка, здесь откроется турнирная сетка.');
+    var copy = document.getElementById('bracketCopy');
+    if (copy) copy.textContent = '';
+    var legend = document.getElementById('bLegend');
+    if (legend) legend.innerHTML = '';
+    var grid = document.getElementById('teamsGrid');
+    if (grid) grid.innerHTML = soonCard(g.teamSize === 1 ? 'Игроки ещё не зарегистрированы' : 'Команды ещё не зарегистрированы', 'Заявки принимает бот — после модерации участники появятся на этой странице.');
+    var prev = document.getElementById('schedulePreviewList');
+    if (prev) prev.innerHTML = '<div class="s-empty">Матчей по ' + esc(g.name) + ' пока нет</div>';
+    renderArchive(d);
+    renderNextSeason(d);
+  }
+
+  function soonCard(title, text) {
+    return '<div class="teams-empty">' +
+      '<span class="te-ic">' + ic('users', 'ic-32') + '</span>' +
+      '<div class="te-body"><h3 class="h3">' + esc(title) + '</h3><p class="lead-sm">' + esc(text) + '</p></div>' +
+      '<a class="btn btn-gold" href="' + BOT_URL + '" target="_blank" rel="noopener">' + ic('telegram') + 'Подать заявку в боте</a></div>';
+  }
+
+  /** Панель выбора игры (прилипает под шапкой) */
+  function renderGameBar() {
+    var bar = document.getElementById('gameBar');
+    if (!bar || !G) return;
+    bar.innerHTML = G.list.map(function (g) {
+      var on = g.id === GAME;
+      return '<button type="button" class="game-tab' + (on ? ' is-on' : '') + '" role="tab" aria-selected="' + on + '" data-game="' + g.id + '">' +
+        G.glyph(g.id) + '<span class="gt-name">' + esc(g.short) + '</span><span class="gt-size">' + G.sizeLabel(g.id) + '</span></button>';
+    }).join('');
+  }
+
+  function setUrlGame(id) {
+    try {
+      var url = location.pathname + (id === 'dota2' ? '' : '?game=' + id) + location.hash;
+      history.replaceState(null, '', url);
+    } catch (e) { /* адрес не обновился — не критично */ }
+  }
+
+  function switchGame(id) {
+    if (!G || !G.isGame(id) || id === GAME) return;
+    GAME = id;
+    setUrlGame(id);
+    closeBracketViewer && closeBracketViewer();
+    var ctl = viewerCtl && viewerCtl();
+    if (ctl) ctl.reset();
+    if (G) G.applyTheme(GAME);
+    D.setGame(GAME);
+    renderGameBar();
+    document.body.classList.add('is-switching');
+    D.load(GAME).then(function (d) {
+      render(d);
+      U.observeReveals();
+      document.body.classList.remove('is-switching');
+    });
+  }
+
+  function initGameBar() {
+    var bar = document.getElementById('gameBar');
+    if (!bar || !G) return;
+    renderGameBar();
+    bar.addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('[data-game]') : null;
+      if (btn) switchGame(btn.getAttribute('data-game'));
+    });
+    bar.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      var ids = G.ids, i = ids.indexOf(GAME);
+      var next = ids[(i + (e.key === 'ArrowRight' ? 1 : ids.length - 1)) % ids.length];
+      switchGame(next);
+      var el = bar.querySelector('[data-game="' + next + '"]'); if (el) el.focus();
+    });
+  }
+
   /* ---------- Полный рендер ---------- */
   function render(d) {
     document.body.setAttribute('data-phase', d.phase);
+    document.body.setAttribute('data-empty', d.empty ? '1' : '0');
+    renderGameChrome();
     renderHero(d);
+    if (d.empty) { renderEmpty(d); return; }
     renderHeroStatus(d);
     renderChampion(d);
     renderStream(d);
@@ -822,6 +937,9 @@
     initBracketExpand();
     initDust();
     initStreamPlayer();
+    initGameBar();
+    D.setGame(GAME);
+    if (G) G.applyTheme(GAME);
 
     var toggle = document.getElementById('streamToggle');
     if (toggle) {
@@ -833,7 +951,7 @@
       });
     }
 
-    D.load().then(function (d) {
+    D.load(GAME).then(function (d) {
       render(d);
       U.observeReveals();
     });

@@ -6,7 +6,7 @@
     "e2e": "node tests/e2e-bracket.mjs",
     "version:assets": "node scripts/version-assets.mjs",
     "predeploy": "node scripts/version-assets.mjs && node tests/syntax.mjs && node tests/audit.mjs",
-    "test": "node scripts/_test-versioning.mjs && node tests/syntax.mjs && node tests/audit.mjs && node tests/smoke.mjs && node tests/smoke-history.mjs && node tests/regression-seasons.mjs && node tests/admin-archive.mjs && node tests/admin-import.mjs && node tests/admin-bracket.mjs && node tests/bracket-view.mjs && node tests/save-photos.mjs && node tests/bracket-engine2.mjs"
+    "test": "node scripts/_test-versioning.mjs && node tests/syntax.mjs && node tests/audit.mjs && node tests/smoke.mjs && node tests/smoke-history.mjs && node tests/regression-seasons.mjs && node tests/admin-archive.mjs && node tests/admin-import.mjs && node tests/admin-bracket.mjs && node tests/bracket-view.mjs && node tests/games.mjs && node tests/save-photos.mjs && node tests/bracket-engine2.mjs"
   },
   "devDependencies": {
     "jsdom": "^30.1.2"
