@@ -1,7 +1,5 @@
 import { gameFrom, tournamentKey } from '../_lib/games.js';
-
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_MS = 10 * 60 * 1000; // 10 минут блокировки после превышения лимита
+import { authorize } from '../_lib/auth.js';
 
 /* Лимиты KV: 25 МБ на значение. Держим запас и отдаём понятную ошибку. */
 const MAX_HISTORY_BYTES = 20 * 1024 * 1024;
@@ -123,37 +121,8 @@ export async function onRequestPost(context) {
 
   const { password, data, game: gameRaw } = body || {};
 
-  // В Cloudflare IP можно получить так:
-  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  const rateKey = 'ip:' + ip;
-
-  // ---- Проверка блокировки по перебору пароля ----
-  const now = Date.now();
-  let record = await env.COMPASS_KV.get(rateKey, { type: 'json' });
-
-  if (record && now - record.firstAttempt < LOCKOUT_MS && record.count >= MAX_ATTEMPTS) {
-    const waitMin = Math.ceil((LOCKOUT_MS - (now - record.firstAttempt)) / 60000);
-    return new Response(
-      'Слишком много неверных попыток. Попробуйте снова через ' + waitMin + ' мин.',
-      { status: 429 }
-    );
-  }
-  // Окно сброшено — начинаем считать заново
-  if (record && now - record.firstAttempt >= LOCKOUT_MS) {
-    record = null;
-  }
-
-  // Проверка пароля (переменная окружения ADMIN_PASSWORD)
-  if (!password || password !== env.ADMIN_PASSWORD) {
-    const next = record
-      ? { count: record.count + 1, firstAttempt: record.firstAttempt }
-      : { count: 1, firstAttempt: now };
-    await env.COMPASS_KV.put(rateKey, JSON.stringify(next));
-    return new Response('Forbidden', { status: 403 });
-  }
-
-  // Пароль верный — сбрасываем счётчик неудачных попыток
-  if (record) await env.COMPASS_KV.delete(rateKey);
+  const denied = await authorize(env, request, password);
+  if (denied) return denied;
 
   if (!data || typeof data !== 'object') {
     return new Response('Bad request: missing data', { status: 400 });
@@ -216,9 +185,6 @@ export async function onRequestPost(context) {
       for (const id of photoIdsIn(stored)) if (!photos.used.has(id)) stale.push('photo:' + id);
       for (const key of stale) await env.COMPASS_KV.delete(key);
 
-      // Если в историю ничего не менялось (только ссылки) — сообщаем админке,
-      // что перезаписывать её не потребовалось.
-      if (!photos.changed) historyKept = true;
     } else {
       historyKept = true;
     }

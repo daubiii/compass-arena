@@ -233,7 +233,7 @@
     .admin-games button.active { color:var(--gc); border-color:var(--gc); background:rgba(255,255,255,.04); box-shadow:0 0 0 1px var(--gc) inset; }
     .admin-games .ag-note { flex-basis:100%; font-size:12px; color:#5f6773; }
 </style>
-<script src="/assets/ca-bracket-engine.js?v=dc1a6f5"></script>
+<script src="/assets/ca-bracket-engine.js?v=0c31fa3"></script>
 </head>
 <body>
 
@@ -862,6 +862,7 @@ function clearEditLogo() {
    (главная причина «пропавшей» истории). */
 var DATA_READY = false;
 var SERVER_HISTORY_N = 0;
+var HISTORY_SNAPSHOT = '[]';   /* архив в момент загрузки: если не менялся, сервер его не получает */
 var LAST_LOAD_FAILED = false;
 
 function loadData() {
@@ -895,6 +896,7 @@ function loadData() {
             DATA_READY = true;
             LAST_LOAD_FAILED = false;
             SERVER_HISTORY_N = HISTORY.length;
+            HISTORY_SNAPSHOT = JSON.stringify(HISTORY);
         })
         .catch(function(err) {
             console.warn('Не удалось загрузить данные', err);
@@ -1287,8 +1289,80 @@ function saveData(force) {
     }
     updateMatchLinks();
     var pw = ensurePassword();
-    // Собираем payload: DATA + history отдельным полем
-    var payload = Object.assign({}, DATA, { history: HISTORY, clearHistory: !!force });
+
+    /* Картинки (логотипы, фото архива) уходят на сервер отдельными запросами, а в данных
+       остаются короткие ссылки. Иначе JSON на несколько мегабайт упирается в лимит CPU воркера. */
+    return uploadInlineImages(pw).then(function() {
+        return saveDataRequest(pw, force);
+    }).catch(function(err) {
+        if (err && err.forbidden) {
+            ADMIN_PW = null;
+            showToast('⛔ Неверный пароль — экран возвращён к серверным данным');
+            return loadData().then(renderEverything);
+        }
+        console.warn('Не удалось загрузить картинки', err);
+        showToast('⚠️ Не удалось загрузить картинки — сохранение отменено');
+        return false;
+    });
+}
+
+var UPLOAD_CACHE = {};
+function isInlineImage(url) { return typeof url === 'string' && /^data:image\/(jpeg|png|webp|gif);base64,/i.test(url); }
+
+/* Все места, где в данных лежит data:-картинка: логотипы команд, логотипы в снимках архива, фото архива */
+function collectInlineImages() {
+    var holders = [];
+    var i, j;
+    for (i = 0; i < (DATA.teams || []).length; i++) {
+        if (isInlineImage(DATA.teams[i].logo)) holders.push({ o: DATA.teams[i], k: 'logo' });
+    }
+    for (i = 0; i < HISTORY.length; i++) {
+        var ch = HISTORY[i] || {};
+        for (j = 0; j < (ch.teams || []).length; j++) {
+            if (ch.teams[j] && isInlineImage(ch.teams[j].logo)) holders.push({ o: ch.teams[j], k: 'logo' });
+        }
+        for (j = 0; j < (ch.photos || []).length; j++) {
+            if (ch.photos[j] && isInlineImage(ch.photos[j].url)) holders.push({ o: ch.photos[j], k: 'url' });
+        }
+    }
+    return holders;
+}
+
+function uploadOne(dataUrl, pw) {
+    if (UPLOAD_CACHE[dataUrl]) return Promise.resolve(UPLOAD_CACHE[dataUrl]);
+    var type = /^data:([a-z]+\/[a-z]+);/i.exec(dataUrl)[1].toLowerCase();
+    return fetch(dataUrl).then(function(r) { return r.blob(); }).then(function(blob) {
+        return fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': type, 'X-Admin-Password': pw },
+            body: blob
+        });
+    }).then(function(res) {
+        if (res.status === 403 || res.status === 429) { var e = new Error('forbidden'); e.forbidden = true; throw e; }
+        if (!res.ok) throw new Error('upload ' + res.status);
+        return res.json();
+    }).then(function(out) {
+        UPLOAD_CACHE[dataUrl] = out.url;
+        return out.url;
+    });
+}
+
+function uploadInlineImages(pw) {
+    var holders = collectInlineImages();
+    var chain = Promise.resolve();
+    holders.forEach(function(h) {
+        chain = chain.then(function() {
+            return uploadOne(h.o[h.k], pw).then(function(url) { h.o[h.k] = url; });
+        });
+    });
+    return chain.then(function() { if (holders.length) { renderTeams(); } });
+}
+
+function saveDataRequest(pw, force) {
+    /* Архив отправляем только если он менялся: иначе сервер зря разбирает его на каждое сохранение */
+    var historyDirty = !!force || JSON.stringify(HISTORY) !== HISTORY_SNAPSHOT;
+    var payload = Object.assign({}, DATA);
+    if (historyDirty) { payload.history = HISTORY; payload.clearHistory = !!force; }
 
     return fetch('/api/save', {
         method: 'POST',
@@ -1314,6 +1388,7 @@ function saveData(force) {
             return loadData().then(renderEverything);
         }
         SERVER_HISTORY_N = HISTORY.length;
+        if (historyDirty) HISTORY_SNAPSHOT = JSON.stringify(HISTORY);
         return true;
     }).catch(function(err) {
         console.warn('Не удалось сохранить', err);

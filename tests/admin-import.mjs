@@ -114,6 +114,11 @@ async function boot(initial) {
       win.confirm = (msg) => { state.confirms.push(String(msg)); return state.answer; };
       win.prompt = () => 'pw';
       win.fetch = async (url, opts) => {
+        if (String(url).indexOf('data:') === 0) return { blob: async () => ({ type: 'image/png', size: 1 }) };
+        if (String(url).indexOf('/api/upload') >= 0) {
+          state.uploads = (state.uploads || 0) + 1;
+          return { ok: true, status: 200, json: async () => ({ ok: true, url: '/api/photo/' + String(state.uploads).padStart(32, 'a') }) };
+        }
         if (String(url).indexOf('/api/save') >= 0) {
           const body = JSON.parse(opts.body);
           state.saves.push(body.data);
@@ -284,12 +289,13 @@ console.log('\n4. Импорт команд: предупреждения, за�
 
   const saved = lastSave(state);
   ok(!!saved, 'данные сохранены на сервер');
+  if (state.uploads) ok(!JSON.stringify(saved).includes('data:image'), 'в сохранённых данных нет base64: логотипы ушли отдельными запросами', state.uploads);
   ok(saved.teams.length === 3, 'в сохранении три команды', saved.teams && saved.teams.length);
   ok(saved.teams.map((t) => t.name).join(',') === 'Team Spirit,Virtus.pro,BetBoom Team', 'порядок команд сохранён',
     saved.teams.map((t) => t.name).join(','));
   ok(saved.teams.map((t) => t.id).join(',') === '1,2,3', 'id переназначены 1..N', saved.teams.map((t) => t.id).join(','));
   ok(saved.teams[0].players.length === 5 && saved.teams[0].players[0].role === 1, 'состав и роли на месте');
-  ok(saved.teams[0].logo.indexOf('data:image') === 0, 'логотип перенесён');
+  ok(saved.teams[0].logo.indexOf('/api/photo/') === 0 || saved.teams[0].logo.indexOf('data:image') === 0, 'логотип перенесён (ссылкой на загруженный файл)');
 
   ok(saved.matches.length === 0, 'старая сетка сброшена — матчей нет, сетку надо сгенерировать заново');
   const dirty = saved.matches.filter((m) => m.team1 !== null || m.team2 !== null || m.winner !== null);
@@ -485,7 +491,8 @@ console.log('\n9. Логотипы 8 команд × ~200 КБ');
     (payloadSize / 1024 / 1024).toFixed(2) + ' МБ · import: ' + importMs + ' мс · renderTeams: ' + renderMs + ' мс (jsdom)');
 
   ok(items === 8, 'список команд отрисован полностью', items);
-  ok(jsonSize > 1.5 * 1024 * 1024, 'логотипы действительно попали в данные', (jsonSize / 1024 / 1024).toFixed(2) + ' МБ');
+  ok(payloadSize < 60 * 1024, 'тело сохранения лёгкое: логотипы ушли отдельными запросами, а не внутри JSON', (payloadSize / 1024).toFixed(1) + ' КБ');
+  ok((state.uploads || 0) >= 1 && /^\/api\/photo\//.test(w.DATA.teams[0].logo), 'в данных вместо base64 — ссылки /api/photo/…', state.uploads);
   ok(jsonSize < 4 * 1024 * 1024, 'данные не раздулись сверх ожидаемого', (jsonSize / 1024 / 1024).toFixed(2) + ' МБ');
   ok(payloadSize < 5 * 1024 * 1024, 'тело запроса сохранения в разумных пределах', (payloadSize / 1024 / 1024).toFixed(2) + ' МБ');
   ok(renderMs < 3000, 'отрисовка списка не зависает (jsdom)', renderMs + ' мс');
