@@ -169,7 +169,10 @@
       fromServer: !!(raw && typeof raw === 'object' && (src.teams || src.matches))
     };
 
-    var teams = Array.isArray(src.teams) && src.teams.length ? src.teams : def.teams;
+    /* Dota 2 без команд показывает заглушку «Слот 1–6»; новые дисциплины стартуют пустыми */
+    var emptyOk = !!(src.game && src.game !== 'dota2');
+    D.game = src.game || 'dota2';
+    var teams = Array.isArray(src.teams) && src.teams.length ? src.teams : (emptyOk ? [] : def.teams);
     for (var i = 0; i < teams.length; i++) {
       var t = teams[i] || {};
       D.teams.push({
@@ -180,7 +183,7 @@
       });
     }
 
-    var matches = Array.isArray(src.matches) && src.matches.length ? src.matches : def.matches;
+    var matches = Array.isArray(src.matches) && src.matches.length ? src.matches : (emptyOk ? [] : def.matches);
     for (var m = 0; m < matches.length; m++) {
       var mm = matches[m] || {};
       var match = {
@@ -615,13 +618,24 @@
   }
   function onChange(fn) { listeners.push(fn); return fn; }
 
-  function load() {
-    return fetch('/api/data', { cache: 'no-store' })
-      .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
+  var GAME = 'dota2';
+  function dataUrl(game, light) {
+    return '/api/data?game=' + encodeURIComponent(game) + (light ? '&light=1' : '');
+  }
+  function fetchRaw(game, light) {
+    return fetch(dataUrl(game, light), { cache: 'no-store' }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    });
+  }
+
+  /** Загружает данные дисциплины (по умолчанию — текущей) и делает их текущими */
+  function load(game) {
+    if (game) GAME = game;
+    var requested = GAME;
+    return fetchRaw(requested)
       .then(function (raw) {
+        if (requested !== GAME) return D;      // успели переключиться на другую игру
         var data = Object.assign({}, raw);
         D = finalize(normalize(data));
         D.fromServer = true;
@@ -634,9 +648,30 @@
       });
   }
 
+  /** Все дисциплины сразу (расписание, архив): { games: {id: D}, history } — текущее состояние не трогает */
+  function loadAll() {
+    var ids = (CA.games && CA.games.ids) || ['dota2'];
+    return Promise.all(ids.map(function (id) {
+      return fetchRaw(id, true)
+        .then(function (raw) { var d = finalize(normalize(Object.assign({ game: id }, raw))); d.fromServer = true; return [id, d, raw]; })
+        .catch(function () { return [id, finalize(normalize({ game: id })), null]; });
+    })).then(function (list) {
+      var games = {};
+      var history = [];
+      list.forEach(function (it) {
+        games[it[0]] = it[1];
+        if (!history.length && it[2] && Array.isArray(it[2].history)) history = it[2].history;
+      });
+      return { games: games, history: history };
+    });
+  }
+
+  function setGame(game) { GAME = (CA.games && CA.games.isGame(game)) ? game : 'dota2'; return GAME; }
+  function getGame() { return GAME; }
+
   function startAutoRefresh(ms) {
     if (timer) clearInterval(timer);
-    timer = setInterval(load, ms || 60000);
+    timer = setInterval(function () { load(); }, ms || 60000);
     return timer;
   }
 
@@ -648,6 +683,9 @@
     finalize: finalize,
     get: get,
     load: load,
+    loadAll: loadAll,
+    setGame: setGame,
+    game: getGame,
     setRaw: setRaw,
     onChange: onChange,
     startAutoRefresh: startAutoRefresh,

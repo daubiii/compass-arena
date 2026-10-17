@@ -148,7 +148,14 @@ async function handle(req, res) {
   let pathname = decodeURIComponent(url.pathname);
 
   if (pathname === '/api/data') {
-    sendJson(res, STATE.data);
+    /* Dota 2 — основное состояние (фикстура); остальные дисциплины стартуют пустыми, как на проде */
+    const game = url.searchParams.get('game') || 'dota2';
+    if (game === 'dota2') { sendJson(res, Object.assign({ game }, STATE.data)); return; }
+    STATE.games = STATE.games || {};
+    sendJson(res, Object.assign({ game, history: STATE.data.history || [] }, STATE.games[game] || {
+      tournament: { name: 'Compass Arena', game, format: 'Custom Bracket', matches: 'Bo3', dates: '' },
+      teams: [], matches: [], schedule: {}, liveMatchId: null
+    }));
     return;
   }
 
@@ -159,6 +166,12 @@ async function handle(req, res) {
       return;
     }
     /* Состояние заменяем целиком — как делает реальный /api/save */
+    if (body.game && body.game !== 'dota2') {
+      STATE.games = STATE.games || {};
+      STATE.games[body.game] = JSON.parse(JSON.stringify(body.data));
+      sendJson(res, { ok: true, game: body.game });
+      return;
+    }
     STATE.data = JSON.parse(JSON.stringify(body.data));
     console.log('[server] сохранено: команд ' + (STATE.data.teams || []).length +
       ', матчей ' + (STATE.data.matches || []).length +
