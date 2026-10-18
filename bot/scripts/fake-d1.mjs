@@ -50,6 +50,15 @@ export function createFakeD1(seed = {}) {
     return row;
   }
 
+  /** Как SQL json_remove/json_extract: payload без logo (строкой) и, по желанию, logo отдельной колонкой */
+  const lightRow = (row, withLogo) => {
+    const payload = JSON.parse(row.payload || '{}');
+    const logo = payload.logo === undefined ? null : payload.logo;
+    delete payload.logo;
+    const out = { ...row, payload: JSON.stringify(payload) };
+    if (withLogo) out.logo = logo;
+    return out;
+  };
   const parseRow = (row) => {
     if (!row) return null;
     let payload = {};
@@ -174,19 +183,32 @@ export function createFakeD1(seed = {}) {
         }));
       }
     },
-    // leads: выборка для экспорта
+    // leads: выборка для экспорта (payload без логотипа + колонка logo)
     {
-      test: /^SELECT \* FROM leads WHERE status = 'approved' AND discipline = \?/,
+      test: /^SELECT id, telegram_id, type, discipline, status, json_remove\(payload, '\$\.logo'\) AS payload, .* json_extract\(payload, '\$\.logo'\) AS logo FROM leads WHERE status = 'approved' AND discipline = \?/,
       all: (p) => {
         let list = db.leads.filter((row) => row.status === 'approved' && row.discipline === p[0]);
         if (p.length > 1) list = list.filter((row) => row.type === p[1]);
-        return rows(list.map(parseRow));
+        return rows(list.map((row) => lightRow(row, true)));
       }
     },
     // leads: незакрытая заявка того же типа
     {
       test: /^SELECT \* FROM leads WHERE telegram_id = \? AND status = 'pending' AND type = \?/,
       first: (p) => parseRow(db.leads.find((r) => r.telegram_id === p[0] && r.status === 'pending' && r.type === p[1] && r.discipline === p[2]) || null)
+    },
+    // leads: списки без логотипа (json_remove в SQL)
+    {
+      test: /^SELECT id, telegram_id, type, discipline, status, json_remove\(payload, '\$\.logo'\) AS payload/,
+      all: (p, q) => {
+        const limit = p[p.length - 2];
+        const offset = p[p.length - 1];
+        const filters = readFilters(p.slice(0, p.length - 2), q);
+        const list = filterRows(filters)
+          .slice()
+          .sort((a, b) => (a.created_at === b.created_at ? b.id - a.id : (a.created_at < b.created_at ? 1 : -1)));
+        return rows(list.slice(offset, offset + limit).map((row) => lightRow(row, false)));
+      }
     },
     // leads: универсальная выборка с LIMIT/OFFSET
     {

@@ -141,6 +141,12 @@ export async function getLead(env, id) {
  * @param {object} env
  * @param {{status?: string, discipline?: string, type?: string, telegramId?: number, limit?: number, offset?: number}} [filters]
  */
+/* Логотип — base64 на сотни килобайт. В списках он не нужен, а разбирать его в воркере
+   (бесплатный тариф — 10 мс CPU) дорого: вырезаем прямо в SQLite, до воркера он не доезжает. */
+const LEAD_LIGHT_COLUMNS =
+  "id, telegram_id, type, discipline, status, json_remove(payload, '$.logo') AS payload, " +
+  'created_at, updated_at, moderated_at, moderated_by, reject_reason';
+
 export async function listLeads(env, filters = {}) {
   const where = [];
   const params = [];
@@ -153,7 +159,7 @@ export async function listLeads(env, filters = {}) {
   const offset = Math.max(Number(filters.offset) || 0, 0);
 
   const sql =
-    `SELECT * FROM leads ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    `SELECT ${LEAD_LIGHT_COLUMNS} FROM leads ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
      ORDER BY datetime(created_at) DESC, id DESC LIMIT ? OFFSET ?`;
 
   const result = await env.DB.prepare(sql).bind(...params, limit, offset).all();
@@ -326,7 +332,8 @@ export async function findApprovedTeamByName(env, discipline, name, excludeId) {
  */
 export async function listApprovedForExport(env, opts) {
   const params = [opts.discipline];
-  let sql = `SELECT * FROM leads WHERE status = 'approved' AND discipline = ?`;
+  /* Логотип отдаём отдельной колонкой-строкой (без разбора JSON): файл экспорта собирается текстом */
+  let sql = `SELECT ${LEAD_LIGHT_COLUMNS}, json_extract(payload, '$.logo') AS logo FROM leads WHERE status = 'approved' AND discipline = ?`;
   if (opts.type) { sql += ' AND type = ?'; params.push(opts.type); }
   sql += ' ORDER BY datetime(created_at) ASC, id ASC';
 

@@ -1,5 +1,11 @@
 import { gameFrom, tournamentKey } from '../_lib/games.js';
 import { authorize } from '../_lib/auth.js';
+import { GAMES } from '../_lib/games.js';
+import { cachePurge } from '../_lib/edge-cache.js';
+
+/* Тело запроса больше этого — почти наверняка base64 внутри JSON. Разбор такого тела не укладывается
+   в 10 мс CPU бесплатного тарифа, поэтому отвечаем понятной ошибкой, а не падаем с 503. */
+const MAX_BODY_BYTES = 2 * 1024 * 1024;
 
 /* Лимиты KV: 25 МБ на значение. Держим запас и отдаём понятную ошибку. */
 const MAX_HISTORY_BYTES = 20 * 1024 * 1024;
@@ -112,6 +118,14 @@ function extractPhotos(history, env) {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
+  const declared = Number(request.headers.get('Content-Length') || 0);
+  if (declared > MAX_BODY_BYTES) {
+    return new Response(
+      'Запрос слишком большой (' + Math.round(declared / 1024) + ' КБ). Картинки нужно загружать через /api/upload, а в данных оставлять ссылки.',
+      { status: 413 }
+    );
+  }
+
   let body;
   try {
     body = await request.json();
@@ -135,6 +149,7 @@ export async function onRequestPost(context) {
   const { history, clearHistory, ...tournamentData } = data;
 
   await env.COMPASS_KV.put(tournamentKey(game), JSON.stringify(tournamentData));
+  await cachePurge(game);
 
   // ---- Сохраняем историю (если передана) ----
   let historyKept = false;
@@ -169,16 +184,19 @@ export async function onRequestPost(context) {
         });
       }
 
-      if (byteLength(trimmedHistory) + payloadSize > MAX_HISTORY_BYTES) {
+      const historyJson = JSON.stringify(photos.history);
+      const historySize = byteLength(historyJson);
+      if (historySize + payloadSize > MAX_HISTORY_BYTES) {
         for (const photo of photos.created) await env.COMPASS_KV.delete('photo:' + photo.id);
         return new Response(
-          'Архив слишком большой: ' + Math.round((byteLength(trimmedHistory) + payloadSize) / 1024 / 1024) +
+          'Архив слишком большой: ' + Math.round((historySize + payloadSize) / 1024 / 1024) +
           ' МБ (лимит ' + Math.round(MAX_HISTORY_BYTES / 1024 / 1024) + ' МБ).',
           { status: 413 }
         );
       }
 
-      await env.COMPASS_KV.put('history', JSON.stringify(photos.history));
+      await env.COMPASS_KV.put('history', historyJson);
+      for (const id of Object.keys(GAMES)) await cachePurge(id);
 
       // Кадры, которые были в прежнем архиве и больше нигде не упомянуты, убираем из KV
       const stale = [];

@@ -42,6 +42,28 @@ const TARGETS = {
    ============================================================ */
 
 /**
+ * JSON с отступами, но без «пережёвывания» логотипов: base64 на сотни килобайт каждый
+ * (8 команд — мегабайты) выносятся из документа и вставляются в готовую строку как есть.
+ * Иначе stringify съедает лимит CPU воркера (бесплатный тариф — 10 мс).
+ * Логотип — data:image/…;base64,… из нашего же бота: символов, требующих экранирования, в нём нет;
+ * на всякий случай подозрительные значения идут обычным путём.
+ */
+export function stringifyWithLogos(doc) {
+  const logos = [];
+  const json = JSON.stringify(doc, (key, value) => {
+    if (key === 'logo' && typeof value === 'string' && value.length > 2000 &&
+        value.startsWith('data:image/') && value.indexOf('"') < 0 && value.indexOf('\\') < 0 &&
+        value.indexOf('\n') < 0) {
+      logos.push(value);
+      return '@@LOGO' + (logos.length - 1) + '@@';
+    }
+    return value;
+  }, 2);
+  if (!logos.length) return json;
+  return json.replace(/"@@LOGO(\d+)@@"/g, (m, i) => '"' + logos[Number(i)] + '"');
+}
+
+/**
  * Файл команд.
  * @param {{discipline: string, teams: Array, freeAgents: Array, exportedAt?: string}} input
  */
@@ -60,7 +82,7 @@ export function buildTeamsDocument({ discipline, teams, freeAgents, exportedAt }
         id: `team_${index + 1}`,
         num: index + 1,
         name: p.name || '',
-        logo: p.logo || '',
+        logo: lead.logo || p.logo || '',
         logoOversized: Boolean(p.logoOversized),
         captainNick: p.captainNick || '',
         captainTelegramId: p.captainTelegramId || lead.telegram_id || null,
@@ -355,7 +377,7 @@ async function onGo(env, query, ctx, choice, target) {
     try {
       await sendDocument(env, ctx.chatId, {
         filename: job.filename,
-        content: JSON.stringify(job.document, null, 2),
+        content: stringifyWithLogos(job.document),
         contentType: 'application/json'
       }, { caption: esc(caption) });
       sent++;
