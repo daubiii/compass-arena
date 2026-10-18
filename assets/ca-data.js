@@ -631,11 +631,11 @@
   function onChange(fn) { listeners.push(fn); return fn; }
 
   var GAME = 'dota2';
-  function dataUrl(game, light) {
-    return '/api/data?game=' + encodeURIComponent(game) + (light ? '&light=1' : '');
+  function dataUrl(game, light, noHistory) {
+    return '/api/data?game=' + encodeURIComponent(game) + (light ? '&light=1' : '') + (noHistory ? '&history=0' : '');
   }
-  function fetchRaw(game, light) {
-    return fetch(dataUrl(game, light), { cache: 'no-store' }).then(function (res) {
+  function fetchRaw(game, light, noHistory) {
+    return fetch(dataUrl(game, light, noHistory), { cache: 'no-store' }).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
     });
@@ -669,10 +669,11 @@
   }
 
   /** Все дисциплины сразу (расписание, архив): { games: {id: D}, history } — текущее состояние не трогает */
-  function loadAll() {
+  function loadAll(withHistory) {
     var ids = (CA.games && CA.games.ids) || ['dota2'];
-    return Promise.all(ids.map(function (id) {
-      return fetchRaw(id, true)
+    return Promise.all(ids.map(function (id, i) {
+      /* Архив общий для всех игр — запрашиваем его один раз (у первой), остальным он не нужен */
+      return fetchRaw(id, true, !(withHistory && i === 0))
         .then(function (raw) { var d = finalize(normalize(Object.assign({ game: id }, raw))); d.fromServer = true; tagMatches(d); return [id, d, raw]; })
         .catch(function () { return [id, finalize(normalize({ game: id })), null]; });
     })).then(function (list) {
@@ -699,7 +700,11 @@
 
   function startAutoRefresh(ms) {
     if (timer) clearInterval(timer);
-    timer = setInterval(function () { load(); }, ms || 60000);
+    /* Скрытая вкладка не опрашивает сервер — экономим чтения KV */
+    timer = setInterval(function () {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      load();
+    }, ms || 60000);
     return timer;
   }
 

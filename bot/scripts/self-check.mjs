@@ -1441,6 +1441,35 @@ console.log('\n16. Brawl Stars и Clash Royale');
 }
 
 /* ============================================================
+   17. Логотипы и лимит CPU: списки без base64, экспорт без разбора
+   ============================================================ */
+console.log('\n17. Тяжёлые логотипы');
+{
+  const { stringifyWithLogos } = await import('../src/handlers/export.js');
+  const { listLeads, listApprovedForExport } = await import('../src/lib/db.js');
+  const big = 'data:image/jpeg;base64,' + 'QUJD'.repeat(70000);          // ≈ 280 КБ
+  const fake = createFakeD1();
+  const env = baseEnv(fake);
+  for (let i = 0; i < 8; i++) {
+    const id = fake._db.addLead({ telegramId: 900 + i, type: 'team', discipline: 'brawl', payload: { name: 'T' + i, logo: big, players: [{ nick: 'a' + i, role: 1, roleLabel: 'Игрок' }] } });
+    fake._db.leads.find((l) => l.id === id || true);
+  }
+  fake._db.leads.forEach((l) => { l.status = 'approved'; });
+
+  const list = await listLeads(env, { status: 'approved', limit: 20 });
+  ok(list.length === 8 && list.every((l) => l.payload.logo === undefined && l.payload.name), 'списки заявок приходят без логотипа');
+  const approved = await listApprovedForExport(env, { discipline: 'brawl' });
+  ok(approved.length === 8 && approved.every((l) => l.logo === big && l.payload.logo === undefined), 'экспорт получает логотип отдельной строкой, payload — без него');
+
+  const doc = { type: 'teams', teams: approved.map((l) => ({ name: l.payload.name, logo: l.logo, n: 1 })), x: 'a"b' };
+  const text = stringifyWithLogos(doc);
+  ok(JSON.stringify(JSON.parse(text)) === JSON.stringify(doc), 'файл экспорта — валидный JSON, логотипы на месте');
+  ok(text.includes('\n  "type": "teams"'), 'файл с отступами');
+  const evil = stringifyWithLogos({ teams: [{ logo: 'data:image/png;base64,' + 'A'.repeat(3000) + '"},{"x":"y' }] });
+  ok(JSON.parse(evil).teams.length === 1, 'логотип со служебными символами не ломает JSON');
+}
+
+/* ============================================================
    Итог
    ============================================================ */
 globalThis.fetch = originalFetch;

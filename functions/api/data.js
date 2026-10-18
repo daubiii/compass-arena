@@ -1,4 +1,5 @@
 import { DEFAULT_GAME, GAMES, gameFrom, tournamentKey } from '../_lib/games.js';
+import { cacheGet, cachePut } from '../_lib/edge-cache.js';
 
 
 // ============================================================
@@ -98,23 +99,37 @@ export async function onRequestGet(context) {
      (логотипы и фото внутри данных) эти 10 мс съедают, поэтому данные и архив отдаём ТЕКСТОМ,
      не разбирая: просто склеиваем строки. Фото в ответе — ссылки /api/photo/<id>;
      data:-URL собираются только по ?full=1 (резервная копия в админке). */
+  const full = reqUrl.searchParams.get('full') === '1';
+  const withHistory = reqUrl.searchParams.get('history') !== '0';
+  /* Публичное чтение — через кэш края (~20 с): экономит чтения KV. Админка просит nocache=1 / full=1 */
+  const cacheable = !full && reqUrl.searchParams.get('nocache') !== '1';
+  if (cacheable) {
+    const hit = await cacheGet(game, withHistory);
+    if (hit) {
+      return new Response(hit.body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Cache': 'HIT' } });
+    }
+  }
+
   let raw = await env.COMPASS_KV.get(key);
   if (!raw) {
     raw = JSON.stringify(game === DEFAULT_GAME ? DEFAULT_DATA : emptyTournament(game));
     await env.COMPASS_KV.put(key, raw);
   }
 
-  let historyRaw = await env.COMPASS_KV.get('history');
+  /* ?history=0 — архив не нужен (расписание, чужие дисциплины): не читаем его вовсе */
+  let historyRaw = withHistory ? await env.COMPASS_KV.get('history') : '[]';
   if (!historyRaw || !String(historyRaw).trim()) historyRaw = '[]';
 
-  const full = reqUrl.searchParams.get('full') === '1';
   if (full) {
     let history = [];
     try { history = JSON.parse(historyRaw); } catch { history = []; }
     historyRaw = JSON.stringify(await hydratePhotos(env, Array.isArray(history) ? history : []));
   }
 
-  return new Response(joinResponse(raw, historyRaw, game), {
+  const body = joinResponse(raw, historyRaw, game);
+  if (cacheable) await cachePut(context, game, withHistory, body);
+
+  return new Response(body, {
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store'
@@ -130,7 +145,7 @@ function joinResponse(raw, historyRaw, game) {
     return '{"history":' + historyRaw + ',"game":' + JSON.stringify(game) + '}';
   }
   const head = text.slice(0, end);
-  const sep = /\{\s*$/.test(head) ? '' : ',';
+  const sep = head.trimEnd().endsWith('{') ? '' : ',';
   return head + sep + '"history":' + historyRaw + ',"game":' + JSON.stringify(game) + '}';
 }
 
