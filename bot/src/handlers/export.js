@@ -178,7 +178,7 @@ function screenDiscipline() {
       'Выбери дисциплину:'
     ].join('\n'),
     keyboard: kb([
-      [{ text: 'Dota 2', data: 'exp:disc:dota2' }, { text: 'CS:GO', data: 'exp:disc:csgo' }],
+      [{ text: 'Dota 2', data: 'exp:disc:dota2' }, { text: 'CS2', data: 'exp:disc:csgo' }],
       [{ text: 'Clash Royale', data: 'exp:disc:clash' }, { text: 'Brawl Stars', data: 'exp:disc:brawl' }],
       [{ text: 'Все дисциплины', data: 'exp:disc:both' }],
       [menuRow]

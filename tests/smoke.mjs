@@ -189,19 +189,20 @@ function makeConfigured(file, scripts, settings, teamsByGame) {
 const cfg = { configured: true, current: 'csgo', season: '2 сезон', prize: { enabled: true, perTeam: 1000, base: 500, note: 'Пояснение' } };
 const six = [1, 2, 3, 4, 5, 6].map((i) => ({ id: i, name: 'Vitality' + i, players: [] }));
 
-console.log('\nindex.html — настроен текущий турнир (CS:GO)');
+console.log('\nindex.html — настроен текущий турнир (CS2)');
 {
   const { dom, seen } = makeConfigured('index.html', HOME, cfg, { csgo: six });
   await sleep(1500);   /* число в банке набегает ~1,1 с */
   const d = dom.window.document;
-  ok(seen.filter((u) => u.indexOf('/api/data') >= 0).every((u) => u.indexOf('game=csgo') >= 0) && seen.some((u) => u.indexOf('/api/data') >= 0), 'грузится только CS:GO', seen.join(' '));
-  ok(d.documentElement.getAttribute('data-game') === 'csgo', 'тема CS:GO');
+  ok(seen.filter((u) => u.indexOf('/api/data') >= 0).every((u) => u.indexOf('game=csgo') >= 0) && seen.some((u) => u.indexOf('/api/data') >= 0), 'грузится только CS2', seen.join(' '));
+  ok(d.documentElement.getAttribute('data-game') === 'csgo', 'тема CS2');
   ok(d.body.classList.contains('is-locked'), 'переключатель дисциплин скрыт');
   ok(d.getElementById('gameBar').children.length === 0, 'вкладки игр не отрисованы');
   ok(d.getElementById('prize').hidden === false, 'банк призовых показан');
   ok(d.getElementById('navPrize').hidden === false, 'пункт «Призовые» в меню');
   ok(d.getElementById('prizeAmount').textContent.replace(/\s/g, '').indexOf('6500') === 0, 'банк = 500 + 6 × 1000', d.getElementById('prizeAmount').textContent);
-  ok(d.getElementById('prizeRule').textContent.indexOf('1\u00a0000') >= 0 || d.getElementById('prizeRule').textContent.replace(/\s/g, '').indexOf('+1000') >= 0, 'формула: +1 000 ₽ за команду', d.getElementById('prizeRule').textContent);
+  ok(!/1\s?000|1000/.test(d.getElementById('prizeRule').textContent) && /Каждая команда/.test(d.getElementById('prizeRule').textContent), 'зрители не видят формулу, только «каждая команда растит банк»', d.getElementById('prizeRule').textContent);
+  ok(!d.getElementById('prizeLadder') && !d.getElementById('prizeBase'), 'ступеней «N команд = N ₽» нет');
   ok(d.getElementById('heroKicker').textContent.indexOf('2 сезон') >= 0, 'сезон в заголовке', d.getElementById('heroKicker').textContent);
   ok(d.getElementById('prizeNote').textContent === 'Пояснение', 'пояснение под банком');
 }
@@ -223,7 +224,7 @@ console.log('\nschedule.html — настроен текущий турнир');
   const dataCalls = seen.filter((u) => u.indexOf('/api/data') >= 0);
   ok(dataCalls.length === 1 && dataCalls[0].indexOf('game=csgo') >= 0, 'запрошена одна дисциплина', dataCalls.join(' '));
   ok(d.getElementById('gameFilters').hidden === true, 'фильтр игр скрыт');
-  ok(d.getElementById('curTournament').hidden === false && d.getElementById('curTournament').textContent.indexOf('CS:GO') >= 0, 'плашка текущего турнира', d.getElementById('curTournament').textContent);
+  ok(d.getElementById('curTournament').hidden === false && d.getElementById('curTournament').textContent.indexOf('CS2') >= 0, 'плашка текущего турнира', d.getElementById('curTournament').textContent);
   ok(/\d+ д \d\d:\d\d:\d\d/.test(d.querySelector('#curTournament .ct-count').textContent), 'отсчёт до старта', d.querySelector('#curTournament .ct-count').textContent);
 }
 

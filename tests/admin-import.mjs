@@ -55,7 +55,7 @@ function teamsDoc(teams, agents, discipline) {
 function settingsDoc(over) {
   const t = Object.assign({
     name: 'Compass Arena Season 3',
-    game: 'CS:GO',
+    game: 'CS2',
     format: 'Custom Bracket',
     matches: 'Bo5',
     dates: '1 ноября 2026'
@@ -245,7 +245,7 @@ console.log('\n3. Проверка содержимого файла коман�
     players: [{ nick: 's1mple', role: 7 }, { nick: 'b1t', role: 2 }, { nick: 'electroNic', role: 3 }, { nick: 'Perfecto', role: 4 }, { nick: 'Boombl4', role: 5 }]
   })];
   await chooseFile(w, JSON.stringify(teamsDoc(csRoles, [], 'csgo')));
-  ok(modalOpen(w), 'у CS:GO ролей нет — номер роли в файле не проверяется');
+  ok(modalOpen(w), 'у CS2 ролей нет — номер роли в файле не проверяется');
   if (modalOpen(w)) w.botImportCancel();
 
   await chooseFile(w, JSON.stringify({ type: 'teams', version: 1, discipline: 'dota2' }));
@@ -400,7 +400,7 @@ console.log('\n6. Файл настроек турнира');
   await sleep(60);
   const saved = lastSave(state);
   ok(saved.tournament.name === 'Compass Arena Season 3', 'название турнира обновлено', saved.tournament.name);
-  ok(saved.tournament.game === 'CS:GO', 'игра обновлена');
+  ok(saved.tournament.game === 'CS2', 'игра обновлена');
   ok(saved.tournament.matches === 'Bo5', 'формат матчей обновлён');
   ok(saved.tournament.dates === '1 ноября 2026', 'даты обновлены');
   ok(JSON.stringify(saved.teams) === teamsBefore, 'команды не изменились');

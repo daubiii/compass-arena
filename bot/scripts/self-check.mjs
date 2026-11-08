@@ -203,7 +203,7 @@ ok(DISCIPLINE_KEYS.join(',') === 'dota2,csgo,clash,brawl', 'четыре дис�
 ok(roleNum('dota2', '2') === 2 && roleLabel('dota2', '2') === 'Мидер', 'роль Dota 2 → номер и подпись');
 ok(roleTitle('dota2', '1') === '1 — Керри', 'полная подпись роли');
 ok(roleLabel('dota2', '4') === 'Саппорт 4' && roleNum('dota2', '4') === 4, 'роль Dota → 4');
-ok(disciplineLabel('csgo') === 'CS:GO' && leadTypeLabel('free_agent') === 'Ищет команду', 'подписи дисциплин и типов');
+ok(disciplineLabel('csgo') === 'CS2' && leadTypeLabel('free_agent') === 'Ищет команду', 'подписи дисциплин и типов');
 
 /* ============================================================
    3. D1-помощники (in-memory замена)
@@ -871,7 +871,7 @@ const teamPayload = (name) => ({
   await say(env, ADMIN, '/leads');
   const menu = lastTo(ADMIN);
   ok(/На модерации: 2/.test(menu) && /Одобрено: 0/.test(menu), 'меню модерации показывает счётчики');
-  ok(/Dota 2 · Команда: 1/.test(menu) && /CS:GO · Ищет команду: 1/.test(menu), 'разбивка ожидающих по дисциплинам');
+  ok(/Dota 2 · Команда: 1/.test(menu) && /CS2 · Ищет команду: 1/.test(menu), 'разбивка ожидающих по дисциплинам');
   ok(/mod:list:new/.test(markupSince(0)) && /mod:list:approved/.test(markupSince(0)), 'кнопки списков на месте');
 
   /* --- карточка первой заявки --- */
@@ -1085,7 +1085,7 @@ const agentLead = (id, telegramId, nick, discipline, type = 'looking_for_team') 
   ok(withAgents.freeAgents[0].telegramId === 999, 'telegramId агента попадает в файл');
 
   const settings = buildSettingsDocument({ discipline: 'csgo', tournamentName: 'Compass Arena Season 2', exportedAt: at });
-  ok(settings.type === 'settings' && settings.tournament.game === 'CS:GO', 'файл настроек: тип и игра по дисциплине');
+  ok(settings.type === 'settings' && settings.tournament.game === 'CS2', 'файл настроек: тип и игра по дисциплине');
   ok(settings.tournament.name === 'Compass Arena Season 2' && settings.bracket.structure === 'custom',
     'файл настроек: название турнира и блок bracket');
   const defaultName = buildSettingsDocument({ discipline: 'dota2', exportedAt: at });
@@ -1133,9 +1133,9 @@ const agentLead = (id, telegramId, nick, discipline, type = 'looking_for_team') 
     ['dota2', 'csgo', 'clash', 'brawl'].map((g) => 'teams_2026-10-07_' + g + '.json').concat(['dota2', 'csgo', 'clash', 'brawl'].map((g) => 'settings_2026-10-07_' + g + '.json')).join(' | ')
     .replace(/2026-10-07/g, new Date().toISOString().slice(0, 10)),
     'имена файлов: команды по дисциплинам, затем настройки', docs.map((d) => d.filename).join(' | '));
-  ok(docs[0].caption === 'Файл 1/8: Dota 2 команды' && docs[1].caption === 'Файл 2/8: CS:GO команды' && docs[3].caption === 'Файл 4/8: Brawl Stars команды',
+  ok(docs[0].caption === 'Файл 1/8: Dota 2 команды' && docs[1].caption === 'Файл 2/8: CS2 команды' && docs[3].caption === 'Файл 4/8: Brawl Stars команды',
     'подписи файлов команд', docs.map((d) => d.caption).join(' | '));
-  ok(docs[4].caption === 'Файл 5/8: Dota 2 настройки' && docs[5].caption === 'Файл 6/8: CS:GO настройки',
+  ok(docs[4].caption === 'Файл 5/8: Dota 2 настройки' && docs[5].caption === 'Файл 6/8: CS2 настройки',
     'подписи файлов настроек');
   ok(/Экспорт готов/.test(lastTo(ADMIN)) && /Импорт из бота/.test(lastTo(ADMIN)), 'итоговое сообщение про импорт');
 
@@ -1423,18 +1423,18 @@ console.log('\n16. Brawl Stars и Clash Royale');
   const clash = fake._db.lastLead();
   ok(clash.discipline === 'clash' && clash.payload.players.length === 1 && clash.payload.name === 'Kingpin' && clash.payload.logo === '', 'в заявке Clash Royale ник, без логотипа');
 
-  // CS:GO: пять игроков, роли не спрашиваются
+  // CS2: пять игроков, роли не спрашиваются
   const NEWBIE = 446;
   await tap(env, NEWBIE, 'reg:disc:csgo');
   await tap(env, NEWBIE, 'reg:type:team');
   await say(env, NEWBIE, 'Five Stack');
   await handleUpdate(env, photoUpdate(NEWBIE, [{ file_id: 'logo', width: 800 }]));
   for (const n of ['p1', 'p2', 'p3', 'p4']) await say(env, NEWBIE, n);
-  ok(/Ник игрока 5/.test(lastTo(NEWBIE)), 'CS:GO: роль не спрашивается, идём к пятому игроку');
+  ok(/Ник игрока 5/.test(lastTo(NEWBIE)), 'CS2: роль не спрашивается, идём к пятому игроку');
   await say(env, NEWBIE, 'p5');
   await tap(env, NEWBIE, 'reg:confirm');
   const cs = fake._db.lastLead();
-  ok(cs.discipline === 'csgo' && cs.payload.players.length === 5 && cs.payload.players.every((p) => p.roleLabel === 'Игрок'), 'CS:GO: пять игроков без ролей', JSON.stringify(cs.payload).slice(0, 200) + ' / ' + lastTo(NEWBIE).slice(0, 100));
+  ok(cs.discipline === 'csgo' && cs.payload.players.length === 5 && cs.payload.players.every((p) => p.roleLabel === 'Игрок'), 'CS2: пять игроков без ролей', JSON.stringify(cs.payload).slice(0, 200) + ' / ' + lastTo(NEWBIE).slice(0, 100));
 
   // Свободный агент без ролей: ник → ранг → описание
   await tap(env, ADMIN, 'reg:disc:brawl');
@@ -1477,7 +1477,7 @@ console.log('\n17. Тяжёлые логотипы');
    ============================================================ */
 globalThis.fetch = originalFetch;
 /* ============================================================
-   18. Сезон 2: только CS:GO, оплата и скриншот
+   18. Сезон 2: только CS2, оплата и скриншот
    ============================================================ */
 console.log('\n18. Блокировка дисциплин и оплата участия');
 {
@@ -1491,11 +1491,11 @@ console.log('\n18. Блокировка дисциплин и оплата уч�
 
   await say(env, U, '/start');
   const menu = markupSince(0);
-  ok(/reg:disc:csgo/.test(menu), 'CS:GO открыт');
+  ok(/reg:disc:csgo/.test(menu), 'CS2 открыт');
   ok(!/reg:disc:dota2|reg:disc:clash|reg:disc:brawl/.test(menu), 'остальные игры не запускают регистрацию');
   ok(/reg:locked:dota2/.test(menu) && /reg:locked:clash/.test(menu) && /reg:locked:brawl/.test(menu), 'закрытые игры — кнопки-пояснения');
   ok(/D\u0336o\u0336t\u0336a\u0336/.test(menu), 'подпись закрытой игры зачёркнута');
-  ok(/Сейчас идёт набор:<\/b> CS:GO/.test(lastTo(U)), 'приветствие говорит, что идёт набор на CS:GO', lastTo(U).slice(0, 80));
+  ok(/Сейчас идёт набор:<\/b> CS2/.test(lastTo(U)), 'приветствие говорит, что идёт набор на CS2', lastTo(U).slice(0, 80));
 
   await tap(env, U, 'reg:locked:dota2');
   ok(/регистрация пока закрыта/.test(lastAnswer()), 'нажатие на закрытую игру — пояснение', lastAnswer());
