@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import { GAMES, tournamentKey, gameFrom } from '../functions/_lib/games.js';
 import { onRequestGet as getData } from '../functions/api/data.js';
 import { onRequestPost as save } from '../functions/api/save.js';
+import { onRequestGet as getSettings, onRequestPost as postSettings } from '../functions/api/settings.js';
 
 let fails = 0;
 const ok = (c, l, x) => { if (c) console.log('  ok   ' + l); else { fails++; console.log('  FAIL ' + l + (x !== undefined ? ' → ' + JSON.stringify(x) : '')); } };
@@ -56,6 +57,22 @@ r = await post({ data: { teams: [], matches: [], tournament: { name: 'x' } } });
 ok(r.status === 200, 'без game сохраняется в Dota 2 (совместимость админки)');
 r = await post({ game: 'bad', data: { teams: [] } });
 ok(r.status === 400, 'сохранение в неизвестную игру → 400');
+
+console.log('\n3. Настройки текущего турнира');
+r = await getSettings({ env, request: new Request('http://x/api/settings') });
+d = await r.json();
+ok(r.status === 200 && d.configured === false && d.current === 'dota2' && d.prize.perTeam === 1000, 'без настроек: не настроено, Dota 2, 1000 ₽ за команду', d);
+const setPost = async (body) => postSettings({ env, request: new Request('http://x/api/settings', { method: 'POST', body: JSON.stringify(body) }) });
+r = await setPost({ password: 'bad', settings: { current: 'csgo' } });
+ok(r.status === 403, 'неверный пароль → 403');
+r = await setPost({ password: 'pw', settings: { current: 'csgo', season: '2 сезон', prize: { perTeam: 1000, base: 500, note: 'x' } } });
+d = await r.json();
+ok(r.status === 200 && d.settings.current === 'csgo' && d.settings.configured === true, 'сохранение настроек');
+d = await (await getSettings({ env, request: new Request('http://x/api/settings') })).json();
+ok(d.current === 'csgo' && d.season === '2 сезон' && d.prize.base === 500 && d.configured, 'настройки читаются обратно');
+r = await setPost({ password: 'pw', settings: { current: 'nope', prize: { perTeam: -5, base: 'abc' } } });
+d = (await r.json()).settings;
+ok(d.current === 'dota2' && d.prize.perTeam === 0 && d.prize.base === 0, 'мусор приводится к допустимому', d);
 
 console.log(fails ? '\nПровалено: ' + fails : '\nвсе проверки пройдены');
 process.exit(fails ? 1 : 0);

@@ -165,6 +165,9 @@ const baseEnv = (fake = createFakeD1(), extra = {}) => ({
   ENVIRONMENT: 'development',
   LEAD_RATE_LIMIT_SEC: '300',
   LOGO_MAX_KB: '200',
+  // Старые сценарии проверяют все дисциплины и заявки без оплаты; оплата и блокировка — в разделе 18
+  ENABLED_DISCIPLINES: 'dota2,csgo,clash,brawl',
+  PAID_DISCIPLINES: '',
   DB: fake.DB,
   _db: fake._db,
   ...extra
@@ -1473,5 +1476,80 @@ console.log('\n17. Тяжёлые логотипы');
    Итог
    ============================================================ */
 globalThis.fetch = originalFetch;
+/* ============================================================
+   18. Сезон 2: только CS:GO, оплата и скриншот
+   ============================================================ */
+console.log('\n18. Блокировка дисциплин и оплата участия');
+{
+  const fake = createFakeD1();
+  const env = baseEnv(fake, {
+    ENABLED_DISCIPLINES: undefined, PAID_DISCIPLINES: undefined,
+    PAY_AMOUNT: '1000 ₽', PAY_REQUISITES: 'Сбер +7 900 000-00-00'
+  });
+  mockTelegram();
+  const U = 701;
+
+  await say(env, U, '/start');
+  const menu = markupSince(0);
+  ok(/reg:disc:csgo/.test(menu), 'CS:GO открыт');
+  ok(!/reg:disc:dota2|reg:disc:clash|reg:disc:brawl/.test(menu), 'остальные игры не запускают регистрацию');
+  ok(/reg:locked:dota2/.test(menu) && /reg:locked:clash/.test(menu) && /reg:locked:brawl/.test(menu), 'закрытые игры — кнопки-пояснения');
+  ok(/D\u0336o\u0336t\u0336a\u0336/.test(menu), 'подпись закрытой игры зачёркнута');
+  ok(/Сейчас идёт набор:<\/b> CS:GO/.test(lastTo(U)), 'приветствие говорит, что идёт набор на CS:GO', lastTo(U).slice(0, 80));
+
+  await tap(env, U, 'reg:locked:dota2');
+  ok(/регистрация пока закрыта/.test(lastAnswer()), 'нажатие на закрытую игру — пояснение', lastAnswer());
+  await tap(env, U, 'reg:disc:dota2');
+  ok(!fake._db.lastLead(), 'даже старая кнопка Dota 2 не открывает регистрацию');
+
+  await tap(env, U, 'reg:disc:csgo');
+  await tap(env, U, 'reg:type:team');
+  await say(env, U, 'Pay Squad');
+  await handleUpdate(env, photoUpdate(U, [{ file_id: 'logo', width: 800 }]));
+  for (const n of ['a1', 'a2', 'a3', 'a4', 'a5']) await say(env, U, n);
+  await tap(env, U, 'reg:confirm');
+  const lead = fake._db.lastLead();
+  ok(lead && lead.status === 'pending' && lead.discipline === 'csgo', 'заявка ушла на модерацию сразу');
+  const pay = lastTo(U);
+  ok(/оплат/i.test(pay) && /1000 ₽/.test(pay) && /Сбер \+7 900 000-00-00/.test(pay), 'сообщение с оплатой, суммой и реквизитами', pay.slice(0, 160));
+  ok(/скриншот/.test(pay) && /reg:paylater/.test(markupSince(0)), 'просит скрин, есть «Пришлю позже»');
+
+  await say(env, U, 'готово');
+  ok(/Пришли скриншот/.test(lastTo(U)), 'текст вместо скрина — подсказка, шаг не теряется');
+
+  await handleUpdate(env, photoUpdate(U, [{ file_id: 'small', width: 90 }, { file_id: 'proof-big', width: 900 }]));
+  ok(/Скрин получен/.test(lastTo(U)), 'скрин принят');
+  const saved = fake._db.lastLead();
+  ok(saved.payload.payment && saved.payload.payment.proofFileId === 'proof-big', 'file_id крупного фото записан в заявку');
+  ok(saved.payload.logo && saved.payload.players.length === 5, 'остальная заявка не повреждена записью оплаты');
+  ok(calls.some((m) => m.method === 'sendPhoto' && m.body && m.body.photo === 'proof-big' && String(m.body.chat_id) === String(ADMIN)), 'скрин переслан организатору');
+
+  await say(env, ADMIN, '/leads');
+  await tap(env, ADMIN, 'mod:view:' + saved.id);
+  ok(calls.some((m) => m.method === 'sendPhoto' && m.body && m.body.photo === 'proof-big' && /Скрин оплаты/.test(m.body.caption || '')), 'при модерации скрин показан под карточкой');
+  ok(/скрин приложен/.test(JSON.stringify(calls)), 'в карточке отмечено, что скрин есть');
+
+  // Без скрина: «Пришлю позже» и отправка позже через /my
+  const U2 = 702;
+  await tap(env, U2, 'reg:disc:csgo');
+  await tap(env, U2, 'reg:type:team');
+  await say(env, U2, 'Late Pay');
+  await handleUpdate(env, photoUpdate(U2, [{ file_id: 'logo', width: 800 }]));
+  for (const n of ['b1', 'b2', 'b3', 'b4', 'b5']) await say(env, U2, n);
+  await tap(env, U2, 'reg:confirm');
+  const late = fake._db.lastLead();
+  await tap(env, U2, 'reg:paylater');
+  ok(!(late.payload.payment), 'без скрина заявка всё равно на модерации');
+  await tap(env, U2, 'my:view:' + late.id);
+  ok(/reg:pay:/.test(markupSince(0)), 'в карточке заявки есть кнопка оплаты');
+  await tap(env, U2, 'reg:pay:' + late.id);
+  await handleUpdate(env, photoUpdate(U2, [{ file_id: 'later-proof', width: 700 }]));
+  ok(fake._db.lastLead().payload.payment.proofFileId === 'later-proof', 'скрин, присланный позже, привязан к заявке');
+
+  // Чужую заявку оплатить нельзя
+  await tap(env, 703, 'reg:pay:' + late.id);
+  ok(/недоступна/.test(lastAnswer()), 'чужая заявка недоступна для оплаты', lastAnswer());
+}
+
 console.log(`\nПройдено: ${passed}, провалено: ${failed}`);
 process.exit(failed ? 1 : 0);

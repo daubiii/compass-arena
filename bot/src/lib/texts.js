@@ -40,7 +40,7 @@ export const stepTitle = (step, total) => `<b>Шаг ${step} из ${total}</b>`;
 export const problem = (text) => `⚠️ ${text}`;
 
 /** Первое сообщение пользователю (/start): что это за бот и как участвовать */
-export const welcomeText = () => [
+export const welcomeText = (openLabels = []) => [
   '🏆 <b>Compass Arena — Регистрация открыта!</b> -',
   'Специально созданный бот для регистрации команд.',
   '',
@@ -49,9 +49,12 @@ export const welcomeText = () => [
   'Нажми /help, чтобы открыть меню бота.',
   'Выбери свою дисциплину.',
   'Зарегистрируй состав команды.',
+  'Оплати участие и пришли скриншот перевода.',
   '',
   '📞 <b>Связь для сотрудничества и вопросов:</b>',
   CONTACTS_LINES,
+  '',
+  ...(openLabels.length ? ['', `🔥 <b>Сейчас идёт набор:</b> ${openLabels.join(', ')}`, '<i>Остальные дисциплины пока закрыты.</i>'] : []),
   '',
   '👇 <b>Выбери дисциплину, чтобы начать</b>'
 ].join('\n');
@@ -60,4 +63,37 @@ export const welcomeText = () => [
 export const registrationClosedText = () => [
   '⚠️ <b>Регистрация сейчас закрыта.</b>',
   `Напиши организаторам: ${CONTACTS}`
+].join('\n');
+
+
+/* ---------- Оплата участия ---------- */
+/** Сумма и реквизиты берутся из переменных воркера PAY_AMOUNT / PAY_REQUISITES (см. wrangler.toml) */
+export function paymentBlock(env) {
+  const amount = String((env && env.PAY_AMOUNT) || '').trim();
+  const requisites = String((env && env.PAY_REQUISITES) || '').trim();
+  const lines = [];
+  if (amount) lines.push(`Сумма взноса: <b>${amount.replace(/[<>&]/g, '')}</b>`);
+  if (requisites) {
+    lines.push('Реквизиты для перевода:');
+    lines.push(`<code>${requisites.replace(/[<>&]/g, '')}</code>`);
+  } else {
+    lines.push(`Реквизиты для оплаты пришлют организаторы: ${CONTACTS}`);
+  }
+  return lines.join('\n');
+}
+
+/** Сообщение сразу после отправки заявки: оплата + просьба прислать скрин */
+export const paymentText = (env, { leadId, label, teamName }) => [
+  `✅ Заявка <code>#${leadId}</code> отправлена на модерацию.`,
+  `${label}${teamName ? ` · «${teamName}»` : ''}`,
+  '',
+  '💳 <b>Остался последний шаг — оплата участия</b>',
+  'Пожалуйста, оплатите вход на турнир:',
+  '',
+  paymentBlock(env),
+  '',
+  '📸 После перевода <b>пришли сюда скриншот</b> (именно как фото). Организатор сверит оплату и заявку, и команда попадёт в сетку.',
+  'Скрин можно отправить и позже — через /my → твоя заявка.',
+  '',
+  contactLine()
 ].join('\n');

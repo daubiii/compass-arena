@@ -26,6 +26,10 @@
     { key: 'done', label: 'Сыгранные' }
   ];
   var TICK = null;
+  var SET = null;                    /* настройка «текущий турнир» */
+  var LOCKED = false;                /* настроено → показываем только текущую дисциплину */
+
+  function ids() { return LOCKED ? [SET.current] : G.ids; }
 
   function stageKey(m) {
     if (m.bracket === 'grand' || m.id === 5) return 'grand';
@@ -36,7 +40,7 @@
   function allMatches() {
     var out = [];
     if (!ALL) return out;
-    G.ids.forEach(function (id) {
+    ids().forEach(function (id) {
       if (GAME_FILTER !== 'all' && GAME_FILTER !== id) return;
       var ds = ALL.games[id];
       if (ds) ds.matches.forEach(function (m) { out.push(m); });
@@ -71,7 +75,7 @@
   /** Ближайший идущий или предстоящий матч среди всех игр */
   function pickNext() {
     var best = null;
-    G.ids.forEach(function (id) {
+    ids().forEach(function (id) {
       var ds = ALL && ALL.games[id];
       if (!ds || ds.empty) return;
       var m = ds.liveMatch || ds.nextMatch;
@@ -85,6 +89,7 @@
   function renderGameFilters() {
     var box = document.getElementById('gameFilters');
     if (!box) return;
+    if (LOCKED) { box.hidden = true; return; }
     var items = [{ id: 'all', name: 'Все игры' }].concat(G.list.map(function (g) { return { id: g.id, name: g.short }; }));
     box.innerHTML = items.map(function (it) {
       var on = GAME_FILTER === it.id;
@@ -209,14 +214,47 @@
       : ' Рядом с каждым матчем — ваше местное время.';
   }
 
+  /* ---------- Плашка «текущий турнир»: игра, сезон, дата и отсчёт ---------- */
+  function renderCurrent() {
+    var box = document.getElementById('curTournament');
+    if (!box) return;
+    var ds = LOCKED && ALL ? ALL.games[SET.current] : null;
+    if (!ds) { box.hidden = true; return; }
+    var g = G.get(SET.current);
+    var phase = ds.phase;
+    var status = phase === 'live' ? '<span class="dot-live"></span>Турнир идёт'
+      : phase === 'post' ? 'Турнир завершён' : 'До старта';
+    box.hidden = false;
+    box.innerHTML =
+      '<span class="ct-ic">' + G.glyph(g.id) + '</span>' +
+      '<div class="ct-main"><small>Текущий турнир</small><b>' + D.esc(g.name) + (SET.season ? ' · ' + D.esc(SET.season) : '') + '</b></div>' +
+      '<div class="ct-when"><small>' + status + '</small><b class="ct-count">' +
+        (phase === 'pre' && ds.startFromServer ? '' : (ds.startFromServer ? D.esc(D.fmtDateTime(ds.tournamentStart)) : 'дата уточняется')) +
+      '</b>' + (phase === 'pre' && ds.startFromServer ? '<span class="ct-date">' + D.esc(D.fmtDateTime(ds.tournamentStart)) + '</span>' : '') + '</div>';
+    tickCurrent();
+  }
+
+  function tickCurrent() {
+    var el = document.querySelector('#curTournament .ct-count');
+    if (!el || !LOCKED || !ALL) return;
+    var ds = ALL.games[SET.current];
+    if (!ds || ds.phase !== 'pre' || !ds.startFromServer) return;
+    var diff = ds.tournamentStart - Date.now();
+    if (diff <= 0) { el.textContent = 'вот-вот начнём'; return; }
+    var d = Math.floor(diff / 86400000), h = Math.floor(diff % 86400000 / 3600000), m = Math.floor(diff % 3600000 / 60000), s = Math.floor(diff % 60000 / 1000);
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    el.textContent = d + ' д ' + p(h) + ':' + p(m) + ':' + p(s);
+  }
+
   function render() {
     NEXT = pickNext();
     var live = !!(NEXT && NEXT.state === 'live');
     var played = 0, total = 0;
-    G.ids.forEach(function (id) { var ds = ALL && ALL.games[id]; if (ds && !ds.empty) { played += ds.stats.played; total += ds.stats.matchesTotal; } });
+    ids().forEach(function (id) { var ds = ALL && ALL.games[id]; if (ds && !ds.empty) { played += ds.stats.played; total += ds.stats.matchesTotal; } });
     document.body.setAttribute('data-phase', live ? 'live' : (played && played >= total ? 'post' : 'pre'));
     /* Тема страницы: у выбранной игры — её цвета, иначе фирменные (Dota 2) */
-    G.applyTheme(GAME_FILTER === 'all' ? G.DEFAULT : GAME_FILTER);
+    G.applyTheme(LOCKED ? SET.current : (GAME_FILTER === 'all' ? G.DEFAULT : GAME_FILTER));
+    renderCurrent();
     renderGameFilters();
     renderFilters();
     renderNextCard();
@@ -262,6 +300,7 @@
     U.initChrome();
     FILTER = filterFromUrl();
     GAME_FILTER = gameFromUrl();
+    var started = false;
 
     var filters = document.getElementById('filters');
     if (filters) {
@@ -298,17 +337,24 @@
     }
 
     function refresh() {
-      return D.loadAll().then(function (all) {
+      return D.loadAll(false, LOCKED ? [SET.current] : null).then(function (all) {
         ALL = all;
         render();
         U.observeReveals();
       });
     }
-    refresh();
+
+    /* Сначала узнаём текущий турнир: остальные дисциплины на странице не нужны и не грузятся */
+    D.loadSettings().then(function (st) {
+      SET = st;
+      if (st.configured) { LOCKED = true; GAME_FILTER = st.current; }
+      started = true;
+      return refresh();
+    });
 
     if (TICK) clearInterval(TICK);
-    TICK = setInterval(tickCard, 1000);
-    setInterval(refresh, 60000);
+    TICK = setInterval(function () { tickCard(); tickCurrent(); }, 1000);
+    setInterval(function () { if (started && !document.hidden) refresh(); }, 60000);
   }
 
   CA.schedule = { init: init, render: render, setData: function (all) { ALL = all; render(); } };

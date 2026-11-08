@@ -21,6 +21,10 @@
   var BOT_URL = 'https://t.me/CompassArenaReg_bot';
   /* Текущая дисциплина: из адреса (?game=…), иначе всегда Dota 2 */
   var GAME = G ? G.fromUrl() : 'dota2';
+  /* Настройка «текущий турнир» из админки: если задана — сайт показывает только эту дисциплину */
+  var SET = null;
+  var LOCKED = false;
+  function seasonText() { return SET && SET.configured && SET.season ? SET.season : ''; }
   /** «команда/команды/команд» или «игрок/игрока/игроков» (Clash Royale) */
   function unitPlural(n) {
     return gm().solo ? D.plural(n, 'игрок', 'игрока', 'игроков') : D.plural(n, 'команда', 'команды', 'команд');
@@ -52,12 +56,14 @@
         '<a class="btn btn-live btn-lg" href="#stream">' + ic('live') + 'Смотреть эфир</a>' +
         '<a class="btn btn-ghost btn-lg" href="#bracket">' + ic('bracket') + 'Турнирная сетка</a>';
     } else {
-      kicker.innerHTML = d.empty ? ('Турнир по ' + esc(gm().name) + ' · скоро') : ('Турнир по ' + esc(gm().name) + ' · первый сезон');
+      kicker.innerHTML = d.empty ? ('Турнир по ' + esc(gm().name) + ' · ' + (seasonText() ? esc(seasonText()) + ' · скоро' : 'скоро'))
+        : ('Турнир по ' + esc(gm().name) + ' · ' + esc(seasonText() || 'первый сезон'));
       title.innerHTML = 'Здесь сражаются<br>не ради участия —<br><em>здесь доказывают</em>';
-      lede.textContent = 'Один шанс, полная концентрация и один трофей на всех. Первый турнир организации Compass Arena.';
+      lede.textContent = 'Один шанс, полная концентрация и один трофей на всех. ' +
+        (seasonText() ? seasonText() + ' организации Compass Arena.' : 'Первый турнир организации Compass Arena.');
       cta.innerHTML =
         '<a class="btn btn-gold btn-lg" href="#bracket">' + ic('bracket') + 'Турнирная сетка</a>' +
-        '<a class="btn btn-ghost btn-lg" href="#teams">' + ic('users') + 'Участники</a>';
+        (prizeVisible() ? '<a class="btn btn-ghost btn-lg" href="#prize">' + ic('trophy') + 'Призовой фонд</a>' : '<a class="btn btn-ghost btn-lg" href="#teams">' + ic('users') + 'Участники</a>');
     }
     void watch;
   }
@@ -104,7 +110,7 @@
     /* pre: отсчёт до старта */
     box.innerHTML = '<div class="cd">' +
       '<div class="cd-inner">' +
-        '<div class="cd-label">До старта турнира<b id="cdDate">' + esc(D.fmtDateTime(d.tournamentStart)) + '</b></div>' +
+        '<div class="cd-label">До старта · ' + esc(gm().name) + (seasonText() ? ' · ' + esc(seasonText()) : '') + '<b id="cdDate">' + esc(D.fmtDateTime(d.tournamentStart)) + '</b></div>' +
         '<div class="cd-nums">' +
           '<div class="cd-num"><b id="cdDays">--</b><small>дней</small></div>' +
           '<div class="cd-num"><b id="cdHours">--</b><small>часов</small></div>' +
@@ -801,6 +807,58 @@
     global.requestAnimationFrame(frame);
   }
 
+  /* ---------- Банк призовых ---------- */
+  function prizeVisible() { return !!(SET && SET.configured && SET.prize.enabled); }
+  var PRIZE_SHOWN = -1;
+
+  function countUp(el, to) {
+    var reduce = global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var from = PRIZE_SHOWN < 0 ? 0 : PRIZE_SHOWN;
+    PRIZE_SHOWN = to;
+    if (reduce || from === to || !global.requestAnimationFrame) { el.textContent = D.fmtMoney(to); return; }
+    var t0 = null, dur = 1100;
+    (function step(ts) {
+      if (t0 == null) t0 = ts;
+      var k = Math.min(1, (ts - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = D.fmtMoney(from + (to - from) * e);
+      if (k < 1) global.requestAnimationFrame(step);
+    })(global.performance && performance.now ? performance.now() : 0);
+  }
+
+  function renderPrize(d) {
+    var sec = document.getElementById('prize');
+    var navs = [document.getElementById('navPrize'), document.getElementById('menuPrize')];
+    var on = prizeVisible();
+    if (sec) sec.hidden = !on;
+    navs.forEach(function (a) { if (a) a.hidden = !on; });
+    if (!on || !sec) return;
+
+    var p = D.prize(d, SET);
+    var cap = d.bracket && Number(d.bracket.teamCount) > 0 ? Number(d.bracket.teamCount) : 0;
+    var solo = !!gm().solo;
+    var one = solo ? 'игрок' : 'команда';
+    var set = function (id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; };
+
+    set('prizeKicker', ic('trophy') + 'Призовой фонд' + (seasonText() ? ' · ' + esc(seasonText()) : ''));
+    set('prizeRule', '<b>1 ' + one + '</b><span class="eq">=</span><b class="plus">+' + esc(D.fmtMoney(p.perTeam)) + '</b><small>к призовому фонду</small>');
+    var amount = document.getElementById('prizeAmount');
+    if (amount) countUp(amount, p.total);
+    set('prizeCount', '<b>' + p.teams + '</b>' + (cap ? ' из ' + cap : '') + ' ' + esc(unitPlural(p.teams)) + ' в сетке');
+    var fill = document.getElementById('prizeFill');
+    if (fill) fill.style.width = (cap ? Math.min(100, p.teams / cap * 100) : Math.min(100, p.teams / 16 * 100)).toFixed(1) + '%';
+    set('prizeBase', p.base > 0 ? 'Стартовый фонд: ' + esc(D.fmtMoney(p.base)) + ' + ' + p.teams + ' × ' + esc(D.fmtMoney(p.perTeam)) : '');
+
+    var marks = [4, 8, 16];
+    if (cap && marks.indexOf(cap) < 0) marks.push(cap);
+    marks.sort(function (a, b) { return a - b; });
+    set('prizeLadder', marks.map(function (n) {
+      var reached = p.teams >= n;
+      return '<div class="pz-step' + (reached ? ' is-hit' : '') + '"><small>' + n + ' ' + esc(unitPlural(n)) + '</small><b>' +
+        esc(D.fmtMoney(p.base + n * p.perTeam)) + '</b></div>';
+    }).join(''));
+    set('prizeNote', p.note ? esc(p.note) : '');
+  }
+
   /* ---------- Дисциплины: переключатель, тема, тексты ---------- */
   function renderGameChrome() {
     var g = gm();
@@ -868,8 +926,9 @@
     }).join('');
   }
 
-  function setUrlGame(id) {
+  function setUrlGame(id, clean) {
     try {
+      if (clean) { history.replaceState(null, '', location.pathname + location.hash); return; }
       var url = location.pathname + (id === 'dota2' ? '' : '?game=' + id) + location.hash;
       history.replaceState(null, '', url);
     } catch (e) { /* адрес не обновился — не критично */ }
@@ -896,6 +955,7 @@
   function initGameBar() {
     var bar = document.getElementById('gameBar');
     if (!bar || !G) return;
+    if (LOCKED) { document.body.classList.add('is-locked'); return; }   /* показываем только текущий турнир */
     renderGameBar();
     bar.addEventListener('click', function (e) {
       var btn = e.target.closest ? e.target.closest('[data-game]') : null;
@@ -916,6 +976,7 @@
     document.body.setAttribute('data-empty', d.empty ? '1' : '0');
     renderGameChrome();
     renderHero(d);
+    renderPrize(d);
     if (d.empty) { renderEmpty(d); return; }
     renderHeroStatus(d);
     renderChampion(d);
@@ -945,10 +1006,6 @@
     initBracketExpand();
     initDust();
     initStreamPlayer();
-    initGameBar();
-    D.setGame(GAME);
-    if (G) G.applyTheme(GAME);
-
     var toggle = document.getElementById('streamToggle');
     if (toggle) {
       toggle.addEventListener('click', function () {
@@ -959,7 +1016,15 @@
       });
     }
 
-    D.load(GAME).then(function (d) {
+    /* Сначала узнаём, какой турнир текущий, и только его грузим */
+    D.loadSettings().then(function (st) {
+      SET = st;
+      if (st.configured) { LOCKED = true; GAME = st.current; setUrlGame(GAME, true); }
+      initGameBar();
+      D.setGame(GAME);
+      if (G) G.applyTheme(GAME);
+      return D.load(GAME);
+    }).then(function (d) {
       render(d);
       U.observeReveals();
     });

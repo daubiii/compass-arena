@@ -669,8 +669,8 @@
   }
 
   /** Все дисциплины сразу (расписание, архив): { games: {id: D}, history } — текущее состояние не трогает */
-  function loadAll(withHistory) {
-    var ids = (CA.games && CA.games.ids) || ['dota2'];
+  function loadAll(withHistory, only) {
+    var ids = (only && only.length) ? only : ((CA.games && CA.games.ids) || ['dota2']);
     return Promise.all(ids.map(function (id, i) {
       /* Архив общий для всех игр — запрашиваем его один раз (у первой), остальным он не нужен */
       return fetchRaw(id, true, !(withHistory && i === 0))
@@ -685,6 +685,46 @@
       });
       return { games: games, history: history };
     });
+  }
+
+  /* ---------- Текущий турнир (общая настройка из админки) ---------- */
+  var SETTINGS_P = null;
+  function cleanSettings(raw) {
+    var s = raw && typeof raw === 'object' ? raw : {};
+    var p = s.prize && typeof s.prize === 'object' ? s.prize : {};
+    var num = function (v, d) { v = Math.round(Number(v)); return isFinite(v) && v >= 0 ? v : d; };
+    return {
+      configured: !!s.configured,
+      current: (CA.games && CA.games.isGame(s.current)) ? s.current : 'dota2',
+      season: String(s.season || ''),
+      prize: { enabled: p.enabled !== false, perTeam: num(p.perTeam, 1000), base: num(p.base, 0), note: String(p.note || '') }
+    };
+  }
+  /** Настройки грузятся один раз за страницу; при ошибке сайт работает как раньше (все игры) */
+  function loadSettings(force) {
+    if (!SETTINGS_P || force) {
+      SETTINGS_P = fetch('/api/settings', { cache: 'no-store' })
+        .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+        .then(cleanSettings)
+        .catch(function () { return cleanSettings(null); });
+    }
+    return SETTINGS_P;
+  }
+  /** Банк призовых: «подтверждённые» команды сетки × сумма за команду + стартовая сумма */
+  function prize(ds, settings) {
+    var st = settings || cleanSettings(null);
+    var teams = ds && ds.realTeams ? ds.realTeams.length : 0;
+    return {
+      enabled: st.prize.enabled,
+      teams: teams,
+      perTeam: st.prize.perTeam,
+      base: st.prize.base,
+      total: st.prize.base + teams * st.prize.perTeam,
+      note: st.prize.note
+    };
+  }
+  function fmtMoney(n) {
+    return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + '\u00a0\u20bd';
   }
 
   /** Выполняет fn так, будто текущий набор данных — ds (для матча из другой дисциплины) */
@@ -717,6 +757,9 @@
     get: get,
     load: load,
     loadAll: loadAll,
+    loadSettings: loadSettings,
+    prize: prize,
+    fmtMoney: fmtMoney,
     using: using,
     setGame: setGame,
     game: getGame,

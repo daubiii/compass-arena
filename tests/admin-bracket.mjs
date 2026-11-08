@@ -102,6 +102,7 @@ console.log('\nA. Генерация Single Elimination на 8 команд');
   ok(state.saves.length > 0, 'сетка сохранена через /api/save');
   ok(!!state.data.bracket, 'в KV ушли настройки сетки');
 
+  w.document.querySelector('.tab[data-tab="matches"]').click();   // вкладки рисуются при открытии, а не все сразу
   const cards = w.document.querySelectorAll('#matchList .match-item');
   ok(cards.length === 7, 'во вкладке «Матчи» семь карточек', cards.length);
   ok(/Полуфинал верхней|Верхняя · раунд|Финал верхней/.test(w.document.getElementById('matchList').textContent),
@@ -180,6 +181,7 @@ console.log('\nC. Double Elimination на 6 команд с гранд-фина�
   ok(matches.filter((m) => m.bracket === 'grand').length === 2, 'гранд-финал + сброс: 2 матча', matches.filter((m) => m.bracket === 'grand').length);
   ok(w.DATA.bracket.grandFinal === 'double', 'в настройках «до двух поражений»');
   ok(w.DATA.bracket.byes === 2, 'в настройках отмечены два BYE', w.DATA.bracket.byes);
+  w.document.querySelector('.tab[data-tab="matches"]').click();
   const html = w.document.getElementById('matchList').textContent;
   ok(/BYE/.test(html), 'пустые слоты подписаны как BYE');
 }
