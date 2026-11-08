@@ -17,17 +17,18 @@
 
 import {
   sendMessage, editMessageText, answerCallbackQuery, sendChatAction,
-  inlineKeyboard, notifyAdmins, getPhotoDataUrl
+  inlineKeyboard, notifyAdmins, getPhotoDataUrl, sendPhoto, adminIds
 } from '../lib/telegram.js';
 import {
   getState, setState, resetState, createLead, canSubmitLead,
-  findPendingTeamByName, findPendingLeadOfType, isRegistrationOpen
+  findPendingTeamByName, findPendingLeadOfType, isRegistrationOpen, getLead, setLeadPayment
 } from '../lib/db.js';
 import { esc, clean, isNick, isTeamName, plural } from '../lib/esc.js';
 import {
-  DISCIPLINES, disciplineLabel, roleByKey, rolesOf, teamSizeOf, hasRoles, soloRole, sizeLabel, isSolo
+  DISCIPLINES, disciplineLabel, roleByKey, rolesOf, teamSizeOf, hasRoles, soloRole, sizeLabel, isSolo,
+  isDisciplineOpen, paymentRequired
 } from '../lib/domain.js';
-import { CANCEL_HINT, CONTACTS, contactsBlock, problem, stepTitle } from '../lib/texts.js';
+import { CANCEL_HINT, CONTACTS, contactsBlock, problem, stepTitle, paymentText } from '../lib/texts.js';
 import { showMainMenu } from './start.js';
 
 /** /skip нужен на необязательных шагах (логотип, ранг, описание, название команды игрока) */
@@ -56,7 +57,8 @@ const STEP = {
   AGENT_NOTE: 'agent_note',
   PLAYER_NICK: 'player_nick',
   PLAYER_TEAM: 'player_team',
-  PLAYER_ROLE: 'player_role'
+  PLAYER_ROLE: 'player_role',
+  PAYMENT: 'payment_proof'
 };
 
 /** Шаги, которые обслуживает этот обработчик (чужие шаги игнорируем) */
@@ -579,6 +581,9 @@ export async function handleCallback(env, query, ctx) {
   try {
     switch (action) {
       case 'disc': return await onDiscipline(env, query, ctx, params[0]);
+      case 'locked': return await onLocked(env, query, params[0]);
+      case 'pay': return await onPay(env, query, ctx, params[0]);
+      case 'paylater': return await onPayLater(env, query, ctx);
       case 'type': return await onType(env, query, ctx, params[0]);
       case 'role': return await onRole(env, query, ctx, params[0]);
       case 'skip': return await onSkipButton(env, query, ctx, params[0]);
@@ -602,6 +607,7 @@ async function onDiscipline(env, query, ctx, discipline) {
     await answerCallbackQuery(env, query.id, { text: 'Неизвестная дисциплина', showAlert: true });
     return true;
   }
+  if (!isDisciplineOpen(env, discipline)) return onLocked(env, query, discipline);
   if (!(await isRegistrationOpen(env))) {
     await answerCallbackQuery(env, query.id, { text: 'Регистрация сейчас закрыта', showAlert: true });
     return true;
@@ -611,6 +617,77 @@ async function onDiscipline(env, query, ctx, discipline) {
   if (isSolo(discipline)) return startSolo(env, ctx, discipline);
   await setState(env, ctx.userId, STEP.TYPE, { discipline, type: null });
   await replace(env, ctx, screenType(discipline));
+  return true;
+}
+
+/** Нажатие на закрытую дисциплину: только пояснение, шаг диалога не меняется */
+async function onLocked(env, query, discipline) {
+  const label = DISCIPLINES[discipline] ? DISCIPLINES[discipline].label : 'Эта дисциплина';
+  await answerCallbackQuery(env, query.id, {
+    text: `${label}: регистрация пока закрыта. Сейчас идёт набор на CS:GO.`,
+    showAlert: true
+  });
+  return true;
+}
+
+/* ---------- Оплата участия ---------- */
+function screenPayment(env, lead) {
+  const p = lead.payload || {};
+  return {
+    text: paymentText(env, { leadId: lead.id, label: esc(disciplineLabel(lead.discipline)), teamName: p.name ? esc(p.name) : '' }),
+    keyboard: kb([[{ text: '⏰ Пришлю позже', data: 'reg:paylater' }], menuRow])
+  };
+}
+
+/** Кнопка «Отправить скрин оплаты» в карточке заявки (/my) */
+async function onPay(env, query, ctx, rawId) {
+  const id = Number(rawId);
+  const lead = Number.isInteger(id) && id > 0 ? await getLead(env, id) : null;
+  if (!lead || lead.telegram_id !== ctx.userId || lead.status !== 'pending' || !paymentRequired(env, lead.discipline)) {
+    await answerCallbackQuery(env, query.id, { text: 'Эта заявка недоступна для оплаты', showAlert: true });
+    return true;
+  }
+  await answerCallbackQuery(env, query.id);
+  await setState(env, ctx.userId, STEP.PAYMENT, { leadId: lead.id, discipline: lead.discipline });
+  await send(env, ctx, screenPayment(env, lead));
+  return true;
+}
+
+async function onPayLater(env, query, ctx) {
+  await answerCallbackQuery(env, query.id, { text: 'Хорошо, скрин можно прислать через /my' });
+  await resetState(env, ctx.userId);
+  await showMainMenu(env, ctx.chatId, ctx.userId, 'Заявка на модерации. Не забудь про оплату — скрин можно прислать в любой момент через /my.');
+  return true;
+}
+
+/** Фото в шаге оплаты: сохраняем file_id к заявке и пересылаем организаторам */
+async function onPaymentPhoto(env, message, ctx, temp) {
+  const lead = await getLead(env, Number(temp.leadId));
+  if (!lead || lead.telegram_id !== ctx.userId || lead.status !== 'pending') {
+    await resetState(env, ctx.userId);
+    await sendMessage(env, ctx.chatId, problem('Заявка уже обработана или не найдена.'), { keyboard: kb([menuRow]) });
+    return true;
+  }
+  const sizes = Array.isArray(message.photo) ? message.photo : [];
+  const best = sizes[sizes.length - 1];
+  if (!best || !best.file_id) {
+    await sendMessage(env, ctx.chatId, problem('Не вижу фото. Пришли скриншот как картинку.'), { keyboard: kb([menuRow]) });
+    return true;
+  }
+  const saved = await setLeadPayment(env, lead.id, ctx.userId, { proofFileId: best.file_id, at: new Date().toISOString() });
+  await resetState(env, ctx.userId);
+  if (!saved) {
+    await sendMessage(env, ctx.chatId, problem('Не удалось сохранить скрин. Попробуй ещё раз через /my.'), { keyboard: kb([menuRow]) });
+    return true;
+  }
+  await sendMessage(env, ctx.chatId,
+    `📸 Скрин получен — заявка <code>#${lead.id}</code>. Организатор сверит оплату и состав.\nРешение придёт в этот чат.`,
+    { keyboard: kb([[{ text: '📋 Мои заявки', data: 'my:list' }], menuRow]) }
+  );
+  const caption = `💳 <b>Скрин оплаты</b> · заявка <code>#${lead.id}</code>\n${esc(disciplineLabel(lead.discipline))} · ${esc((lead.payload && lead.payload.name) || '')}`;
+  for (const adminId of adminIds(env)) {
+    try { await sendPhoto(env, adminId, best.file_id, { caption }); } catch (err) { console.warn('[reg] скрин не доставлен админу', adminId, err && err.message); }
+  }
   return true;
 }
 
@@ -846,12 +923,18 @@ async function onConfirm(env, query, ctx) {
   await answerCallbackQuery(env, query.id, { text: 'Заявка отправлена' });
   await resetState(env, ctx.userId);
 
-  await sendMessage(env, ctx.chatId,
-    `Заявка <code>#${leadId}</code> отправлена на модерацию.\n` +
-    `Дисциплина: ${esc(disciplineLabel(temp.discipline))}\n\n` +
-    'Решение придёт в этот чат. Статус можно посмотреть в /my.\n' + contactsBlock(),
-    { keyboard: kb([menuRow]) }
-  );
+  if (paymentRequired(env, temp.discipline)) {
+    // Сразу просим оплату и скрин; ждём фото в этом шаге (заявка при этом уже ушла на модерацию)
+    await setState(env, ctx.userId, STEP.PAYMENT, { leadId, discipline: temp.discipline });
+    await send(env, ctx, screenPayment(env, { id: leadId, discipline: temp.discipline, payload }));
+  } else {
+    await sendMessage(env, ctx.chatId,
+      `Заявка <code>#${leadId}</code> отправлена на модерацию.\n` +
+      `Дисциплина: ${esc(disciplineLabel(temp.discipline))}\n\n` +
+      'Решение придёт в этот чат. Статус можно посмотреть в /my.\n' + contactsBlock(),
+      { keyboard: kb([menuRow]) }
+    );
+  }
 
   await notifyAdmins(env,
     `📥 <b>Новая заявка на команду</b>\n` +
@@ -1067,6 +1150,12 @@ export async function handleText(env, message, ctx) {
     case STEP.AGENT_NOTE: return onAgentNote(env, ctx, temp, value);
     case STEP.PLAYER_NICK: return onPlayerNickInput(env, ctx, temp, value);
     case STEP.PLAYER_TEAM: return onPlayerTeam(env, ctx, temp, value);
+    case STEP.PAYMENT:
+      await sendMessage(env, ctx.chatId,
+        '📸 Пришли скриншот перевода как фото. Если оплатишь позже — нажми «Пришлю позже» выше или /cancel.',
+        { keyboard: kb([[{ text: '⏰ Пришлю позже', data: 'reg:paylater' }], menuRow]) }
+      );
+      return true;
     default:
       // Шаг кнопочный: подсказываем, но прогресс не сбрасываем
       await sendMessage(env, ctx.chatId,
@@ -1352,6 +1441,7 @@ export async function handlePhoto(env, message, ctx) {
   const temp = state.temp || {};
   const editingLogo = state.step === STEP.TEAM_EDIT_FIELD && temp.editField === 'logo';
 
+  if (state.step === STEP.PAYMENT) return onPaymentPhoto(env, message, ctx, temp);
   if (state.step !== STEP.TEAM_LOGO && !editingLogo) return false;
 
   await sendChatAction(env, ctx.chatId, 'upload_photo');

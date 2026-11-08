@@ -223,6 +223,20 @@ export function createFakeD1(seed = {}) {
         return rows(list.slice(offset, offset + limit).map(parseRow));
       }
     },
+    // leads: скриншот оплаты (json_set прямо в SQLite)
+    {
+      test: /^UPDATE leads SET payload = json_set\(payload, '\$\.payment'/,
+      run: (p) => {
+        const [json, id, telegramId] = p;
+        const row = db.leads.find((r) => r.id === id && r.telegram_id === telegramId && r.status === 'pending');
+        if (!row) return ok({ changes: 0 });
+        const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : { ...row.payload };
+        payload.payment = JSON.parse(json);
+        row.payload = typeof row.payload === 'string' ? JSON.stringify(payload) : payload;
+        row.updated_at = nowSql();
+        return ok({ changes: 1 });
+      }
+    },
     // leads: заявка автора отозвана
     {
       test: /^UPDATE leads SET status = 'withdrawn'/,

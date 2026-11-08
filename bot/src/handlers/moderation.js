@@ -19,7 +19,7 @@
    ============================================================ */
 
 import {
-  sendMessage, answerCallbackQuery, editMessageReplyMarkup, inlineKeyboard
+  sendMessage, answerCallbackQuery, editMessageReplyMarkup, inlineKeyboard, sendPhoto
 } from '../lib/telegram.js';
 import {
   getState, setState, resetState, countLeads, pendingBreakdown,
@@ -417,6 +417,7 @@ function leadCard(lead, author) {
     lines.push(`Название: ${esc(p.name || '—')}`);
     lines.push(`Логотип: ${p.logo ? (p.logoOversized ? 'больше лимита' : 'загружен') : 'нет'}`);
     lines.push(`Капитан: ${esc(p.captainNick || '—')}`);
+    lines.push(`Оплата: ${p.payment && p.payment.proofFileId ? '💳 скрин приложен (ниже)' : '⚠️ скрина нет'}`);
     lines.push('');
     const players = p.players || [];
     if (players.length) {
@@ -481,9 +482,20 @@ async function sendCard(env, ctx, lead, { note = null, backToList = null } = {})
       caption: text,
       keyboard
     });
-    if (sent) return;
+    if (!sent) await screen(env, ctx, text, keyboard);
+  } else {
+    await screen(env, ctx, text, keyboard);
   }
-  await screen(env, ctx, text, keyboard);
+
+  // Скриншот оплаты — отдельным сообщением под карточкой (file_id Telegram, в базе только он)
+  const proof = lead.payload && lead.payload.payment && lead.payload.payment.proofFileId;
+  if (proof) {
+    try {
+      await sendPhoto(env, ctx.chatId, proof, { caption: `💳 Скрин оплаты · заявка <code>#${lead.id}</code>` });
+    } catch (err) {
+      console.warn('[mod] не удалось показать скрин оплаты:', err && err.message);
+    }
+  }
 }
 
 /** Уведомление автору заявки (ошибка доставки не ломает модерацию) */

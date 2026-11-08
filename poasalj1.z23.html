@@ -233,7 +233,7 @@
     .admin-games button.active { color:var(--gc); border-color:var(--gc); background:rgba(255,255,255,.04); box-shadow:0 0 0 1px var(--gc) inset; }
     .admin-games .ag-note { flex-basis:100%; font-size:12px; color:#5f6773; }
 </style>
-<script src="/assets/ca-bracket-engine.js?v=35fb986"></script>
+<script src="/assets/ca-bracket-engine.js?v=5eb21d8"></script>
 </head>
 <body>
 
@@ -380,6 +380,29 @@
     </div>
 
     <div class="tab-content" id="tab-settings">
+        <div class="card" id="currentCard">
+            <div class="card-header"><h3>🎯 Текущий турнир</h3><span id="curStatus" style="color:#5f6773;font-size:12px;"></span></div>
+            <p class="hint" style="margin-bottom:12px;">
+                Главная настройка сайта. Сайт показывает <b>только</b> выбранную дисциплину: её сетку, участников, расписание и отсчёт до старта.
+                Остальные игры не отображаются и не загружаются. Дата старта берётся из «Старт турнира» этой дисциплины (ниже).
+                Пока настройка не сохранена, сайт работает по-старому (все игры).
+            </p>
+            <div class="form-row">
+                <div class="form-group"><label>Дисциплина</label><select id="curGame"></select></div>
+                <div class="form-group"><label>Название сезона</label><input type="text" id="curSeason" maxlength="40" placeholder="2 сезон"></div>
+            </div>
+            <div class="toggle-row">
+                <input type="checkbox" id="curPrizeOn" checked>
+                <label for="curPrizeOn">Показывать банк призовых</label>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>За каждую команду, ₽</label><input type="number" id="curPerTeam" min="0" step="100" value="1000"></div>
+                <div class="form-group"><label>Стартовая сумма, ₽</label><input type="number" id="curBase" min="0" step="100" value="0"></div>
+            </div>
+            <div class="form-group"><label>Пояснение под банком (необязательно)</label><input type="text" id="curPrizeNote" maxlength="300" placeholder="Например: как будет распределён фонд"></div>
+            <p class="hint" id="curPreview"></p>
+            <button class="btn btn-primary" style="margin-top:10px;" onclick="saveCurrent()">💾 Сохранить текущий турнир</button>
+        </div>
         <div class="card">
             <div class="card-header"><h3>⚙️ Общие настройки</h3></div>
             <div class="form-row three">
@@ -866,7 +889,8 @@ var HISTORY_SNAPSHOT = '[]';   /* архив в момент загрузки: �
 var LAST_LOAD_FAILED = false;
 
 function loadData() {
-    return fetch('/api/data?game=' + encodeURIComponent(GAME), { cache: 'no-store' })
+    /* nocache=1: админка всегда читает свежие данные, а не копию с края (иначе можно сохранить устаревшее) */
+    return fetch('/api/data?game=' + encodeURIComponent(GAME) + '&nocache=1', { cache: 'no-store' })
         .then(function(res) {
             if (!res.ok) throw new Error('bad response');
             return res.json();
@@ -1264,11 +1288,15 @@ function renderEverything() {
         } catch(e) {}
     }
 
+    /* Рисуем только открытую вкладку: остальные перерисуются при переключении (обработчик вкладок ниже).
+       Раньше каждое сохранение пересобирало историю с фото и все списки, даже скрытые. */
     renderTeams();
-    renderMatches();
-    renderSchedule();
-    renderHistory();
-    renderAgents();
+    var activeBtn = document.querySelector('.tab.active');
+    var activeTab = activeBtn ? activeBtn.dataset.tab : 'teams';
+    if (activeTab === 'matches') renderMatches();
+    else if (activeTab === 'schedule') renderSchedule();
+    else if (activeTab === 'history') renderHistory();
+    else if (activeTab === 'agents') renderAgents();
     renderTeamsArchiveStatus();
 }
 
@@ -2737,6 +2765,68 @@ function setSchedule(matchId, time) {
     showToast('🕐 Время матча M' + matchId + ' сохранено');
 }
 
+/* ---------- Текущий турнир (общая настройка сайта) ---------- */
+var CUR = null;
+
+function loadCurrent() {
+    return fetch('/api/settings?nocache=1', { cache: 'no-store' })
+        .then(function(res) { if (!res.ok) throw new Error('bad'); return res.json(); })
+        .then(function(s) { CUR = s; renderCurrent(); })
+        .catch(function() {
+            var el = document.getElementById('curStatus');
+            if (el) el.textContent = '⚠️ не удалось загрузить';
+        });
+}
+
+function renderCurrent() {
+    var sel = document.getElementById('curGame');
+    if (!sel || !CUR) return;
+    sel.innerHTML = Object.keys(ADMIN_GAMES).map(function(id) {
+        return '<option value="' + id + '"' + (id === CUR.current ? ' selected' : '') + '>' + ADMIN_GAMES[id].name + '</option>';
+    }).join('');
+    document.getElementById('curSeason').value = CUR.season || '';
+    document.getElementById('curPrizeOn').checked = !!CUR.prize.enabled;
+    document.getElementById('curPerTeam').value = CUR.prize.perTeam;
+    document.getElementById('curBase').value = CUR.prize.base;
+    document.getElementById('curPrizeNote').value = CUR.prize.note || '';
+    var st = document.getElementById('curStatus');
+    if (st) st.textContent = CUR.configured ? '✅ сайт показывает: ' + ADMIN_GAMES[CUR.current].name : '⚠️ не настроено — сайт показывает все игры';
+    var pv = document.getElementById('curPreview');
+    if (pv) {
+        var teams = (DATA && DATA.teams ? DATA.teams : []).filter(function(t) { return t && t.name && !/^Слот\s*\d+$/i.test(String(t.name).trim()); }).length;
+        pv.textContent = 'В «' + ADMIN_GAMES[GAME].name + '» сейчас команд: ' + teams + ' → банк ' + (CUR.prize.base + teams * CUR.prize.perTeam).toLocaleString('ru-RU') + ' ₽ (по сохранённым настройкам).';
+    }
+}
+
+function saveCurrent() {
+    var pw = ensurePassword();
+    var settings = {
+        current: document.getElementById('curGame').value,
+        season: document.getElementById('curSeason').value.trim(),
+        prize: {
+            enabled: document.getElementById('curPrizeOn').checked,
+            perTeam: Number(document.getElementById('curPerTeam').value) || 0,
+            base: Number(document.getElementById('curBase').value) || 0,
+            note: document.getElementById('curPrizeNote').value.trim()
+        }
+    };
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw, settings: settings })
+    }).then(function(res) {
+        if (res.status === 403 || res.status === 429) { ADMIN_PW = null; throw new Error(res.status === 429 ? 'Слишком много попыток, подождите' : 'Неверный пароль'); }
+        if (!res.ok) throw new Error('Ошибка сервера ' + res.status);
+        return res.json();
+    }).then(function(r) {
+        CUR = r.settings;
+        renderCurrent();
+        showToast('🎯 Текущий турнир сохранён: ' + ADMIN_GAMES[CUR.current].name);
+    }).catch(function(err) {
+        showToast('⛔ ' + (err && err.message ? err.message : 'Не удалось сохранить'));
+    });
+}
+
 function saveSettings() {
     var name = document.getElementById('settingsName').value.trim();
     var game = document.getElementById('settingsGame').value.trim();
@@ -3543,6 +3633,7 @@ window.renderAgents = renderAgents;
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 loadData().then(renderEverything);
+loadCurrent();
 
 console.log('✅ Admin panel loaded (+ history, MVP, photos, bracket engine)');
 </script>

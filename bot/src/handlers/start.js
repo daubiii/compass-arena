@@ -7,7 +7,7 @@
 
 import { sendMessage, answerCallbackQuery, inlineKeyboard } from '../lib/telegram.js';
 import { resetState, isRegistrationOpen, getState } from '../lib/db.js';
-import { DISCIPLINES, DISCIPLINE_KEYS } from '../lib/domain.js';
+import { DISCIPLINES, DISCIPLINE_KEYS, isDisciplineOpen, strike } from '../lib/domain.js';
 import { contactsBlock, registrationClosedText, welcomeText } from '../lib/texts.js';
 
 export const commands = ['start', 'help', 'cancel'];
@@ -34,14 +34,15 @@ export async function showMainMenu(env, chatId, userId, intro = '') {
     return;
   }
 
-  const rows = DISCIPLINE_KEYS.map((key) => ([{
-    text: `${DISCIPLINES[key].emoji} ${DISCIPLINES[key].label}`,
-    data: `reg:disc:${key}`
-  }]));
+  /* Закрытые дисциплины видны, но серые и зачёркнутые: нажатие даёт только пояснение */
+  const openKeys = DISCIPLINE_KEYS.filter((key) => isDisciplineOpen(env, key));
+  const rows = DISCIPLINE_KEYS.map((key) => ([isDisciplineOpen(env, key)
+    ? { text: `${DISCIPLINES[key].emoji} ${DISCIPLINES[key].label}`, data: `reg:disc:${key}` }
+    : { text: `🔒 ${strike(DISCIPLINES[key].label)}`, data: `reg:locked:${key}` }]));
   rows.push([{ text: '📋 Мои заявки', data: 'my:list' }, { text: '❓ FAQ', data: 'faq:menu' }]);
 
   // Полный текст приветствия живёт в texts.js — здесь только подстановка
-  const text = [intro, welcomeText()].filter(Boolean).join('\n\n');
+  const text = [intro, welcomeText(openKeys.map((key) => DISCIPLINES[key].label))].filter(Boolean).join('\n\n');
   await sendMessage(env, chatId, text, { keyboard: inlineKeyboard(rows) });
 }
 

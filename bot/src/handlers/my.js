@@ -15,7 +15,7 @@ import { sendMessage, answerCallbackQuery, inlineKeyboard } from '../lib/telegra
 import { listLeads, getLead, withdrawLead, getState, sqliteTimeToDate } from '../lib/db.js';
 import { esc, truncate } from '../lib/esc.js';
 import {
-  disciplineLabel, leadTypeLabel, leadStatusLabel, leadStatusIcon
+  disciplineLabel, leadTypeLabel, leadStatusLabel, leadStatusIcon, paymentRequired
 } from '../lib/domain.js';
 import { CONTACTS, SITE_URL, contactsBlock } from '../lib/texts.js';
 import { screen } from '../lib/ui.js';
@@ -83,6 +83,7 @@ function leadDetails(lead) {
   if (lead.type === 'team') {
     out.push(`Команда: <b>${esc(p.name || '—')}</b>`);
     if (p.captainNick) out.push(`Капитан: ${esc(p.captainNick)}`);
+    out.push(`Оплата: ${p.payment && p.payment.proofFileId ? '📸 скрин отправлен' : '⏳ ждём скриншот перевода'}`);
     const players = Array.isArray(p.players) ? p.players : [];
     players.forEach((pl, i) => out.push(`  ${i + 1}. ${esc(pl.nick)} — ${esc(pl.roleLabel || pl.role || '')}`));
   } else if (lead.type === 'free_agent') {
@@ -126,6 +127,10 @@ async function showLead(env, ctx, lead) {
   ];
 
   const rows = [];
+  if (lead.status === 'pending' && lead.type === 'team' && paymentRequired(env, lead.discipline)) {
+    const sent = lead.payload && lead.payload.payment && lead.payload.payment.proofFileId;
+    rows.push([{ text: sent ? '💳 Отправить другой скрин' : '💳 Оплатить и прислать скрин', data: `reg:pay:${lead.id}` }]);
+  }
   if (lead.status === 'pending') rows.push([{ text: '🗑 Отозвать заявку', data: `my:wd:${lead.id}` }]);
   if (lead.status === 'rejected' || lead.status === 'withdrawn') {
     rows.push([{ text: '🔁 Подать заново', data: `reg:disc:${lead.discipline}` }]);

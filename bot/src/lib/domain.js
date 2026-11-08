@@ -156,3 +156,35 @@ export function leadStatusIcon(status) {
   if (status === 'withdrawn') return '↩️';
   return '•';
 }
+
+
+/* ============================================================
+   Доступные дисциплины и оплата
+   ------------------------------------------------------------
+   Сезон 2 — только CS:GO. Остальные игры в боте видны, но недоступны
+   (серые, зачёркнутые). Список можно переопределить переменной
+   ENABLED_DISCIPLINES (через запятую, например «csgo,dota2»).
+   ============================================================ */
+export const DEFAULT_OPEN_DISCIPLINES = ['csgo'];
+
+export function openDisciplines(env) {
+  const raw = env && env.ENABLED_DISCIPLINES;
+  if (raw == null || String(raw).trim() === '') return DEFAULT_OPEN_DISCIPLINES.slice();
+  return String(raw).split(',').map((x) => x.trim().toLowerCase()).filter(isDiscipline);
+}
+
+export function isDisciplineOpen(env, key) {
+  return openDisciplines(env).includes(String(key || ''));
+}
+
+/** «CS:GO» → «C̶S̶:̶G̶O̶» — кнопку Telegram нельзя отключить, поэтому зачёркиваем подпись */
+export function strike(text) {
+  return Array.from(String(text || '')).map((ch) => (ch === ' ' ? ch : ch + '\u0336')).join('');
+}
+
+/** Оплата участия: по умолчанию в открытых дисциплинах; PAID_DISCIPLINES (список, можно пустой) переопределяет */
+export function paymentRequired(env, discipline) {
+  const raw = env && env.PAID_DISCIPLINES;
+  if (raw == null) return isDisciplineOpen(env, discipline);
+  return String(raw).split(',').map((x) => x.trim().toLowerCase()).includes(String(discipline || ''));
+}

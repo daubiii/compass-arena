@@ -172,5 +172,60 @@ console.log('\nrules.html / 404.html');
   ok(d.querySelectorAll('.err-actions a').length === 3, 'ссылки на 404');
 }
 
+/* ---------------- текущий турнир: настройка из админки ---------------- */
+function makeConfigured(file, scripts, settings, teamsByGame) {
+  const seen = [];
+  const dom = makeDom(file, PRE, ['ca-games.js']);   /* страница + реестр игр, остальное подключим ниже */
+  const w = dom.window;
+  w.fetch = async (u) => {
+    u = String(u); seen.push(u);
+    if (u.indexOf('/api/settings') >= 0) return { ok: true, json: async () => settings };
+    const g = (u.match(/game=(\w+)/) || [])[1] || 'dota2';
+    return { ok: true, json: async () => ({ game: g, teams: teamsByGame[g] || [], matches: [], tournamentStart: new Date(Date.now() + 5 * 86400000).toISOString() }) };
+  };
+  for (const f of scripts) w.eval(read('assets/' + f));
+  return { dom, seen };
+}
+const cfg = { configured: true, current: 'csgo', season: '2 сезон', prize: { enabled: true, perTeam: 1000, base: 500, note: 'Пояснение' } };
+const six = [1, 2, 3, 4, 5, 6].map((i) => ({ id: i, name: 'Vitality' + i, players: [] }));
+
+console.log('\nindex.html — настроен текущий турнир (CS:GO)');
+{
+  const { dom, seen } = makeConfigured('index.html', HOME, cfg, { csgo: six });
+  await sleep(1500);   /* число в банке набегает ~1,1 с */
+  const d = dom.window.document;
+  ok(seen.filter((u) => u.indexOf('/api/data') >= 0).every((u) => u.indexOf('game=csgo') >= 0) && seen.some((u) => u.indexOf('/api/data') >= 0), 'грузится только CS:GO', seen.join(' '));
+  ok(d.documentElement.getAttribute('data-game') === 'csgo', 'тема CS:GO');
+  ok(d.body.classList.contains('is-locked'), 'переключатель дисциплин скрыт');
+  ok(d.getElementById('gameBar').children.length === 0, 'вкладки игр не отрисованы');
+  ok(d.getElementById('prize').hidden === false, 'банк призовых показан');
+  ok(d.getElementById('navPrize').hidden === false, 'пункт «Призовые» в меню');
+  ok(d.getElementById('prizeAmount').textContent.replace(/\s/g, '').indexOf('6500') === 0, 'банк = 500 + 6 × 1000', d.getElementById('prizeAmount').textContent);
+  ok(d.getElementById('prizeRule').textContent.indexOf('1\u00a0000') >= 0 || d.getElementById('prizeRule').textContent.replace(/\s/g, '').indexOf('+1000') >= 0, 'формула: +1 000 ₽ за команду', d.getElementById('prizeRule').textContent);
+  ok(d.getElementById('heroKicker').textContent.indexOf('2 сезон') >= 0, 'сезон в заголовке', d.getElementById('heroKicker').textContent);
+  ok(d.getElementById('prizeNote').textContent === 'Пояснение', 'пояснение под банком');
+}
+
+console.log('\nindex.html — настройка не задана: всё как раньше');
+{
+  const { dom } = makeConfigured('index.html', HOME, { configured: false, current: 'dota2', season: '', prize: { enabled: true, perTeam: 1000, base: 0, note: '' } }, {});
+  await sleep(200);
+  const d = dom.window.document;
+  ok(!d.body.classList.contains('is-locked') && d.getElementById('gameBar').children.length === 4, 'переключатель на месте');
+  ok(d.getElementById('prize').hidden === true, 'банк скрыт');
+}
+
+console.log('\nschedule.html — настроен текущий турнир');
+{
+  const { dom, seen } = makeConfigured('schedule.html', ['ca-data.js', 'ca-ui.js', 'ca-views.js', 'ca-schedule.js'], cfg, { csgo: six });
+  await sleep(200);
+  const d = dom.window.document;
+  const dataCalls = seen.filter((u) => u.indexOf('/api/data') >= 0);
+  ok(dataCalls.length === 1 && dataCalls[0].indexOf('game=csgo') >= 0, 'запрошена одна дисциплина', dataCalls.join(' '));
+  ok(d.getElementById('gameFilters').hidden === true, 'фильтр игр скрыт');
+  ok(d.getElementById('curTournament').hidden === false && d.getElementById('curTournament').textContent.indexOf('CS:GO') >= 0, 'плашка текущего турнира', d.getElementById('curTournament').textContent);
+  ok(/\d+ д \d\d:\d\d:\d\d/.test(d.querySelector('#curTournament .ct-count').textContent), 'отсчёт до старта', d.querySelector('#curTournament .ct-count').textContent);
+}
+
 console.log(fails ? '\nПровалено проверок: ' + fails : '\nВсе проверки пройдены');
 process.exit(fails ? 1 : 0);

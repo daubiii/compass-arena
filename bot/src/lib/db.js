@@ -400,3 +400,16 @@ export function sqliteTimeToDate(value) {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? null : date;
 }
+
+
+/**
+ * Привязывает к заявке скриншот оплаты (file_id Telegram). Правим JSON прямо в SQLite (json_set),
+ * не разбирая payload с логотипом в воркере. Только своя заявка в статусе pending.
+ */
+export async function setLeadPayment(env, id, telegramId, payment) {
+  const result = await env.DB.prepare(
+    `UPDATE leads SET payload = json_set(payload, '$.payment', json(?1)), updated_at = datetime('now')
+     WHERE id = ?2 AND telegram_id = ?3 AND status = 'pending'`
+  ).bind(JSON.stringify(payment), id, telegramId).run();
+  return Boolean(result.meta && result.meta.changes);
+}
