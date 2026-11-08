@@ -1347,3 +1347,12 @@ html[data-game="brawl"] { --hero-hue: 232deg; --hero-sat: 1.05; }
 .cur-tournament .ct-date { display: block; color: var(--text-2); font-size: 13px; margin-top: 2px; }
 @media (max-width: 560px) { .cur-tournament .ct-when { text-align: left; flex-basis: 100%; } }
 .gamebar[hidden] { display: none; }
+
+/* Публичная плашка банка: без цифр формулы */
+.prize-rule .pz-plus {
+  display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); color: #1a1208; font-weight: 700; line-height: 1;
+}
+.prize-rule { align-items: center; }
+.prize-how li { background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.01)); }
+.prize-how li:hover { border-color: rgba(var(--gold-rgb), .45); transform: translateY(-2px); transition: transform .25s var(--ease), border-color .25s; }

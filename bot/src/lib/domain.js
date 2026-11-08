@@ -23,9 +23,9 @@ export const DISCIPLINES = {
   },
   csgo: {
     key: 'csgo',
-    label: 'CS:GO',
+    label: 'CS2',
     emoji: '🔫',
-    game: 'CS:GO',
+    game: 'CS2',
     roles: [
       { key: 'IGL', num: 1, label: 'IGL', title: 'IGL — Капитан' },
       { key: 'AWP', num: 2, label: 'AWPer', title: 'AWPer — Снайпер' },
@@ -40,7 +40,7 @@ export const DISCIPLINES = {
    Роль в JSON — просто номер слота (1..teamSize) и подпись «Игрок». */
 DISCIPLINES.dota2.teamSize = 5;
 DISCIPLINES.csgo.teamSize = 5;
-/* Роли (керри, мидер…) — только у Dota 2. В CS:GO состав — просто список из пяти. */
+/* Роли (керри, мидер…) — только у Dota 2. В CS2 состав — просто список из пяти. */
 DISCIPLINES.csgo.noRoles = true;
 DISCIPLINES.csgo.roles = [{ key: 'P', num: 1, label: 'Игрок', title: 'Игрок' }];
 DISCIPLINES.clash = {
@@ -68,7 +68,7 @@ export function disciplineGame(key) {
   return isDiscipline(key) ? DISCIPLINES[key].game : String(key || '');
 }
 
-/** «Dota 2, CS:GO» — для справок и сообщений */
+/** «Dota 2, CS2» — для справок и сообщений */
 export function disciplinesListLabel() {
   return DISCIPLINE_KEYS.map((key) => DISCIPLINES[key].label).join(', ');
 }
@@ -161,7 +161,7 @@ export function leadStatusIcon(status) {
 /* ============================================================
    Доступные дисциплины и оплата
    ------------------------------------------------------------
-   Сезон 2 — только CS:GO. Остальные игры в боте видны, но недоступны
+   Сезон 2 — только CS2. Остальные игры в боте видны, но недоступны
    (серые, зачёркнутые). Список можно переопределить переменной
    ENABLED_DISCIPLINES (через запятую, например «csgo,dota2»).
    ============================================================ */
@@ -177,7 +177,7 @@ export function isDisciplineOpen(env, key) {
   return openDisciplines(env).includes(String(key || ''));
 }
 
-/** «CS:GO» → «C̶S̶:̶G̶O̶» — кнопку Telegram нельзя отключить, поэтому зачёркиваем подпись */
+/** «CS2» → «C̶S̶2̶» — кнопку Telegram нельзя отключить, поэтому зачёркиваем подпись */
 export function strike(text) {
   return Array.from(String(text || '')).map((ch) => (ch === ' ' ? ch : ch + '\u0336')).join('');
 }

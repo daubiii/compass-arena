@@ -23,7 +23,7 @@
       theme: { accent: '#c9a35a', hi: '#ecd6a3', lo: '#8c6f39', rgb: '201, 163, 90', tint: '#0b0d12' }
     },
     {
-      id: 'csgo', name: 'CS:GO', short: 'CS:GO', teamSize: 5, unit: 'team', matchFormat: 'Bo3',
+      id: 'csgo', name: 'CS2', short: 'CS2', teamSize: 5, unit: 'team', matchFormat: 'Bo3',
       tagline: 'Пять на пять', owner: 'Valve Corporation',
       theme: { accent: '#e07a3a', hi: '#f7c49b', lo: '#9a4f1f', rgb: '224, 122, 58', tint: '#0e0d0c' }
     },

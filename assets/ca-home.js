@@ -840,22 +840,13 @@
     var set = function (id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; };
 
     set('prizeKicker', ic('trophy') + 'Призовой фонд' + (seasonText() ? ' · ' + esc(seasonText()) : ''));
-    set('prizeRule', '<b>1 ' + one + '</b><span class="eq">=</span><b class="plus">+' + esc(D.fmtMoney(p.perTeam)) + '</b><small>к призовому фонду</small>');
+    /* Сколько даёт одна команда, знают только организаторы: зрителям — просто «каждая команда растит банк» */
+    set('prizeRule', '<span class="pz-plus">+</span><b>Каждая ' + (solo ? 'заявка' : 'команда') + ' в сетке</b><small>увеличивает призовой фонд</small>');
     var amount = document.getElementById('prizeAmount');
     if (amount) countUp(amount, p.total);
     set('prizeCount', '<b>' + p.teams + '</b>' + (cap ? ' из ' + cap : '') + ' ' + esc(unitPlural(p.teams)) + ' в сетке');
     var fill = document.getElementById('prizeFill');
     if (fill) fill.style.width = (cap ? Math.min(100, p.teams / cap * 100) : Math.min(100, p.teams / 16 * 100)).toFixed(1) + '%';
-    set('prizeBase', p.base > 0 ? 'Стартовый фонд: ' + esc(D.fmtMoney(p.base)) + ' + ' + p.teams + ' × ' + esc(D.fmtMoney(p.perTeam)) : '');
-
-    var marks = [4, 8, 16];
-    if (cap && marks.indexOf(cap) < 0) marks.push(cap);
-    marks.sort(function (a, b) { return a - b; });
-    set('prizeLadder', marks.map(function (n) {
-      var reached = p.teams >= n;
-      return '<div class="pz-step' + (reached ? ' is-hit' : '') + '"><small>' + n + ' ' + esc(unitPlural(n)) + '</small><b>' +
-        esc(D.fmtMoney(p.base + n * p.perTeam)) + '</b></div>';
-    }).join(''));
     set('prizeNote', p.note ? esc(p.note) : '');
   }
 

@@ -624,7 +624,7 @@ async function onDiscipline(env, query, ctx, discipline) {
 async function onLocked(env, query, discipline) {
   const label = DISCIPLINES[discipline] ? DISCIPLINES[discipline].label : 'Эта дисциплина';
   await answerCallbackQuery(env, query.id, {
-    text: `${label}: регистрация пока закрыта. Сейчас идёт набор на CS:GO.`,
+    text: `${label}: регистрация пока закрыта. Сейчас идёт набор на CS2.`,
     showAlert: true
   });
   return true;
